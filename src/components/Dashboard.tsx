@@ -5,6 +5,8 @@ import PatientForm from './PatientForm';
 import RiskDisplay from './RiskDisplay';
 import PredictionHistory from './PredictionHistory';
 import { PatientData, PredictionResult, generateMockPrediction, mockPredictions } from '@/lib/mockData';
+import { mlService } from '@/services/mlService';
+import { supabase } from '@/lib/supabase';
 import { Heart, History, User, BarChart3 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -15,12 +17,40 @@ export default function Dashboard() {
   const handlePrediction = async (patientData: PatientData) => {
     setLoading(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Use ML service for real prediction
+      const mlResponse = await mlService.predictHeartAttackRisk({
+        patientData,
+        userId: user?.id,
+        useHistoricalData: true
+      });
+      
+      // Convert ML response to our PredictionResult format
+      const prediction: PredictionResult = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        riskLevel: mlResponse.prediction.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
+        riskScore: mlResponse.prediction.riskScore,
+        confidence: mlResponse.prediction.confidence,
+        prediction: mlResponse.prediction.prediction === 'Risk Detected' ? 'Risk' : 'No Risk',
+        explanation: mlResponse.explanation,
+        recommendations: mlResponse.recommendations,
+        patientData: patientData
+      };
+      
+      setCurrentPrediction(prediction);
+      setPredictions(prev => [prediction, ...prev]);
+    } catch (error) {
+      console.error('Prediction error:', error);
+      // Fallback to mock prediction
+      const prediction = generateMockPrediction(patientData);
+      setCurrentPrediction(prediction);
+      setPredictions(prev => [prediction, ...prev]);
+    }
     
-    const prediction = generateMockPrediction(patientData);
-    setCurrentPrediction(prediction);
-    setPredictions(prev => [prediction, ...prev]);
     setLoading(false);
   };
 
