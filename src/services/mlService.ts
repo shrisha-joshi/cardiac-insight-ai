@@ -205,31 +205,43 @@ class MLService {
 
     const riskLevel = this.calculateRiskLevel(riskScore);
     
-    return `Based on the analysis of your health parameters, you have a ${riskLevel.toLowerCase()} risk of cardiovascular events. ${
-      factors.length > 0 
-        ? `Key contributing factors include: ${factors.join(', ')}.` 
-        : 'Your current health indicators show favorable cardiovascular health.'
-    }`;
+    let explanation = `**⚠️ MEDICAL DISCLAIMER: This analysis is for educational purposes only and does not constitute medical advice. Always consult with qualified healthcare professionals for medical diagnosis, treatment, and personalized care.**\n\n`;
+    
+    explanation += `Based on the analysis of your health parameters, the assessment indicates a ${riskLevel.toLowerCase()} risk level for cardiovascular events. `;
+    
+    if (factors.length > 0) {
+      explanation += `Key contributing factors identified include: ${factors.join(', ')}.\n\n`;
+    } else {
+      explanation += `Your current health indicators show relatively favorable cardiovascular health metrics.\n\n`;
+    }
+    
+    explanation += `**🏥 IMPORTANT:** Please discuss these results with your healthcare provider for proper medical interpretation and personalized recommendations. This assessment cannot replace professional medical evaluation or clinical judgment.`;
+    
+    return explanation;
   }
 
   private generateRecommendations(riskScore: number, patientData: any): string[] {
-    const recommendations = [];
+    const recommendations = [
+      '⚠️ MEDICAL DISCLAIMER: These are general educational recommendations only. Always consult your healthcare provider before making significant health changes.'
+    ];
 
     if (patientData.cholesterol > 240) {
-      recommendations.push('Consider dietary changes to reduce cholesterol levels');
+      recommendations.push('🩺 Discuss cholesterol management options with your healthcare provider');
     }
     if (patientData.bloodPressureSystolic > 140) {
-      recommendations.push('Monitor and manage blood pressure through lifestyle changes');
+      recommendations.push('🩺 Consult your doctor about blood pressure monitoring and management strategies');
     }
     if (patientData.smoking) {
-      recommendations.push('Smoking cessation is highly recommended');
+      recommendations.push('🩺 Seek professional support for smoking cessation programs');
     }
     if (patientData.exerciseHours < 3) {
-      recommendations.push('Increase physical activity to at least 150 minutes per week');
+      recommendations.push('🩺 Ask your healthcare provider about safe exercise recommendations for your condition');
     }
 
-    recommendations.push('Regular check-ups with your healthcare provider');
-    recommendations.push('Maintain a heart-healthy diet rich in fruits and vegetables');
+    recommendations.push('🏥 Schedule regular check-ups with your healthcare provider');
+    recommendations.push('🏥 Discuss heart-healthy dietary options with a registered dietitian');
+    recommendations.push('🏥 Bring these assessment results to your next medical appointment');
+    recommendations.push('🚨 Seek immediate medical attention if you experience chest pain, shortness of breath, or other concerning symptoms');
 
     return recommendations;
   }

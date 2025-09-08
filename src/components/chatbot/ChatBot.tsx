@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
+import { aiService } from '@/services/aiService';
 import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity } from 'lucide-react';
 
 interface Message {
@@ -29,9 +30,30 @@ export default function ChatBot() {
       setUser(user);
     });
 
-    // Add welcome message
+    // Add welcome message with medical disclaimer
     addBotMessage(
-      "Hello! I'm your AI Health Assistant. I can help you understand heart health, analyze your medical history, and provide personalized recommendations. How can I help you today?"
+      `👋 Welcome to your AI Health Assistant!
+
+**⚠️ IMPORTANT MEDICAL DISCLAIMER:**
+I'm designed to provide educational information about heart health, but I am **NOT a substitute for professional medical care**. 
+
+**I CANNOT:**
+• Diagnose medical conditions
+• Provide medical advice or treatment
+• Replace consultation with healthcare providers
+• Handle medical emergencies
+
+**🚨 FOR EMERGENCIES:** If you're experiencing chest pain, shortness of breath, or other concerning symptoms, **call emergency services immediately** (911, 999, 112).
+
+**What I CAN help with:**
+• General heart health education
+• Understanding risk factors
+• Lifestyle recommendations
+• Questions to ask your healthcare provider
+
+**Always consult qualified healthcare professionals for medical advice, diagnosis, and treatment.**
+
+How can I help you learn about heart health today?`
     );
   }, []);
 
@@ -77,78 +99,43 @@ export default function ChatBot() {
   };
 
   const processUserMessage = async (message: string): Promise<{ content: string; data?: any }> => {
-    const lowerMessage = message.toLowerCase();
-
-    // Health assessment questions
-    if (lowerMessage.includes('risk') || lowerMessage.includes('assessment') || lowerMessage.includes('heart attack')) {
-      return {
-        content: "I can help you understand heart attack risk factors. Based on medical literature, key factors include:\n\n• Age (risk increases with age)\n• High blood pressure\n• High cholesterol\n• Smoking\n• Diabetes\n• Family history\n• Obesity\n• Sedentary lifestyle\n\nWould you like me to analyze your recent assessments or help you schedule a new evaluation?"
-      };
-    }
-
-    // Medical history inquiry
-    if (lowerMessage.includes('history') || lowerMessage.includes('previous') || lowerMessage.includes('past')) {
-      if (!user) {
-        return {
-          content: "To access your medical history, please log in to your account. I can provide general health information without login if you prefer."
-        };
-      }
-
-      try {
-        const history = await mlService.getMedicalHistory(user.id);
-        if (history.length === 0) {
-          return {
-            content: "I don't see any previous assessments in your records. Would you like to take your first heart health assessment? It only takes a few minutes and provides valuable insights."
-          };
+    try {
+      // Use the enhanced AI service with comprehensive medical disclaimers
+      const response = await aiService.getChatResponse(message, { user });
+      
+      // If user is asking about their medical history and is logged in
+      if (user && message.toLowerCase().includes('history')) {
+        try {
+          const history = await mlService.getMedicalHistory(user.id);
+          if (history.length > 0) {
+            const recentAssessment = history[0];
+            const riskLevel = recentAssessment.prediction_result?.prediction?.riskLevel || 'Unknown';
+            const riskScore = recentAssessment.prediction_result?.prediction?.riskScore || 0;
+            
+            response.content += `\n\n**Your Recent Assessment Data:**\n`;
+            response.content += `• Total Assessments: ${history.length}\n`;
+            response.content += `• Most Recent Risk Level: ${riskLevel}\n`;
+            response.content += `• Most Recent Risk Score: ${riskScore.toFixed(1)}%\n\n`;
+            response.content += `**⚠️ MEDICAL DISCLAIMER:** This historical data is for educational review only. Please discuss these results with your healthcare provider for proper medical interpretation and guidance.`;
+            
+            response.data = { history: history.slice(0, 3) };
+          }
+        } catch (error) {
+          console.error('Error fetching medical history:', error);
         }
-
-        const recentAssessment = history[0];
-        const riskLevel = recentAssessment.prediction_result?.prediction?.riskLevel || 'Unknown';
-        const riskScore = recentAssessment.prediction_result?.prediction?.riskScore || 0;
-
-        return {
-          content: `I found ${history.length} previous assessment(s) in your records. Your most recent assessment showed a ${riskLevel.toLowerCase()} risk level with a score of ${riskScore.toFixed(1)}%. \n\nWould you like me to explain what this means or provide recommendations based on your history?`,
-          data: { history: history.slice(0, 3) }
-        };
-      } catch (error) {
-        return {
-          content: "I had trouble accessing your medical history. Please try again or contact support if the issue persists."
-        };
       }
-    }
-
-    // Symptom inquiries
-    if (lowerMessage.includes('symptom') || lowerMessage.includes('chest pain') || lowerMessage.includes('shortness of breath')) {
+      
+      return response;
+    } catch (error) {
+      console.error('AI service error:', error);
       return {
-        content: "⚠️ **Important:** If you're experiencing chest pain, shortness of breath, or other concerning symptoms, please seek immediate medical attention or call emergency services.\n\nCommon heart attack symptoms include:\n• Chest pain or discomfort\n• Shortness of breath\n• Pain in arms, back, neck, jaw, or stomach\n• Cold sweat, nausea, or lightheadedness\n\nFor non-emergency health questions, I'm here to help with information and prevention strategies."
+        content: `I apologize, but I'm experiencing technical difficulties. 
+
+**⚠️ MEDICAL DISCLAIMER:** If you're experiencing a medical emergency or have urgent health concerns, please contact emergency services immediately (911, 999, 112) or your healthcare provider.
+
+For general heart health questions, please try asking again in a moment.`
       };
     }
-
-    // Lifestyle recommendations
-    if (lowerMessage.includes('prevent') || lowerMessage.includes('improve') || lowerMessage.includes('lifestyle') || lowerMessage.includes('diet') || lowerMessage.includes('exercise')) {
-      return {
-        content: "Here are evidence-based recommendations for heart health:\n\n**Diet:**\n• Follow a Mediterranean-style diet\n• Limit saturated fats and trans fats\n• Increase omega-3 fatty acids\n• Eat plenty of fruits and vegetables\n\n**Exercise:**\n• 150 minutes of moderate aerobic activity weekly\n• Include strength training 2+ days per week\n• Start gradually if you're new to exercise\n\n**Lifestyle:**\n• Don't smoke or quit if you do\n• Limit alcohol consumption\n• Manage stress through relaxation techniques\n• Get 7-9 hours of quality sleep\n\nWould you like specific advice for any of these areas?"
-      };
-    }
-
-    // Medication and treatment questions
-    if (lowerMessage.includes('medication') || lowerMessage.includes('treatment') || lowerMessage.includes('doctor')) {
-      return {
-        content: "I can provide general information about heart health, but I cannot give specific medical advice or recommend treatments. For questions about:\n\n• Medications and dosages\n• Treatment plans\n• Specific medical conditions\n• Symptom diagnosis\n\nPlease consult with your healthcare provider. They have access to your complete medical history and can provide personalized care.\n\nIs there general heart health information I can help you with instead?"
-      };
-    }
-
-    // Data interpretation
-    if (lowerMessage.includes('cholesterol') || lowerMessage.includes('blood pressure') || lowerMessage.includes('numbers')) {
-      return {
-        content: "I can help you understand common heart health measurements:\n\n**Blood Pressure:**\n• Normal: Less than 120/80 mmHg\n• Elevated: 120-129 systolic, less than 80 diastolic\n• Stage 1 High: 130-139/80-89 mmHg\n• Stage 2 High: 140/90 mmHg or higher\n\n**Cholesterol:**\n• Total: Less than 200 mg/dL (optimal)\n• LDL: Less than 100 mg/dL (optimal)\n• HDL: 40+ mg/dL (men), 50+ mg/dL (women)\n\n**Other Key Metrics:**\n• Resting heart rate: 60-100 bpm\n• BMI: 18.5-24.9 (normal range)\n\nRemember, these are general guidelines. Your doctor can interpret your specific results in context."
-      };
-    }
-
-    // Default response with suggestions
-    return {
-      content: "I'm here to help with heart health questions! I can assist with:\n\n• Understanding risk factors and prevention\n• Explaining assessment results\n• Lifestyle recommendations\n• General health information\n• Reviewing your medical history\n\nWhat specific aspect of heart health would you like to know more about?"
-    };
   };
 
   const formatTimestamp = (timestamp: Date) => {

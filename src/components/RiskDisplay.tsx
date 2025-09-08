@@ -173,11 +173,24 @@ export default function RiskDisplay({ prediction }: RiskDisplayProps) {
       </Card>
 
       {/* Medical Disclaimer */}
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription className="text-xs">
-          <strong>Medical Disclaimer:</strong> This prediction tool is for educational purposes only and should not replace professional medical advice. 
-          Always consult with a qualified healthcare provider for medical diagnosis and treatment decisions.
+      <Alert className="border-medical-primary bg-medical-primary/5">
+        <AlertTriangle className="h-5 w-5 text-medical-primary" />
+        <AlertDescription className="text-sm">
+          <div className="space-y-2">
+            <div className="font-bold text-medical-primary">⚠️ IMPORTANT MEDICAL DISCLAIMER</div>
+            <div className="text-foreground">
+              <strong>This assessment is for educational purposes only and does NOT constitute medical advice, diagnosis, or treatment.</strong>
+            </div>
+            <div className="text-sm space-y-1">
+              <div>• <strong>Consult healthcare professionals</strong> for medical interpretation of these results</div>
+              <div>• <strong>Seek immediate medical attention</strong> if experiencing chest pain or concerning symptoms</div>
+              <div>• <strong>Do not make medical decisions</strong> based solely on this assessment</div>
+              <div>• <strong>This tool cannot replace</strong> professional medical evaluation and clinical judgment</div>
+            </div>
+            <div className="font-semibold text-medical-primary mt-2">
+              🏥 ALWAYS discuss these results with your qualified healthcare provider
+            </div>
+          </div>
         </AlertDescription>
       </Alert>
     </div>
