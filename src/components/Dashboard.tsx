@@ -6,7 +6,7 @@ import RiskDisplay from './RiskDisplay';
 import PredictionHistory from './PredictionHistory';
 import { PatientData, PredictionResult, generateMockPrediction, mockPredictions } from '@/lib/mockData';
 import { mlService } from '@/services/mlService';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Heart, History, User, BarChart3 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -18,34 +18,43 @@ export default function Dashboard() {
     setLoading(true);
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Use ML service for real prediction
-      const mlResponse = await mlService.predictHeartAttackRisk({
-        patientData,
-        userId: user?.id,
-        useHistoricalData: true
-      });
-      
-      // Convert ML response to our PredictionResult format
-      const prediction: PredictionResult = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        riskLevel: mlResponse.prediction.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
-        riskScore: mlResponse.prediction.riskScore,
-        confidence: mlResponse.prediction.confidence,
-        prediction: mlResponse.prediction.prediction === 'Risk Detected' ? 'Risk' : 'No Risk',
-        explanation: mlResponse.explanation,
-        recommendations: mlResponse.recommendations,
-        patientData: patientData
-      };
-      
-      setCurrentPrediction(prediction);
-      setPredictions(prev => [prediction, ...prev]);
+      // Only try Supabase if properly configured
+      if (isSupabaseConfigured) {
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Use ML service for real prediction
+        const mlResponse = await mlService.predictHeartAttackRisk({
+          patientData,
+          userId: user?.id,
+          useHistoricalData: true
+        });
+        
+        // Convert ML response to our PredictionResult format
+        const prediction: PredictionResult = {
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          riskLevel: mlResponse.prediction.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
+          riskScore: mlResponse.prediction.riskScore,
+          confidence: mlResponse.prediction.confidence,
+          prediction: mlResponse.prediction.prediction === 'Risk Detected' ? 'Risk' : 'No Risk',
+          explanation: mlResponse.explanation,
+          recommendations: mlResponse.recommendations,
+          patientData: patientData
+        };
+        
+        setCurrentPrediction(prediction);
+        setPredictions(prev => [prediction, ...prev]);
+      } else {
+        // Fallback to mock prediction when Supabase not configured
+        console.log('Using mock prediction - Supabase not configured');
+        const prediction = generateMockPrediction(patientData);
+        setCurrentPrediction(prediction);
+        setPredictions(prev => [prediction, ...prev]);
+      }
     } catch (error) {
       console.error('Prediction error:', error);
-      // Fallback to mock prediction
+      // Fallback to mock prediction on any error
       const prediction = generateMockPrediction(patientData);
       setCurrentPrediction(prediction);
       setPredictions(prev => [prediction, ...prev]);
