@@ -86,6 +86,7 @@ All colors MUST be HSL.
 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-glow: 210 40% 88%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -98,6 +99,18 @@ All colors MUST be HSL.
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+
+    --warning: 35 91% 65%;
+    --warning-foreground: 26 83% 14%;
+
+    --success: 146 60% 47%;
+    --success-foreground: 210 40% 98%;
+
+    --medical-primary: 202 83% 51%;
+    --medical-secondary: 146 60% 57%;
+    --risk-low: 146 60% 57%;
+    --risk-medium: 35 91% 65%;
+    --risk-high: 0 84% 70%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
