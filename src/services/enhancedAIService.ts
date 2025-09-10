@@ -136,6 +136,36 @@ class EnhancedAIService {
     return ['cholesterol', 'blood pressure', 'sugar', 'glucose', 'test results', 'lab report', 'numbers', 'levels'].some(term => message.includes(term));
   }
 
+  private getSymptomsResponse(): AIResponse {
+    return {
+      content: `🚨 **URGENT - SEEK IMMEDIATE MEDICAL ATTENTION** 🚨
+
+If you're experiencing ANY of these symptoms, call emergency services NOW:
+• Chest pain, pressure, or discomfort
+• Shortness of breath
+• Pain radiating to arms, neck, jaw, or back
+• Nausea, sweating, or dizziness
+• Unusual fatigue
+
+**⚠️ CRITICAL MEDICAL DISCLAIMER:** 
+- This AI cannot diagnose medical conditions
+- Never delay emergency care to use this chat
+- Time is critical in heart attacks - every minute matters
+- When in doubt, always seek immediate professional medical help
+
+**Emergency Numbers:**
+• India: 108
+• US: 911
+• UK: 999  
+• EU: 112
+• Canada: 911
+• Australia: 000
+
+Are you currently experiencing any of these symptoms? If yes, please contact emergency services immediately.`,
+      suggestions: ['I need general heart health info', 'What are heart attack prevention tips?', 'Tell me about stress management']
+    };
+  }
+
   private getEmergencyResponse(): AIResponse {
     return {
       content: `🚨 **MEDICAL EMERGENCY** 🚨
