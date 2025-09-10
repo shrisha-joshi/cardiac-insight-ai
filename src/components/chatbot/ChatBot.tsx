@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
-import { aiService } from '@/services/aiService';
+import { enhancedAiService } from '@/services/enhancedAIService';
 import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity } from 'lucide-react';
 
 interface Message {
