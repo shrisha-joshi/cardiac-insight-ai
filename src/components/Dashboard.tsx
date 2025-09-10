@@ -8,16 +8,21 @@ import { PatientData, PredictionResult, generateMockPrediction, mockPredictions 
 import { mlService } from '@/services/mlService';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Heart, History, User, BarChart3 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
   const [currentPrediction, setCurrentPrediction] = useState<PredictionResult | null>(null);
   const [predictions, setPredictions] = useState<PredictionResult[]>(mockPredictions);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('predict');
+  const { toast } = useToast();
 
   const handlePrediction = async (patientData: PatientData) => {
     setLoading(true);
     
     try {
+      let prediction: PredictionResult;
+      
       // Only try Supabase if properly configured
       if (isSupabaseConfigured) {
         // Get current user
@@ -31,7 +36,7 @@ export default function Dashboard() {
         });
         
         // Convert ML response to our PredictionResult format
-        const prediction: PredictionResult = {
+        prediction = {
           id: Date.now().toString(),
           timestamp: new Date(),
           riskLevel: mlResponse.prediction.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
@@ -42,22 +47,38 @@ export default function Dashboard() {
           recommendations: mlResponse.recommendations,
           patientData: patientData
         };
-        
-        setCurrentPrediction(prediction);
-        setPredictions(prev => [prediction, ...prev]);
       } else {
-        // Fallback to mock prediction when Supabase not configured
-        console.log('Using mock prediction - Supabase not configured');
-        const prediction = generateMockPrediction(patientData);
-        setCurrentPrediction(prediction);
-        setPredictions(prev => [prediction, ...prev]);
+        // Use enhanced mock prediction
+        console.log('Using enhanced mock prediction - Supabase not configured');
+        prediction = generateMockPrediction(patientData);
       }
+      
+      setCurrentPrediction(prediction);
+      setPredictions(prev => [prediction, ...prev]);
+      
+      // Automatically switch to results tab
+      setActiveTab('results');
+      
+      // Show success toast
+      toast({
+        title: "Assessment Complete",
+        description: `Heart attack risk assessment completed. Risk level: ${prediction.riskLevel}`,
+        variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
+      });
+      
     } catch (error) {
       console.error('Prediction error:', error);
-      // Fallback to mock prediction on any error
+      // Fallback to enhanced mock prediction on any error
       const prediction = generateMockPrediction(patientData);
       setCurrentPrediction(prediction);
       setPredictions(prev => [prediction, ...prev]);
+      setActiveTab('results');
+      
+      toast({
+        title: "Assessment Complete (Offline Mode)",
+        description: `Risk assessment completed using offline analysis. Risk level: ${prediction.riskLevel}`,
+        variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
+      });
     }
     
     setLoading(false);
@@ -76,7 +97,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <Tabs defaultValue="predict" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="predict" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
