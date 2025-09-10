@@ -101,7 +101,7 @@ How can I help you learn about heart health today?`
   const processUserMessage = async (message: string): Promise<{ content: string; data?: any }> => {
     try {
       // Use the enhanced AI service with comprehensive medical disclaimers
-      const response = await aiService.getChatResponse(message, { user });
+      const response = await enhancedAiService.getChatResponse(message, 'user123', { user });
       
       // If user is asking about their medical history and is logged in
       if (user && message.toLowerCase().includes('history')) {
