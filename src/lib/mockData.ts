@@ -12,6 +12,16 @@ export interface PatientData {
   stSlope: 'up' | 'flat' | 'down';
   smoking: boolean;
   diabetes: boolean;
+  // New enhanced fields
+  previousHeartAttack: boolean;
+  cholesterolMedication: boolean;
+  diabetesMedication: 'insulin' | 'tablets' | 'both' | 'none';
+  bpMedication: boolean;
+  lifestyleChanges: boolean;
+  dietType: 'vegetarian' | 'non-vegetarian' | 'vegan';
+  stressLevel: number; // 1-10 scale
+  sleepHours: number;
+  physicalActivity: 'low' | 'moderate' | 'high';
 }
 
 export interface PredictionResult {
@@ -102,90 +112,149 @@ export const defaultPatientData: PatientData = {
   oldpeak: 0,
   stSlope: 'flat',
   smoking: false,
-  diabetes: false
+  diabetes: false,
+  // New enhanced defaults
+  previousHeartAttack: false,
+  cholesterolMedication: false,
+  diabetesMedication: 'none',
+  bpMedication: false,
+  lifestyleChanges: false,
+  dietType: 'vegetarian',
+  stressLevel: 5,
+  sleepHours: 7,
+  physicalActivity: 'moderate',
 };
 
 export function generateMockPrediction(patientData: PatientData): PredictionResult {
-  // Advanced medical algorithm based on clinical research and validated scoring systems
-  // Combines Framingham Risk Score, ASCVD guidelines, and Indian population studies
-  
+  // Advanced medical algorithm with enhanced lifestyle and historical factors
   let riskScore = 0;
   let riskFactors: string[] = [];
   
-  // Age-based risk (based on Framingham Heart Study data)
+  // Age-based risk
   const ageRisk = calculateAgeRisk(patientData.age, patientData.gender);
   riskScore += ageRisk.score;
   if (ageRisk.score > 0) riskFactors.push(ageRisk.factor);
   
   // Gender-based cardiovascular risk
   if (patientData.gender === 'male') {
-    riskScore += 12; // Males have higher baseline risk
+    riskScore += 12;
     riskFactors.push('Male gender increases cardiovascular risk');
   }
   
-  // Chest pain type assessment (based on NSTEMI/STEMI prediction models)
-  const chestPainRisk = assessChestPainRisk(patientData.chestPainType);
-  riskScore += chestPainRisk.score;
-  if (chestPainRisk.score > 0) riskFactors.push(chestPainRisk.factor);
+  // Previous heart attack (major risk factor)
+  if (patientData.previousHeartAttack) {
+    riskScore += 35;
+    riskFactors.push('History of heart attack significantly increases risk of future cardiac events');
+    
+    // Medication compliance helps reduce risk
+    if (patientData.cholesterolMedication) {
+      riskScore -= 8;
+    } else {
+      riskScore += 5;
+      riskFactors.push('Not taking cholesterol medication after heart attack increases risk');
+    }
+  }
   
-  // Blood pressure assessment (JNC 8 guidelines)
+  // Enhanced diabetes assessment
+  if (patientData.diabetes) {
+    riskScore += 18;
+    riskFactors.push('Diabetes significantly increases cardiovascular risk');
+    
+    // Medication management impact
+    if (patientData.diabetesMedication === 'none') {
+      riskScore += 12;
+      riskFactors.push('Unmanaged diabetes dramatically increases heart attack risk');
+    } else if (patientData.diabetesMedication === 'both') {
+      riskScore -= 5; // Better controlled
+    }
+  }
+  
+  // Blood pressure with medication assessment
   const bpRisk = assessBloodPressureRisk(patientData.restingBP, patientData.age);
   riskScore += bpRisk.score;
   if (bpRisk.score > 0) riskFactors.push(bpRisk.factor);
   
-  // Cholesterol assessment (ATP IV guidelines)
+  if (patientData.restingBP > 130) {
+    if (patientData.bpMedication) {
+      riskScore -= 6; // Medication helps
+    }
+    if (patientData.lifestyleChanges) {
+      riskScore -= 8; // Lifestyle changes help
+    }
+  }
+  
+  // Other existing assessments
+  const chestPainRisk = assessChestPainRisk(patientData.chestPainType);
+  riskScore += chestPainRisk.score;
+  if (chestPainRisk.score > 0) riskFactors.push(chestPainRisk.factor);
+  
   const cholesterolRisk = assessCholesterolRisk(patientData.cholesterol, patientData.age);
   riskScore += cholesterolRisk.score;
   if (cholesterolRisk.score > 0) riskFactors.push(cholesterolRisk.factor);
   
-  // Diabetes mellitus (major risk factor)
-  if (patientData.diabetes) {
-    riskScore += 18;
-    riskFactors.push('Diabetes significantly increases cardiovascular risk');
-  }
-  
-  // Smoking assessment (major modifiable risk factor)
   if (patientData.smoking) {
     riskScore += 22;
     riskFactors.push('Smoking dramatically increases heart attack risk');
   }
   
-  // Fasting blood sugar
   if (patientData.fastingBS) {
     riskScore += 12;
     riskFactors.push('Elevated fasting blood sugar indicates metabolic dysfunction');
   }
   
-  // Exercise-induced angina (strong predictor)
   if (patientData.exerciseAngina) {
     riskScore += 20;
     riskFactors.push('Exercise-induced chest pain suggests coronary artery disease');
   }
   
-  // Heart rate assessment
+  // Enhanced lifestyle assessment
+  if (patientData.physicalActivity === 'low') {
+    riskScore += 12;
+    riskFactors.push('Sedentary lifestyle significantly increases cardiovascular risk');
+  } else if (patientData.physicalActivity === 'high') {
+    riskScore -= 8; // Protective factor
+  }
+  
+  // Diet assessment
+  if (patientData.dietType === 'vegetarian' || patientData.dietType === 'vegan') {
+    riskScore -= 6; // Plant-based diet is protective
+  }
+  
+  // Stress assessment
+  if (patientData.stressLevel >= 8) {
+    riskScore += 15;
+    riskFactors.push('High stress levels contribute significantly to cardiovascular disease');
+  } else if (patientData.stressLevel <= 3) {
+    riskScore -= 5; // Low stress is protective
+  }
+  
+  // Sleep assessment
+  if (patientData.sleepHours < 6 || patientData.sleepHours > 9) {
+    riskScore += 10;
+    riskFactors.push('Poor sleep patterns increase cardiovascular risk');
+  }
+  
+  // Other clinical assessments
   const hrRisk = assessHeartRateRisk(patientData.maxHR, patientData.age);
   riskScore += hrRisk.score;
   if (hrRisk.score > 0) riskFactors.push(hrRisk.factor);
   
-  // ST slope assessment (exercise ECG findings)
   const stSlopeRisk = assessSTSlopeRisk(patientData.stSlope);
   riskScore += stSlopeRisk.score;
   if (stSlopeRisk.score > 0) riskFactors.push(stSlopeRisk.factor);
   
-  // ECG findings
   const ecgRisk = assessECGRisk(patientData.restingECG);
   riskScore += ecgRisk.score;
   if (ecgRisk.score > 0) riskFactors.push(ecgRisk.factor);
   
   // Cap risk score and determine risk level
-  riskScore = Math.min(riskScore, 100);
+  riskScore = Math.min(Math.max(riskScore, 0), 100);
   
   const riskLevel: 'low' | 'medium' | 'high' = 
     riskScore < 25 ? 'low' : riskScore < 60 ? 'medium' : 'high';
   
   const prediction = riskScore > 45 ? 'Risk' : 'No Risk';
   
-  // Calculate confidence based on number of risk factors and their strength
   const confidence = calculateConfidence(riskFactors.length, riskScore);
   
   return {
@@ -196,8 +265,8 @@ export function generateMockPrediction(patientData: PatientData): PredictionResu
     prediction,
     confidence,
     timestamp: new Date(),
-    explanation: generateDetailedExplanation(riskScore, patientData, riskFactors),
-    recommendations: generateComprehensiveRecommendations(riskLevel, patientData, riskFactors)
+    explanation: generateEnhancedExplanationWithReassurance(riskScore, riskLevel, patientData, riskFactors),
+    recommendations: generateEnhancedIndianRecommendations(riskLevel, patientData, riskFactors)
   };
 }
 
@@ -277,27 +346,171 @@ function calculateConfidence(riskFactorCount: number, riskScore: number) {
   return Math.min(baseConfidence + Math.random() * 5, 98);
 }
 
-function generateDetailedExplanation(riskScore: number, data: PatientData, riskFactors: string[]): string {
+function generateEnhancedExplanationWithReassurance(riskScore: number, riskLevel: 'low' | 'medium' | 'high', data: PatientData, riskFactors: string[]): string {
   let explanation = '';
   
-  if (riskScore < 25) {
-    explanation = '✅ **Low cardiovascular risk detected.** Your assessment shows favorable heart health indicators with minimal risk factors present. ';
-  } else if (riskScore < 60) {
-    explanation = '⚠️ **Moderate cardiovascular risk identified.** Several risk factors are present that warrant medical attention and lifestyle modifications. ';
+  // Reassuring introduction
+  explanation += '💗 **Your Heart Health Assessment Results**\n\n';
+  
+  if (riskLevel === 'low') {
+    explanation += `**Excellent news!** Your current heart attack risk is **low (${riskScore.toFixed(1)}%)**. This indicates a strong foundation for cardiovascular health. `;
+  } else if (riskLevel === 'medium') {
+    explanation += `Your heart attack risk assessment shows a **moderate level (${riskScore.toFixed(1)}%)**. While this isn't immediately alarming, it presents valuable opportunities to enhance your heart health. `;
   } else {
-    explanation = '🚨 **High cardiovascular risk detected.** Multiple significant risk factors are present requiring immediate medical evaluation and intervention. ';
+    explanation += `Your assessment indicates a **higher risk level (${riskScore.toFixed(1)}%)** for cardiovascular events. Please don't be alarmed - this assessment is designed to help you take proactive steps toward better heart health. `;
   }
   
+  explanation += 'Remember, this is a predictive tool to guide preventive care, not a medical diagnosis.\n\n';
+  
+  // Risk factors with context
   if (riskFactors.length > 0) {
-    explanation += `\n\n**Key Risk Factors Identified:**\n${riskFactors.map(factor => `• ${factor}`).join('\n')}`;
+    explanation += '### ⚠️ Key Areas for Attention:\n';
+    riskFactors.slice(0, 5).forEach((factor, index) => {
+      explanation += `${index + 1}. ${factor}\n`;
+    });
+    explanation += '\n';
   }
   
-  explanation += '\n\n**⚠️ Medical Disclaimer:** This assessment is for educational purposes only and does not constitute medical diagnosis. Please consult healthcare professionals for proper evaluation and treatment.';
+  // Protective factors
+  let protectiveFactors: string[] = [];
+  if (data.dietType === 'vegetarian' || data.dietType === 'vegan') {
+    protectiveFactors.push('Plant-based diet provides natural cardiovascular protection');
+  }
+  if (data.physicalActivity === 'high') {
+    protectiveFactors.push('High physical activity significantly reduces heart disease risk');
+  }
+  if (!data.smoking) {
+    protectiveFactors.push('Non-smoking status protects against cardiovascular disease');
+  }
+  if (data.stressLevel <= 5) {
+    protectiveFactors.push('Well-managed stress levels support heart health');
+  }
+  
+  if (protectiveFactors.length > 0) {
+    explanation += '### ✅ Your Heart-Healthy Strengths:\n';
+    protectiveFactors.forEach((factor, index) => {
+      explanation += `${index + 1}. ${factor}\n`;
+    });
+    explanation += '\n';
+  }
+  
+  // Personalized insights
+  explanation += '### 🎯 What This Means for You:\n';
+  explanation += 'Heart disease is largely preventable through lifestyle modifications. The recommendations provided combine modern medical guidelines with traditional Indian approaches including Ayurveda and yoga. ';
+  explanation += 'Small, consistent changes can lead to significant improvements in your cardiovascular health.\n\n';
+  
+  // Reassuring conclusion
+  explanation += '### 🌟 Moving Forward:\n';
+  explanation += 'This assessment empowers you with knowledge to make informed health decisions. ';
+  explanation += 'Focus on the actionable recommendations, and remember that every positive change, no matter how small, contributes to better heart health.\n\n';
+  
+  explanation += '**⚠️ Important Reminder:** This assessment is for educational purposes only and does not constitute professional medical advice. Always consult with qualified healthcare providers for medical evaluation, diagnosis, and treatment decisions.';
   
   return explanation;
 }
 
-function generateComprehensiveRecommendations(riskLevel: 'low' | 'medium' | 'high', data: PatientData, riskFactors: string[]): string[] {
+function generateEnhancedIndianRecommendations(riskLevel: 'low' | 'medium' | 'high', data: PatientData, riskFactors: string[]): string[] {
+  let recommendations: string[] = [];
+  
+  // Medical recommendations based on risk level
+  if (riskLevel === 'high') {
+    recommendations.push('🏥 **URGENT**: Schedule cardiology consultation within 1-2 weeks');
+    recommendations.push('🔬 Request comprehensive cardiac evaluation: ECG, stress test, lipid profile');
+    recommendations.push('💊 Discuss preventive medications with your doctor (aspirin, statins if needed)');
+  } else if (riskLevel === 'medium') {
+    recommendations.push('🩺 Schedule appointment with primary care physician within 1 month');
+    recommendations.push('📊 Get annual comprehensive health screening');
+    recommendations.push('🔍 Consider cardiac risk assessment every 6 months');
+  } else {
+    recommendations.push('✅ Maintain current healthy practices');
+    recommendations.push('📅 Continue regular annual health check-ups');
+  }
+  
+  // Ayurvedic and Traditional Medicine
+  recommendations.push('🌿 **Ayurvedic Heart Support**:');
+  recommendations.push('   • Arjuna bark powder: 500mg twice daily with warm water');
+  recommendations.push('   • Fresh garlic: 2-3 cloves daily or garlic tablets');
+  recommendations.push('   • Turmeric with black pepper: Golden milk before bed');
+  recommendations.push('   • Amla (Indian gooseberry) juice: 30ml in the morning');
+  
+  // Yoga and Exercise
+  recommendations.push('🧘 **Daily Yoga Practice** (30-45 minutes):');
+  recommendations.push('   • Pranayama: Anulom Vilom, Kapalbhati, Ujjayi breathing');
+  recommendations.push('   • Asanas: Vajrasana, Shavasana, Bhujangasana, Tadasana');
+  recommendations.push('   • Meditation: 15-20 minutes for stress reduction');
+  
+  // Diet based on preference
+  if (data.dietType === 'vegetarian') {
+    recommendations.push('🥗 **Heart-Healthy Vegetarian Diet**:');
+    recommendations.push('   • Include: Lentils, quinoa, nuts, leafy greens, whole grains');
+    recommendations.push('   • Omega-3 sources: Walnuts, flaxseeds, chia seeds');
+    recommendations.push('   • Consider: B12, Iron, and Omega-3 supplements (consult doctor)');
+  } else if (data.dietType === 'vegan') {
+    recommendations.push('🌱 **Heart-Healthy Vegan Approach**:');
+    recommendations.push('   • Protein: Legumes, tofu, tempeh, quinoa, hemp seeds');
+    recommendations.push('   • Essential supplements: B12, D3, Omega-3 (algae-based), Iron');
+    recommendations.push('   • Focus: Colorful vegetables, berries, nuts, whole grains');
+  } else {
+    recommendations.push('🐟 **Balanced Heart-Healthy Diet**:');
+    recommendations.push('   • Include: Fatty fish 2-3 times/week (salmon, mackerel)');
+    recommendations.push('   • Limit: Red meat and processed meats');
+    recommendations.push('   • Increase: Plant-based meals to 60-70% of diet');
+  }
+  
+  // Home Remedies
+  recommendations.push('🏠 **Traditional Home Remedies**:');
+  recommendations.push('   • Morning: Warm lemon water with honey');
+  recommendations.push('   • Daily: 2-3 cups green tea');
+  recommendations.push('   • Snack: Handful of soaked almonds');
+  recommendations.push('   • Cooking: Use garlic, ginger, turmeric regularly');
+  
+  // Specific risk factor management
+  if (data.smoking) {
+    recommendations.push('🚭 **Smoking Cessation** (Most Critical):');
+    recommendations.push('   • Quit immediately - most important change you can make');
+    recommendations.push('   • Try: Nicotine replacement therapy, counseling');
+    recommendations.push('   • Support: Join smoking cessation programs');
+  }
+  
+  if (data.diabetes) {
+    recommendations.push('🩸 **Diabetes Management**:');
+    recommendations.push('   • Monitor blood sugar levels regularly');
+    recommendations.push('   • Follow prescribed medication regimen strictly');
+    recommendations.push('   • Diet: Low glycemic index foods, portion control');
+  }
+  
+  if (data.stressLevel >= 7) {
+    recommendations.push('🧘 **Stress Management Priority**:');
+    recommendations.push('   • Daily: Deep breathing exercises (5-10 minutes, 3 times)');
+    recommendations.push('   • Try: Progressive muscle relaxation');
+    recommendations.push('   • Consider: Professional counseling or therapy');
+    recommendations.push('   • Maintain: Work-life balance');
+  }
+  
+  if (data.sleepHours < 7 || data.sleepHours > 8) {
+    recommendations.push('😴 **Sleep Optimization**:');
+    recommendations.push('   • Target: 7-8 hours of quality sleep nightly');
+    recommendations.push('   • Routine: Consistent sleep and wake times');
+    recommendations.push('   • Evening: Avoid screens 1 hour before bed');
+    recommendations.push('   • Natural aids: Chamomile tea, warm milk with turmeric');
+  }
+  
+  // Emergency awareness
+  recommendations.push('🚨 **Heart Attack Warning Signs - Know Them**:');
+  recommendations.push('   • Chest pain, pressure, tightness, or discomfort');
+  recommendations.push('   • Shortness of breath, nausea, cold sweats');
+  recommendations.push('   • Pain in arms, neck, jaw, back, or upper abdomen');
+  recommendations.push('   • **Emergency**: Call 108 (India) or local emergency number immediately');
+  
+  // Lifestyle
+  recommendations.push('💪 **Daily Lifestyle Habits**:');
+  recommendations.push('   • Walk: 30-45 minutes daily (or equivalent exercise)');
+  recommendations.push('   • Hydration: 8-10 glasses of water daily');
+  recommendations.push('   • Social: Maintain strong family and community connections');
+  recommendations.push('   • Mindfulness: Practice gratitude and positive thinking');
+  
+  return recommendations;
+}
   let recommendations: string[] = [];
   
   // Immediate medical recommendations based on risk level
@@ -340,12 +553,6 @@ function generateComprehensiveRecommendations(riskLevel: 'low' | 'medium' | 'hig
   recommendations.push('🧘 **Yoga Practice:** Daily Pranayama (breathing exercises) - Anulom Vilom, Kapalbhati');
   recommendations.push('💚 **Herbal Support:** Garlic, turmeric, and ginger in daily diet');
   recommendations.push('🌿 **Lifestyle:** Follow Ayurvedic principles - regular sleep cycle, mindful eating');
-  
-  // General preventive measures
-  recommendations.push('💤 Maintain 7-9 hours of quality sleep nightly');
-  recommendations.push('🧠 Stress management through meditation, yoga, or counseling');
-  recommendations.push('🚶‍♂️ Daily physical activity - even 30 minutes of walking helps');
-  recommendations.push('🥗 Plant-based diet rich in fruits, vegetables, whole grains, and legumes');
   
   return recommendations;
 }

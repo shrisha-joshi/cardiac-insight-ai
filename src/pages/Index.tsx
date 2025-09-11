@@ -233,6 +233,140 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Subscription Plans Section */}
+      <section className="py-24 bg-gradient-to-r from-medical-primary/5 to-medical-secondary/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              Choose Your Health Assessment Plan
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Select the plan that best fits your health monitoring needs
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Basic Plan */}
+            <Card className="text-center hover:shadow-lg transition-shadow relative">
+              <CardHeader>
+                <CardTitle className="text-2xl mb-2">Basic Assessment</CardTitle>
+                <div className="text-4xl font-bold text-medical-primary mb-4">Free</div>
+                <CardDescription>Essential heart risk evaluation</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-left">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Basic risk prediction</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">10 clinical parameters</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">General recommendations</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Basic health tips</span>
+                  </li>
+                </ul>
+                <Button 
+                  className="w-full mt-6" 
+                  variant="outline"
+                  onClick={() => setShowDashboard(true)}
+                >
+                  Start Free Assessment
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Premium Plan */}
+            <Card className="text-center hover:shadow-lg transition-shadow relative border-medical-primary">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <Badge className="bg-medical-primary text-white">Most Popular</Badge>
+              </div>
+              <CardHeader>
+                <CardTitle className="text-2xl mb-2">Premium Assessment</CardTitle>
+                <div className="text-4xl font-bold text-medical-primary mb-4">₹999</div>
+                <CardDescription>Comprehensive lifestyle analysis</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-left">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Advanced AI prediction</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">15+ lifestyle questions</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Ayurvedic recommendations</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Yoga & exercise plans</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Dietary supplements advice</span>
+                  </li>
+                </ul>
+                <Button 
+                  className="w-full mt-6"
+                  onClick={() => alert('Premium assessment requires Supabase integration for payment processing')}
+                >
+                  Choose Premium
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Professional Plan */}
+            <Card className="text-center hover:shadow-lg transition-shadow relative">
+              <CardHeader>
+                <CardTitle className="text-2xl mb-2">Professional</CardTitle>
+                <div className="text-4xl font-bold text-medical-primary mb-4">₹2999</div>
+                <CardDescription>Complete health ecosystem</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="space-y-3 text-left">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">All Premium features</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">AI Health Chatbot</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Monthly health reports</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">Family health tracking</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-success" />
+                    <span className="text-sm">24/7 health support</span>
+                  </li>
+                </ul>
+                <Button 
+                  className="w-full mt-6" 
+                  variant="outline"
+                  onClick={() => alert('Professional plan requires Supabase integration for full features')}
+                >
+                  Choose Professional
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-24">
         <div className="container mx-auto px-4 text-center">
