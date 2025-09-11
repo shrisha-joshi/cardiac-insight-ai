@@ -193,16 +193,20 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="heartRate">Resting Heart Rate</Label>
-                <Input
-                  id="heartRate"
-                  type="number"
-                  value={formData.maxHR}
-                  onChange={(e) => updateField('maxHR', parseInt(e.target.value) || 150)}
-                  min="50"
-                  max="220"
-                  placeholder="e.g., 72"
-                />
-                <div className="text-xs text-muted-foreground">Your heart rate when at rest (beats per minute)</div>
+                <Select 
+                  value={formData.maxHR < 70 ? 'low' : formData.maxHR > 100 ? 'high' : 'normal'} 
+                  onValueChange={(value) => updateField('maxHR', value === 'low' ? 60 : value === 'high' ? 110 : 80)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select heart rate range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low (50-69 bpm) - Athletic/Very Fit</SelectItem>
+                    <SelectItem value="normal">Normal (70-100 bpm) - Healthy Range</SelectItem>
+                    <SelectItem value="high">High (100+ bpm) - May Need Attention</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground">Your typical resting heart rate</div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="exerciseCapacity">Exercise Capacity</Label>
@@ -284,13 +288,13 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-1">
-                  <Label htmlFor="fastingBS" className="font-medium">High Blood Sugar</Label>
-                  <div className="text-xs text-muted-foreground">Fasting blood sugar over 120 mg/dL</div>
+                  <Label htmlFor="diabetes" className="font-medium">Diabetes/High Blood Sugar</Label>
+                  <div className="text-xs text-muted-foreground">Diagnosed with diabetes or high blood sugar</div>
                 </div>
                 <Switch
-                  id="fastingBS"
-                  checked={formData.fastingBS}
-                  onCheckedChange={(checked) => updateField('fastingBS', checked)}
+                  id="diabetes"
+                  checked={formData.diabetes}
+                  onCheckedChange={(checked) => updateField('diabetes', checked)}
                 />
               </div>
               <div className="flex items-center justify-between space-x-2">
@@ -317,14 +321,146 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               </div>
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-1">
-                  <Label htmlFor="diabetes" className="font-medium">Diabetes</Label>
-                  <div className="text-xs text-muted-foreground">Diagnosed with diabetes</div>
+                  <Label htmlFor="previousHeartAttack" className="font-medium">Previous Heart Attack</Label>
+                  <div className="text-xs text-muted-foreground">History of heart attack or cardiac event</div>
                 </div>
                 <Switch
-                  id="diabetes"
-                  checked={formData.diabetes}
-                  onCheckedChange={(checked) => updateField('diabetes', checked)}
+                  id="previousHeartAttack"
+                  checked={formData.previousHeartAttack}
+                  onCheckedChange={(checked) => updateField('previousHeartAttack', checked)}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Conditional Questions */}
+          {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
+                <Heart className="h-5 w-5" />
+                Additional Medical Information
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {formData.previousHeartAttack && (
+                  <div className="space-y-2">
+                    <Label>Are you taking cholesterol medication?</Label>
+                    <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes, taking cholesterol medication</SelectItem>
+                        <SelectItem value="no">No, not taking medication</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.diabetes && (
+                  <div className="space-y-2">
+                    <Label>What diabetes treatment are you taking?</Label>
+                    <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select treatment type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="insulin">Insulin injections</SelectItem>
+                        <SelectItem value="tablets">Oral tablets/pills</SelectItem>
+                        <SelectItem value="both">Both insulin and tablets</SelectItem>
+                        <SelectItem value="none">No medication currently</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.restingBP > 130 && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Are you taking blood pressure medication?</Label>
+                      <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Yes, taking BP medication</SelectItem>
+                          <SelectItem value="no">No, not taking medication</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Have you made lifestyle/diet changes recently?</Label>
+                      <Select value={formData.lifestyleChanges ? 'yes' : 'no'} onValueChange={(value) => updateField('lifestyleChanges', value === 'yes')}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Yes, made significant changes</SelectItem>
+                          <SelectItem value="no">No, no major changes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Lifestyle Assessment */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
+              <Activity className="h-5 w-5" />
+              Lifestyle Assessment
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Dietary Preference</Label>
+                <Select value={formData.dietType} onValueChange={(value) => updateField('dietType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select diet type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                    <SelectItem value="non-vegetarian">Non-Vegetarian</SelectItem>
+                    <SelectItem value="vegan">Vegan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Physical Activity Level</Label>
+                <Select value={formData.physicalActivity} onValueChange={(value) => updateField('physicalActivity', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select activity level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low - Minimal exercise</SelectItem>
+                    <SelectItem value="moderate">Moderate - Regular light exercise</SelectItem>
+                    <SelectItem value="high">High - Intensive regular exercise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stressLevel">Stress Level (1-10)</Label>
+                <Input
+                  id="stressLevel"
+                  type="number"
+                  value={formData.stressLevel}
+                  onChange={(e) => updateField('stressLevel', parseInt(e.target.value) || 5)}
+                  min="1"
+                  max="10"
+                  placeholder="5"
+                />
+                <div className="text-xs text-muted-foreground">1 = Very relaxed, 10 = Extremely stressed</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sleepHours">Average Sleep Hours</Label>
+                <Input
+                  id="sleepHours"
+                  type="number"
+                  value={formData.sleepHours}
+                  onChange={(e) => updateField('sleepHours', parseInt(e.target.value) || 7)}
+                  min="3"
+                  max="12"
+                  placeholder="7"
+                />
+                <div className="text-xs text-muted-foreground">Hours of sleep per night on average</div>
               </div>
             </div>
           </div>
