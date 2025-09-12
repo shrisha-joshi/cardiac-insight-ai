@@ -52,7 +52,16 @@ export const mockPredictions: PredictionResult[] = [
       oldpeak: 1.2,
       stSlope: 'flat',
       smoking: true,
-      diabetes: false
+      diabetes: false,
+      previousHeartAttack: false,
+      cholesterolMedication: false,
+      diabetesMedication: 'none',
+      bpMedication: false,
+      lifestyleChanges: false,
+      dietType: 'non-vegetarian',
+      stressLevel: 8,
+      sleepHours: 6,
+      physicalActivity: 'low'
     },
     riskScore: 75,
     riskLevel: 'high',
@@ -82,7 +91,16 @@ export const mockPredictions: PredictionResult[] = [
       oldpeak: 0.5,
       stSlope: 'up',
       smoking: false,
-      diabetes: false
+      diabetes: false,
+      previousHeartAttack: false,
+      cholesterolMedication: false,
+      diabetesMedication: 'none',
+      bpMedication: false,
+      lifestyleChanges: true,
+      dietType: 'vegetarian',
+      stressLevel: 3,
+      sleepHours: 8,
+      physicalActivity: 'moderate'
     },
     riskScore: 25,
     riskLevel: 'low',
@@ -508,51 +526,6 @@ function generateEnhancedIndianRecommendations(riskLevel: 'low' | 'medium' | 'hi
   recommendations.push('   • Hydration: 8-10 glasses of water daily');
   recommendations.push('   • Social: Maintain strong family and community connections');
   recommendations.push('   • Mindfulness: Practice gratitude and positive thinking');
-  
-  return recommendations;
-}
-  let recommendations: string[] = [];
-  
-  // Immediate medical recommendations based on risk level
-  if (riskLevel === 'high') {
-    recommendations.push('🏥 **URGENT:** Schedule immediate cardiology consultation');
-    recommendations.push('🔬 Consider comprehensive cardiac evaluation (stress test, echocardiogram, CT angiography)');
-    recommendations.push('💊 Discuss preventive medications with your cardiologist (aspirin, statins, ACE inhibitors)');
-  } else if (riskLevel === 'medium') {
-    recommendations.push('🏥 Schedule appointment with primary care physician within 2-4 weeks');
-    recommendations.push('📊 Request comprehensive metabolic panel and lipid profile');
-    recommendations.push('🔍 Consider annual cardiac screening');
-  } else {
-    recommendations.push('✅ Continue current healthy practices');
-    recommendations.push('📅 Maintain regular annual health check-ups');
-  }
-  
-  // Lifestyle recommendations based on specific risk factors
-  if (data.smoking) {
-    recommendations.push('🚭 **CRITICAL:** Quit smoking immediately - seek professional smoking cessation support');
-    recommendations.push('📞 Call smoking cessation helpline: 1-800-QUIT-NOW (US)');
-  }
-  
-  if (data.diabetes || data.fastingBS) {
-    recommendations.push('🍎 **Diabetes Management:** Strict blood sugar control with diet, exercise, and medication compliance');
-    recommendations.push('📱 Consider continuous glucose monitoring');
-  }
-  
-  if (data.restingBP > 130) {
-    recommendations.push('🩺 **Blood Pressure:** Daily monitoring, reduce sodium intake, increase potassium-rich foods');
-    recommendations.push('🧘‍♂️ Practice stress reduction techniques (yoga, meditation, deep breathing)');
-  }
-  
-  if (data.cholesterol > 200) {
-    recommendations.push('🥑 **Diet:** Mediterranean-style diet rich in omega-3 fatty acids, fiber, and antioxidants');
-    recommendations.push('🏃‍♂️ **Exercise:** Minimum 150 minutes moderate aerobic activity weekly');
-  }
-  
-  // Indian traditional medicine recommendations
-  recommendations.push('🇮🇳 **Ayurvedic Support:** Incorporate Arjuna (Terminalia arjuna) tea for heart health');
-  recommendations.push('🧘 **Yoga Practice:** Daily Pranayama (breathing exercises) - Anulom Vilom, Kapalbhati');
-  recommendations.push('💚 **Herbal Support:** Garlic, turmeric, and ginger in daily diet');
-  recommendations.push('🌿 **Lifestyle:** Follow Ayurvedic principles - regular sleep cycle, mindful eating');
   
   return recommendations;
 }
