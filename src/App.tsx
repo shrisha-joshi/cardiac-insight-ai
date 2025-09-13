@@ -12,6 +12,9 @@ import ProfilePage from "./components/profile/ProfilePage";
 import ChatBot from "./components/chatbot/ChatBot";
 import MedicalHistory from "./components/history/MedicalHistory";
 import Header from "./components/layout/Header";
+import BasicDashboard from "./components/subscription/BasicDashboard";
+import PremiumDashboard from "./components/subscription/PremiumDashboard";
+import ProfessionalDashboard from "./components/subscription/ProfessionalDashboard";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +34,9 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/chatbot" element={<ChatBot />} />
             <Route path="/history" element={<MedicalHistory />} />
+            <Route path="/basic-dashboard" element={<BasicDashboard />} />
+            <Route path="/premium-dashboard" element={<PremiumDashboard />} />
+            <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
