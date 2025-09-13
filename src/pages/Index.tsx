@@ -170,7 +170,7 @@ const Index = () => {
                     <span className="text-sm">AI health chatbot</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6" variant="outline">
+                <Button className="w-full mt-6" variant="outline" onClick={() => window.location.href = '/basic-dashboard'}>
                   Get Started
                 </Button>
               </CardContent>
@@ -200,7 +200,7 @@ const Index = () => {
                     <span className="text-sm">Ayurvedic recommendations</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6">
+                <Button className="w-full mt-6" onClick={() => window.location.href = '/premium-dashboard'}>
                   Upgrade to Premium
                 </Button>
               </CardContent>
@@ -227,7 +227,7 @@ const Index = () => {
                     <span className="text-sm">Family health tracking</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6" variant="outline">
+                <Button className="w-full mt-6" variant="outline" onClick={() => window.location.href = '/professional-dashboard'}>
                   Go Professional
                 </Button>
               </CardContent>

@@ -12,16 +12,39 @@ export interface PatientData {
   stSlope: 'up' | 'flat' | 'down';
   smoking: boolean;
   diabetes: boolean;
-  // New enhanced fields
+  // Basic info fields
+  height?: number;
+  weight?: number;
+  // Enhanced health metrics
+  systolicBP?: number;
+  diastolicBP?: number;
+  heartRate?: number;
+  ldlCholesterol?: number;
+  hdlCholesterol?: number;
+  bloodSugar?: number;
+  // Enhanced medical fields
   previousHeartAttack: boolean;
   cholesterolMedication: boolean;
-  diabetesMedication: 'insulin' | 'tablets' | 'both' | 'none';
+  diabetesMedication?: 'insulin' | 'tablets' | 'both' | 'none';
+  diabetesTreatment?: string;
   bpMedication: boolean;
   lifestyleChanges: boolean;
+  ecgResults?: string;
+  exerciseTestResults?: string;
+  currentMedications?: string;
+  // Lifestyle fields
   dietType: 'vegetarian' | 'non-vegetarian' | 'vegan';
   stressLevel: number; // 1-10 scale
   sleepHours: number;
+  sleepQuality?: number;
   physicalActivity: 'low' | 'moderate' | 'high';
+  exerciseFrequency?: number;
+  dietHabits?: string;
+  workStress?: string;
+  supplementsDescription?: string;
+  // Family and medical history
+  familyHistory?: any[];
+  supplements?: any[];
 }
 
 export interface PredictionResult {
@@ -131,16 +154,39 @@ export const defaultPatientData: PatientData = {
   stSlope: 'flat',
   smoking: false,
   diabetes: false,
-  // New enhanced defaults
+  // Basic info defaults
+  height: 170,
+  weight: 70,
+  // Enhanced health metrics defaults
+  systolicBP: 120,
+  diastolicBP: 80,
+  heartRate: 70,
+  ldlCholesterol: 100,
+  hdlCholesterol: 50,
+  bloodSugar: 90,
+  // Enhanced medical defaults
   previousHeartAttack: false,
   cholesterolMedication: false,
   diabetesMedication: 'none',
+  diabetesTreatment: '',
   bpMedication: false,
   lifestyleChanges: false,
+  ecgResults: 'normal',
+  exerciseTestResults: 'normal',
+  currentMedications: '',
+  // Lifestyle defaults
   dietType: 'vegetarian',
   stressLevel: 5,
   sleepHours: 7,
+  sleepQuality: 7,
   physicalActivity: 'moderate',
+  exerciseFrequency: 3,
+  dietHabits: '',
+  workStress: '',
+  supplementsDescription: '',
+  // Family and medical history defaults
+  familyHistory: [],
+  supplements: [],
 };
 
 export function generateMockPrediction(patientData: PatientData): PredictionResult {
