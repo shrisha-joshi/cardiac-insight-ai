@@ -1,11 +1,13 @@
+import { PatientData, PredictionResult } from '@/lib/mockData';
+
 interface AIResponse {
   content: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 class AIService {
   // Fallback AI service that uses rule-based responses
-  async getChatResponse(message: string, context?: any): Promise<AIResponse> {
+  async getChatResponse(message: string, context?: Record<string, unknown>): Promise<AIResponse> {
     const lowerMessage = message.toLowerCase();
     
     // Medical emergency detection
@@ -292,9 +294,9 @@ How can I help you learn about heart health today?`
     return emergencyKeywords.some(keyword => lowerMessage.includes(keyword));
   }
   
-  async generateHealthInsight(patientData: any, predictionResult: any): Promise<string> {
-    const riskLevel = predictionResult.prediction.riskLevel;
-    const riskScore = predictionResult.prediction.riskScore;
+  async generateHealthInsight(patientData: PatientData, predictionResult: PredictionResult): Promise<string> {
+    const riskLevel = predictionResult.riskLevel;
+    const riskScore = predictionResult.riskScore;
     
     let insight = `**⚠️ MEDICAL DISCLAIMER: This analysis is for educational purposes only. Always consult healthcare professionals for medical advice, diagnosis, or treatment decisions.**\n\n`;
     
@@ -303,13 +305,13 @@ How can I help you learn about heart health today?`
     insight += `• Risk Score: ${riskScore.toFixed(1)}%\n\n`;
     
     // Add specific insights based on risk level
-    if (riskLevel === 'High') {
+    if (riskLevel === 'high') {
       insight += `**🚨 Important:** Your assessment indicates elevated cardiovascular risk factors. This is **NOT a medical diagnosis** but suggests you should:\n\n`;
       insight += `**IMMEDIATE NEXT STEPS:**\n`;
       insight += `• **Schedule an appointment with a healthcare provider soon**\n`;
       insight += `• Discuss these results with a cardiologist\n`;
       insight += `• Do not ignore symptoms like chest pain or shortness of breath\n\n`;
-    } else if (riskLevel === 'Medium') {
+    } else if (riskLevel === 'medium') {
       insight += `**⚠️ Notice:** Your assessment shows moderate risk factors that warrant attention. **This is not a diagnosis** but suggests:\n\n`;
       insight += `**RECOMMENDED ACTIONS:**\n`;
       insight += `• **Consult with your primary care physician** about these results\n`;

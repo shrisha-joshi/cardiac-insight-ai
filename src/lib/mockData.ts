@@ -43,8 +43,8 @@ export interface PatientData {
   workStress?: string;
   supplementsDescription?: string;
   // Family and medical history
-  familyHistory?: any[];
-  supplements?: any[];
+  familyHistory?: string[];
+  supplements?: string[];
 }
 
 export interface PredictionResult {
@@ -192,7 +192,7 @@ export const defaultPatientData: PatientData = {
 export function generateMockPrediction(patientData: PatientData): PredictionResult {
   // Advanced medical algorithm with enhanced lifestyle and historical factors
   let riskScore = 0;
-  let riskFactors: string[] = [];
+  const riskFactors: string[] = [];
   
   // Age-based risk
   const ageRisk = calculateAgeRisk(patientData.age, patientData.gender);
@@ -436,7 +436,7 @@ function generateEnhancedExplanationWithReassurance(riskScore: number, riskLevel
   }
   
   // Protective factors
-  let protectiveFactors: string[] = [];
+  const protectiveFactors: string[] = [];
   if (data.dietType === 'vegetarian' || data.dietType === 'vegan') {
     protectiveFactors.push('Plant-based diet provides natural cardiovascular protection');
   }
@@ -474,7 +474,7 @@ function generateEnhancedExplanationWithReassurance(riskScore: number, riskLevel
 }
 
 function generateEnhancedIndianRecommendations(riskLevel: 'low' | 'medium' | 'high', data: PatientData, riskFactors: string[]): string[] {
-  let recommendations: string[] = [];
+  const recommendations: string[] = [];
   
   // Medical recommendations based on risk level
   if (riskLevel === 'high') {

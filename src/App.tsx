@@ -15,6 +15,7 @@ import Header from "./components/layout/Header";
 import BasicDashboard from "./components/subscription/BasicDashboard";
 import PremiumDashboard from "./components/subscription/PremiumDashboard";
 import ProfessionalDashboard from "./components/subscription/ProfessionalDashboard";
+import DatabaseStatus from "./components/database/DatabaseStatus";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/basic-dashboard" element={<BasicDashboard />} />
             <Route path="/premium-dashboard" element={<PremiumDashboard />} />
             <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
+            <Route path="/database-status" element={<DatabaseStatus />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

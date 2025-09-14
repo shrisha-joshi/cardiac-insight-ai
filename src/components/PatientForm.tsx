@@ -23,7 +23,7 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
     onSubmit(formData);
   };
 
-  const updateField = (field: keyof PatientData, value: any) => {
+  const updateField = (field: keyof PatientData, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

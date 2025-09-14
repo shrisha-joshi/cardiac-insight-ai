@@ -1,6 +1,8 @@
+import { PatientData, PredictionResult } from '@/lib/mockData';
+
 interface AIResponse {
   content: string;
-  data?: any;
+  data?: Record<string, unknown>;
   suggestions?: string[];
 }
 
@@ -17,7 +19,7 @@ interface ConversationContext {
 class EnhancedAIService {
   private conversationHistory: Map<string, ConversationContext> = new Map();
 
-  async getChatResponse(message: string, userId: string = 'anonymous', context?: any): Promise<AIResponse> {
+  async getChatResponse(message: string, userId: string = 'anonymous', context?: Record<string, unknown>): Promise<AIResponse> {
     const lowerMessage = message.toLowerCase();
     const userContext = this.conversationHistory.get(userId) || { previousQuestions: [] };
     
@@ -764,7 +766,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
     };
   }
 
-  async generateHealthInsight(patientData: any, predictionResult: any): Promise<string> {
+  async generateHealthInsight(patientData: PatientData, predictionResult: PredictionResult): Promise<string> {
     const riskLevel = predictionResult.riskLevel;
     const riskScore = predictionResult.riskScore;
     
