@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,21 +7,32 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
 import { enhancedAiService } from '@/services/enhancedAIService';
+import { PatientData, PredictionResult } from '@/lib/mockData';
 import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity } from 'lucide-react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Message {
   id: string;
   type: 'user' | 'bot';
   content: string;
   timestamp: Date;
-  data?: any;
+  data?: Record<string, unknown>;
+}
+
+interface AssessmentHistory {
+  id: string;
+  user_id: string;
+  assessment_date: string;
+  patient_data: PatientData;
+  prediction_result: PredictionResult;
+  created_at: string;
 }
 
 export default function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,8 +42,11 @@ export default function ChatBot() {
     });
 
     // Add welcome message with medical disclaimer
-    addBotMessage(
-      `👋 Welcome to your AI Health Assistant!
+    // Add welcome message on component mount
+    const welcomeMessage: Message = {
+      id: 'welcome-' + Date.now().toString(),
+      type: 'bot',
+      content: `👋 Welcome to your AI Health Assistant!
 
 **⚠️ IMPORTANT MEDICAL DISCLAIMER:**
 I'm designed to provide educational information about heart health, but I am **NOT a substitute for professional medical care**. 
@@ -53,8 +67,10 @@ I'm designed to provide educational information about heart health, but I am **N
 
 **Always consult qualified healthcare professionals for medical advice, diagnosis, and treatment.**
 
-How can I help you learn about heart health today?`
-    );
+How can I help you learn about heart health today?`,
+      timestamp: new Date()
+    };
+    setMessages([welcomeMessage]);
   }, []);
 
   useEffect(() => {
@@ -65,7 +81,7 @@ How can I help you learn about heart health today?`
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const addMessage = (type: 'user' | 'bot', content: string, data?: any) => {
+  const addMessage = (type: 'user' | 'bot', content: string, data?: Record<string, unknown>) => {
     const newMessage: Message = {
       id: Date.now().toString(),
       type,
@@ -76,9 +92,9 @@ How can I help you learn about heart health today?`
     setMessages(prev => [...prev, newMessage]);
   };
 
-  const addBotMessage = (content: string, data?: any) => {
+  const addBotMessage = useCallback((content: string, data?: Record<string, unknown>) => {
     addMessage('bot', content, data);
-  };
+  }, []);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || loading) return;
@@ -98,7 +114,7 @@ How can I help you learn about heart health today?`
     }
   };
 
-  const processUserMessage = async (message: string): Promise<{ content: string; data?: any }> => {
+  const processUserMessage = async (message: string): Promise<{ content: string; data?: Record<string, unknown> }> => {
     try {
       // Use the enhanced AI service with comprehensive medical disclaimers
       const response = await enhancedAiService.getChatResponse(message, 'user123', { user });
@@ -207,17 +223,17 @@ For general heart health questions, please try asking again in a moment.`
                       {message.data && message.data.history && (
                         <div className="mt-2 space-y-2 w-full">
                           <p className="text-xs text-muted-foreground">Recent Assessments:</p>
-                          {message.data.history.map((assessment: any, index: number) => (
+                          {(message.data.history as AssessmentHistory[]).map((assessment: AssessmentHistory, index: number) => (
                             <div key={index} className="bg-accent/50 p-2 rounded text-xs">
                               <div className="flex justify-between items-center">
                                 <span>
                                   {new Date(assessment.assessment_date).toLocaleDateString()}
                                 </span>
                                 <Badge variant={
-                                  assessment.prediction_result?.prediction?.riskLevel === 'Low' ? 'secondary' :
-                                  assessment.prediction_result?.prediction?.riskLevel === 'Medium' ? 'default' : 'destructive'
+                                  assessment.prediction_result?.riskLevel === 'low' ? 'secondary' :
+                                  assessment.prediction_result?.riskLevel === 'medium' ? 'default' : 'destructive'
                                 }>
-                                  {assessment.prediction_result?.prediction?.riskLevel || 'Unknown'} Risk
+                                  {assessment.prediction_result?.riskLevel || 'Unknown'} Risk
                                 </Badge>
                               </div>
                             </div>

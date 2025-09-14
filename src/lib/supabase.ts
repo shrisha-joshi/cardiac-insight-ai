@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { PatientData, PredictionResult } from './mockData'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -57,24 +58,24 @@ export type Database = {
           id: string
           user_id: string
           assessment_date: string
-          patient_data: any
-          prediction_result: any
+          patient_data: PatientData
+          prediction_result: PredictionResult
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
           assessment_date: string
-          patient_data: any
-          prediction_result: any
+          patient_data: PatientData
+          prediction_result: PredictionResult
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           assessment_date?: string
-          patient_data?: any
-          prediction_result?: any
+          patient_data?: PatientData
+          prediction_result?: PredictionResult
           created_at?: string
         }
       }
@@ -87,7 +88,7 @@ export type Database = {
           file_type: string
           upload_date: string
           processing_status: string
-          metadata: any
+          metadata: Record<string, unknown>
         }
         Insert: {
           id?: string
@@ -97,7 +98,7 @@ export type Database = {
           file_type: string
           upload_date?: string
           processing_status?: string
-          metadata?: any
+          metadata?: Record<string, unknown>
         }
         Update: {
           id?: string
@@ -107,7 +108,7 @@ export type Database = {
           file_type?: string
           upload_date?: string
           processing_status?: string
-          metadata?: any
+          metadata?: Record<string, unknown>
         }
       }
     }

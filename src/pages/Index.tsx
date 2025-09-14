@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Activity, Shield, Stethoscope, CheckCircle, Users, TrendingUp, Clock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Heart, Activity, Shield, Stethoscope, CheckCircle, Users, TrendingUp, Clock, Database, AlertTriangle } from 'lucide-react';
 import Dashboard from '@/components/Dashboard';
+import { useDatabaseStatus } from '@/hooks/use-database-status';
 import heroImage from '@/assets/medical-hero.jpg';
 
 const Index = () => {
   const [showDashboard, setShowDashboard] = useState(false);
+  const databaseStatus = useDatabaseStatus();
 
   if (showDashboard) {
     return <Dashboard />;
@@ -15,6 +18,33 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Database Status Banner */}
+      {!databaseStatus.checking && (!databaseStatus.isConfigured || !databaseStatus.tablesExist) && (
+        <div className="bg-yellow-50 border-b border-yellow-200">
+          <div className="container mx-auto px-4 py-3">
+            <Alert className="border-yellow-200 bg-transparent">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <span className="font-semibold">Database Setup Required:</span> 
+                {!databaseStatus.isConfigured 
+                  ? " Supabase is not configured. Some features may not work properly."
+                  : " Database tables are missing. Please set up the database to use all features."
+                }
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="p-0 ml-2 h-auto text-yellow-700 hover:text-yellow-900"
+                  onClick={() => window.location.href = '/database-status'}
+                >
+                  <Database className="h-3 w-3 mr-1" />
+                  Check Database Status
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-medical-primary/10 via-background to-medical-secondary/10" />
@@ -35,7 +65,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="text-lg px-8 py-6"
-                  onClick={() => setShowDashboard(true)}
+                  onClick={() => window.location.href = '/basic-dashboard'}
                 >
                   Start Risk Assessment
                   <Heart className="ml-2 h-5 w-5" />
@@ -152,8 +182,8 @@ const Index = () => {
             <Card className="text-center hover:shadow-lg transition-shadow p-8">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold mb-2">Basic</CardTitle>
-                <div className="text-4xl font-bold text-medical-primary mb-2">₹299</div>
-                <p className="text-muted-foreground">per month</p>
+                <div className="text-4xl font-bold text-green-600 mb-2">Free</div>
+                <p className="text-muted-foreground">forever</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="space-y-2 text-left">
@@ -163,15 +193,19 @@ const Index = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-medical-primary" />
-                    <span className="text-sm">Monthly health reports</span>
+                    <span className="text-sm">All PatientForm features</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-medical-primary" />
-                    <span className="text-sm">AI health chatbot</span>
+                    <span className="text-sm">Basic AI insights</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-medical-primary" />
+                    <span className="text-sm">Limited document upload (2 files)</span>
                   </li>
                 </ul>
                 <Button className="w-full mt-6" variant="outline" onClick={() => window.location.href = '/basic-dashboard'}>
-                  Get Started
+                  Get Started Free
                 </Button>
               </CardContent>
             </Card>
@@ -182,7 +216,7 @@ const Index = () => {
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl font-bold mb-2">Premium</CardTitle>
-                <div className="text-4xl font-bold text-medical-primary mb-2">₹799</div>
+                <div className="text-4xl font-bold text-medical-primary mb-2">₹499</div>
                 <p className="text-muted-foreground">per month</p>
               </CardHeader>
               <CardContent className="space-y-4">

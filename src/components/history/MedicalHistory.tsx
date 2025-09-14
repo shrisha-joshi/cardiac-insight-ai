@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,13 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
 import { useToast } from '@/hooks/use-toast';
+import { PatientData, PredictionResult } from '@/lib/mockData';
 import { History, Calendar, TrendingUp, TrendingDown, Minus, Search, Filter, Download, Eye } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
 
 interface MedicalRecord {
   id: string;
   assessment_date: string;
-  patient_data: any;
-  prediction_result: any;
+  patient_data: PatientData;
+  prediction_result: PredictionResult;
   created_at: string;
 }
 
@@ -21,49 +23,125 @@ export default function MedicalHistory() {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchUserAndHistory();
-  }, []);
-
-  useEffect(() => {
-    filterRecords();
-  }, [records, searchTerm, riskFilter]);
-
-  const fetchUserAndHistory = async () => {
+  const fetchUserAndHistory = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL === 'https://placeholder.supabase.co') {
+        console.warn('Supabase not configured - using mock data');
+        setRecords([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Authentication error:', authError);
+        toast({
+          title: "Database Connection Error",
+          description: "Unable to connect to database. Please check your internet connection.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       setUser(user);
 
       if (user) {
-        const history = await mlService.getMedicalHistory(user.id);
-        setRecords(history || []);
+        try {
+          const history = await mlService.getMedicalHistory(user.id);
+          console.log('Fetched medical history:', history);
+          setRecords(history || []);
+        } catch (historyError: unknown) {
+          console.error('Error fetching medical history:', historyError);
+          
+          // Check if it's a network/connection error
+          const errorMessage = historyError instanceof Error ? historyError.message : String(historyError);
+          if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
+            toast({
+              title: "Connection Error",
+              description: "Unable to fetch medical history. Please check your internet connection and try again.",
+              variant: "destructive",
+            });
+          } else {
+            // Try direct Supabase query as fallback
+            try {
+              const { data, error } = await supabase
+                .from('medical_history')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('assessment_date', { ascending: false });
+
+              if (error) {
+                console.error('Direct query error:', error);
+                if (error.code === 'PGRST116') {
+                  toast({
+                    title: "Database Setup Required",
+                    description: "Medical history table not found. Please check database status.",
+                    variant: "destructive",
+                    action: (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => window.location.href = '/database-status'}
+                      >
+                        Check Database
+                      </Button>
+                    ),
+                  });
+                } else {
+                  toast({
+                    title: "Database Error",
+                    description: `Unable to access medical history: ${error.message}`,
+                    variant: "destructive",
+                  });
+                }
+              } else {
+                console.log('Direct query result:', data);
+                setRecords(data || []);
+              }
+            } catch (fallbackError) {
+              console.error('Fallback query failed:', fallbackError);
+              toast({
+                title: "Service Unavailable",
+                description: "Medical history service is temporarily unavailable. Please try again later.",
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      } else {
+        // No user authenticated - this is normal for the demo
+        console.log('No authenticated user - showing empty history');
+        setRecords([]);
       }
-    } catch (error) {
-      console.error('Error fetching medical history:', error);
+    } catch (error: unknown) {
+      console.error('Error in fetchUserAndHistory:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch medical history",
+        title: "Unexpected Error",
+        description: "An unexpected error occurred while loading medical history.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const filterRecords = () => {
+  const filterRecords = useCallback(() => {
     let filtered = records;
 
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(record => {
         const searchLower = searchTerm.toLowerCase();
-        const riskLevel = record.prediction_result?.prediction?.riskLevel?.toLowerCase() || '';
+        const riskLevel = record.prediction_result?.riskLevel?.toLowerCase() || '';
         const date = new Date(record.assessment_date).toLocaleDateString().toLowerCase();
         return riskLevel.includes(searchLower) || date.includes(searchLower);
       });
@@ -72,12 +150,20 @@ export default function MedicalHistory() {
     // Apply risk level filter
     if (riskFilter !== 'all') {
       filtered = filtered.filter(record => 
-        record.prediction_result?.prediction?.riskLevel?.toLowerCase() === riskFilter
+        record.prediction_result?.riskLevel?.toLowerCase() === riskFilter
       );
     }
 
     setFilteredRecords(filtered);
-  };
+  }, [records, searchTerm, riskFilter]);
+
+  useEffect(() => {
+    fetchUserAndHistory();
+  }, [fetchUserAndHistory]);
+
+  useEffect(() => {
+    filterRecords();
+  }, [filterRecords]);
 
   const getRiskBadgeVariant = (riskLevel: string) => {
     switch (riskLevel?.toLowerCase()) {
@@ -91,8 +177,8 @@ export default function MedicalHistory() {
   const getRiskTrend = (currentIndex: number) => {
     if (currentIndex >= records.length - 1) return null;
     
-    const current = records[currentIndex].prediction_result?.prediction?.riskScore || 0;
-    const previous = records[currentIndex + 1].prediction_result?.prediction?.riskScore || 0;
+    const current = records[currentIndex].prediction_result?.riskScore || 0;
+    const previous = records[currentIndex + 1].prediction_result?.riskScore || 0;
     
     if (current > previous) return 'up';
     if (current < previous) return 'down';
@@ -102,7 +188,7 @@ export default function MedicalHistory() {
   const calculateAverageRiskScore = () => {
     if (records.length === 0) return 0;
     const sum = records.reduce((acc, record) => 
-      acc + (record.prediction_result?.prediction?.riskScore || 0), 0
+      acc + (record.prediction_result?.riskScore || 0), 0
     );
     return sum / records.length;
   };
@@ -112,11 +198,11 @@ export default function MedicalHistory() {
       ['Date', 'Risk Level', 'Risk Score', 'Confidence', 'Age', 'Blood Pressure', 'Cholesterol'].join(','),
       ...records.map(record => [
         new Date(record.assessment_date).toLocaleDateString(),
-        record.prediction_result?.prediction?.riskLevel || '',
-        record.prediction_result?.prediction?.riskScore || '',
-        record.prediction_result?.prediction?.confidence || '',
+        record.prediction_result?.riskLevel || '',
+        record.prediction_result?.riskScore || '',
+        record.prediction_result?.confidence || '',
         record.patient_data?.age || '',
-        `${record.patient_data?.bloodPressureSystolic || ''}/${record.patient_data?.bloodPressureDiastolic || ''}`,
+        `${record.patient_data?.systolicBP || ''}/${record.patient_data?.diastolicBP || ''}`,
         record.patient_data?.cholesterol || ''
       ].join(','))
     ].join('\n');
@@ -152,6 +238,47 @@ export default function MedicalHistory() {
             </CardDescription>
           </CardHeader>
         </Card>
+      </div>
+    );
+  }
+
+  if (filteredRecords.length === 0 && !loading) {
+    return (
+      <div className="min-h-screen bg-background py-8">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Medical History</h1>
+            <p className="text-muted-foreground">
+              Track your cardiovascular health assessments over time
+            </p>
+          </div>
+
+          <Card className="text-center py-12">
+            <CardContent>
+              <History className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">No Medical History Found</h2>
+              <p className="text-muted-foreground mb-6">
+                {records.length === 0 
+                  ? "You haven't completed any health assessments yet. Complete an assessment to start tracking your cardiovascular health."
+                  : "No records match your current filters. Try adjusting your search or filter criteria."
+                }
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={() => window.location.href = '/'}>
+                  Complete Assessment
+                </Button>
+                {records.length > 0 && (
+                  <Button variant="outline" onClick={() => {
+                    setSearchTerm('');
+                    setRiskFilter('all');
+                  }}>
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -199,7 +326,7 @@ export default function MedicalHistory() {
                 <div>
                   <p className="text-sm text-muted-foreground">Low Risk</p>
                   <p className="text-2xl font-bold text-success">
-                    {records.filter(r => r.prediction_result?.prediction?.riskLevel?.toLowerCase() === 'low').length}
+                    {records.filter(r => r.prediction_result?.riskLevel?.toLowerCase() === 'low').length}
                   </p>
                 </div>
                 <div className="w-8 h-8 bg-success/20 rounded-full flex items-center justify-center">
@@ -215,7 +342,7 @@ export default function MedicalHistory() {
                 <div>
                   <p className="text-sm text-muted-foreground">High Risk</p>
                   <p className="text-2xl font-bold text-destructive">
-                    {records.filter(r => r.prediction_result?.prediction?.riskLevel?.toLowerCase() === 'high').length}
+                    {records.filter(r => r.prediction_result?.riskLevel?.toLowerCase() === 'high').length}
                   </p>
                 </div>
                 <div className="w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center">
@@ -282,9 +409,9 @@ export default function MedicalHistory() {
         ) : (
           <div className="space-y-4">
             {filteredRecords.map((record, index) => {
-              const riskLevel = record.prediction_result?.prediction?.riskLevel || 'Unknown';
-              const riskScore = record.prediction_result?.prediction?.riskScore || 0;
-              const confidence = record.prediction_result?.prediction?.confidence || 0;
+              const riskLevel = record.prediction_result?.riskLevel || 'Unknown';
+              const riskScore = record.prediction_result?.riskScore || 0;
+              const confidence = record.prediction_result?.confidence || 0;
               const trend = getRiskTrend(records.findIndex(r => r.id === record.id));
 
               return (
@@ -350,8 +477,8 @@ export default function MedicalHistory() {
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Blood Pressure:</span>
                                 <span>
-                                  {record.patient_data?.bloodPressureSystolic || 'N/A'}/
-                                  {record.patient_data?.bloodPressureDiastolic || 'N/A'} mmHg
+                                  {record.patient_data?.systolicBP || 'N/A'}/
+                                  {record.patient_data?.diastolicBP || 'N/A'} mmHg
                                 </span>
                               </div>
                               <div className="flex justify-between">
@@ -360,7 +487,7 @@ export default function MedicalHistory() {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Heart Rate:</span>
-                                <span>{record.patient_data?.restingHeartRate || 'N/A'} bpm</span>
+                                <span>{record.patient_data?.heartRate || 'N/A'} bpm</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">BMI:</span>
@@ -390,7 +517,7 @@ export default function MedicalHistory() {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Exercise (hrs/week):</span>
-                                <span>{record.patient_data?.exerciseHours || 'N/A'}</span>
+                                <span>{record.patient_data?.exerciseFrequency || 'N/A'}</span>
                               </div>
                             </div>
                           </div>

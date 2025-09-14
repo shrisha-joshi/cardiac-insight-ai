@@ -15,9 +15,22 @@ import { useToast } from '@/hooks/use-toast';
 import { Heart, User, LogOut, Settings, History, MessageCircle } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
+interface UserProfile {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  date_of_birth?: string;
+  phone?: string;
+  emergency_contact?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -90,12 +103,6 @@ export default function Header() {
 
         <nav className="hidden md:flex items-center gap-6">
           <Link
-            to="/dashboard"
-            className="text-foreground hover:text-medical-primary transition-colors"
-          >
-            Dashboard
-          </Link>
-          <Link
             to="/history"
             className="text-foreground hover:text-medical-primary transition-colors"
           >
@@ -106,6 +113,12 @@ export default function Header() {
             className="text-foreground hover:text-medical-primary transition-colors"
           >
             AI Assistant
+          </Link>
+          <Link
+            to="/database-status"
+            className="text-foreground hover:text-medical-primary transition-colors text-sm"
+          >
+            Database Status
           </Link>
         </nav>
 

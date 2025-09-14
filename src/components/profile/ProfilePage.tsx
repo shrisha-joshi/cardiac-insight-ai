@@ -32,40 +32,60 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchUserAndProfile();
-  }, []);
+    const fetchData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
 
-  const fetchUserAndProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+        if (user) {
+          // Fetch profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
 
-      if (user) {
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+          if (!profileError && profileData) {
+            setProfile(profileData);
+          } else if (profileError && profileError.code === 'PGRST116') {
+            // Profile doesn't exist, create one
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                user_id: user.id,
+                first_name: '',
+                last_name: '',
+                email: user.email || '',
+              })
+              .select()
+              .single();
 
-        if (!profileError && profileData) {
-          setProfile(profileData);
+            if (!createError && newProfile) {
+              setProfile(newProfile);
+              toast({
+                title: "Profile created",
+                description: "Please update your profile information.",
+              });
+            }
+          }
+
+          // Fetch assessment count
+          const { count } = await supabase
+            .from('medical_history')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
+          setAssessmentCount(count || 0);
         }
-
-        // Fetch assessment count
-        const { count } = await supabase
-          .from('medical_history')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        setAssessmentCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchData();
+  }, [toast]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

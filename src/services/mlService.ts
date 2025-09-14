@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase';
+import { PatientData, PredictionResult } from '@/lib/mockData';
 
 export interface MLPredictionRequest {
-  patientData: any;
+  patientData: PatientData;
   userId?: string;
   useHistoricalData?: boolean;
 }
@@ -194,12 +195,12 @@ class MLService {
     return 'High';
   }
 
-  private generateExplanation(riskScore: number, patientData: any): string {
+  private generateExplanation(riskScore: number, patientData: PatientData): string {
     const factors = [];
     
     if (patientData.age > 60) factors.push('advanced age');
     if (patientData.cholesterol > 240) factors.push('high cholesterol');
-    if (patientData.bloodPressureSystolic > 140) factors.push('high blood pressure');
+    if (patientData.systolicBP && patientData.systolicBP > 140) factors.push('high blood pressure');
     if (patientData.smoking) factors.push('smoking history');
     if (patientData.diabetes) factors.push('diabetes');
 
@@ -220,7 +221,7 @@ class MLService {
     return explanation;
   }
 
-  private generateRecommendations(riskScore: number, patientData: any): string[] {
+  private generateRecommendations(riskScore: number, patientData: PatientData): string[] {
     const recommendations = [
       '⚠️ MEDICAL DISCLAIMER: These are general educational recommendations only. Always consult your healthcare provider before making significant health changes.'
     ];
@@ -228,13 +229,13 @@ class MLService {
     if (patientData.cholesterol > 240) {
       recommendations.push('🩺 Discuss cholesterol management options with your healthcare provider');
     }
-    if (patientData.bloodPressureSystolic > 140) {
+    if (patientData.systolicBP && patientData.systolicBP > 140) {
       recommendations.push('🩺 Consult your doctor about blood pressure monitoring and management strategies');
     }
     if (patientData.smoking) {
       recommendations.push('🩺 Seek professional support for smoking cessation programs');
     }
-    if (patientData.exerciseHours < 3) {
+    if (patientData.exerciseFrequency && patientData.exerciseFrequency < 3) {
       recommendations.push('🩺 Ask your healthcare provider about safe exercise recommendations for your condition');
     }
 
@@ -246,7 +247,7 @@ class MLService {
     return recommendations;
   }
 
-  private getAnalyzedFactors(patientData: any): string[] {
+  private getAnalyzedFactors(patientData: PatientData): string[] {
     return [
       'Age and Gender',
       'Blood Pressure',
@@ -259,7 +260,7 @@ class MLService {
     ];
   }
 
-  private async savePredictionToHistory(userId: string, patientData: any, prediction: MLPredictionResponse): Promise<void> {
+  private async savePredictionToHistory(userId: string, patientData: PatientData, prediction: MLPredictionResponse): Promise<void> {
     try {
       await supabase.from('medical_history').insert({
         user_id: userId,
@@ -272,7 +273,7 @@ class MLService {
     }
   }
 
-  private fallbackPrediction(patientData: any): MLPredictionResponse {
+  private fallbackPrediction(patientData: PatientData): MLPredictionResponse {
     // Simple rule-based fallback
     let riskScore = 0.2;
     
@@ -285,8 +286,8 @@ class MLService {
     else if (patientData.cholesterol > 240) riskScore += 0.2;
     
     // Blood pressure
-    if (patientData.bloodPressureSystolic > 160) riskScore += 0.3;
-    else if (patientData.bloodPressureSystolic > 140) riskScore += 0.2;
+    if (patientData.systolicBP && patientData.systolicBP > 160) riskScore += 0.3;
+    else if (patientData.systolicBP && patientData.systolicBP > 140) riskScore += 0.2;
     
     // Risk factors
     if (patientData.smoking) riskScore += 0.2;
