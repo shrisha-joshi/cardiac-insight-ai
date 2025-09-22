@@ -1,5 +1,9 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
+import { config } from '@/lib/config';
 import { PatientData, PredictionResult } from '@/lib/mockData';
 
+// Legacy interfaces for backwards compatibility
 interface AIResponse {
   content: string;
   data?: Record<string, unknown>;
@@ -16,8 +20,51 @@ interface ConversationContext {
   currentTopic?: string;
 }
 
+// New interfaces for enhanced AI
+export interface EnhancedAIRequest {
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  patientData: {
+    age: number;
+    gender: string;
+    medicalHistory: string[];
+    currentConditions: string[];
+    lifestyle: string[];
+  };
+  requestType: 'medicines' | 'ayurveda' | 'yoga' | 'diet' | 'comprehensive';
+}
+
+export interface EnhancedAIResponse {
+  suggestions: {
+    medicines?: string[];
+    ayurveda?: string[];
+    yoga?: string[];
+    diet?: string[];
+    lifestyle?: string[];
+  };
+  warnings: string[];
+  disclaimer: string;
+  source: 'gemini' | 'openai' | 'fallback';
+}
+
 class EnhancedAIService {
   private conversationHistory: Map<string, ConversationContext> = new Map();
+  private gemini: GoogleGenerativeAI | null = null;
+  private openai: OpenAI | null = null;
+
+  constructor() {
+    // Initialize Google Gemini
+    if (config.ai.providers.gemini.enabled && config.ai.providers.gemini.apiKey) {
+      this.gemini = new GoogleGenerativeAI(config.ai.providers.gemini.apiKey);
+    }
+
+    // Initialize OpenAI
+    if (config.ai.providers.openai.enabled && config.ai.providers.openai.apiKey) {
+      this.openai = new OpenAI({
+        apiKey: config.ai.providers.openai.apiKey,
+        dangerouslyAllowBrowser: true // Note: In production, calls should go through a backend
+      });
+    }
+  }
 
   async getChatResponse(message: string, userId: string = 'anonymous', context?: Record<string, unknown>): Promise<AIResponse> {
     const lowerMessage = message.toLowerCase();
@@ -847,6 +894,251 @@ I'm here to provide comprehensive heart health education with a focus on **India
     insight += `4. Track your progress using health apps or journals\n`;
     
     return insight;
+  }
+
+  // New enhanced AI methods using Gemini and OpenAI
+  async getEnhancedSuggestions(request: EnhancedAIRequest): Promise<EnhancedAIResponse> {
+    const prompt = this.buildEnhancedPrompt(request);
+
+    try {
+      // Try Gemini first
+      if (this.gemini) {
+        const response = await this.callGemini(prompt);
+        if (response && response.suggestions) {
+          return {
+            suggestions: response.suggestions,
+            warnings: response.warnings || [],
+            source: 'gemini',
+            disclaimer: this.getMedicalDisclaimer()
+          };
+        }
+      }
+
+      // Fallback to OpenAI
+      if (this.openai) {
+        const response = await this.callOpenAI(prompt);
+        if (response && response.suggestions) {
+          return {
+            suggestions: response.suggestions,
+            warnings: response.warnings || [],
+            source: 'openai',
+            disclaimer: this.getMedicalDisclaimer()
+          };
+        }
+      }
+
+      // Fallback to rule-based suggestions
+      return this.getFallbackSuggestions(request);
+    } catch (error) {
+      console.error('AI service error:', error);
+      return this.getFallbackSuggestions(request);
+    }
+  }
+
+  private buildEnhancedPrompt(request: EnhancedAIRequest): string {
+    const { riskLevel, patientData, requestType } = request;
+    
+    return `
+    You are a medical AI assistant providing evidence-based health suggestions. 
+    
+    Patient Profile:
+    - Age: ${patientData.age}
+    - Gender: ${patientData.gender}
+    - Cardiovascular Risk Level: ${riskLevel.toUpperCase()}
+    - Medical History: ${patientData.medicalHistory.join(', ') || 'None specified'}
+    - Current Conditions: ${patientData.currentConditions.join(', ') || 'None specified'}
+    - Lifestyle Factors: ${patientData.lifestyle.join(', ') || 'None specified'}
+
+    Please provide ${requestType === 'comprehensive' ? 'comprehensive' : requestType} suggestions for cardiovascular health improvement.
+
+    ${requestType === 'comprehensive' || requestType === 'medicines' ? `
+    MEDICINES/SUPPLEMENTS (over-the-counter and general recommendations):
+    - Evidence-based supplements for heart health
+    - General medication categories (user should consult doctor for prescriptions)
+    - Vitamins and minerals beneficial for cardiovascular health
+    ` : ''}
+
+    ${requestType === 'comprehensive' || requestType === 'ayurveda' ? `
+    AYURVEDIC APPROACHES:
+    - Traditional herbs known for heart health (Arjuna, Garlic, Turmeric, etc.)
+    - Ayurvedic lifestyle practices
+    - Pranayama (breathing exercises)
+    - Dietary principles from Ayurveda
+    ` : ''}
+
+    ${requestType === 'comprehensive' || requestType === 'yoga' ? `
+    YOGA & PHYSICAL PRACTICES:
+    - Specific yoga poses for heart health
+    - Breathing exercises (Pranayama)
+    - Meditation techniques for stress reduction
+    - Safe exercise guidelines based on risk level
+    ` : ''}
+
+    ${requestType === 'comprehensive' || requestType === 'diet' ? `
+    DIETARY RECOMMENDATIONS:
+    - Heart-healthy foods to include
+    - Foods to avoid or limit
+    - Meal timing and portion control
+    - Specific nutrients important for cardiovascular health
+    ` : ''}
+
+    IMPORTANT: 
+    1. Provide practical, actionable suggestions
+    2. Consider the ${riskLevel} risk level in your recommendations
+    3. Include appropriate warnings for high-risk patients
+    4. Suggest consulting healthcare providers for personalized treatment
+    5. Format your response as JSON with categories: medicines, ayurveda, yoga, diet, warnings
+
+    Respond with valid JSON only.
+    `;
+  }
+
+  private async callGemini(prompt: string): Promise<Partial<EnhancedAIResponse> | null> {
+    if (!this.gemini) return null;
+
+    try {
+      const model = this.gemini.getGenerativeModel({ model: config.ai.providers.gemini.model });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      // Try to parse JSON response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          suggestions: parsed,
+          warnings: parsed.warnings || []
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      return null;
+    }
+  }
+
+  private async callOpenAI(prompt: string): Promise<Partial<EnhancedAIResponse> | null> {
+    if (!this.openai) return null;
+
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: config.ai.providers.openai.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a medical AI assistant. Provide evidence-based health suggestions in JSON format. Always include appropriate medical disclaimers.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: config.ai.providers.openai.maxTokens,
+        temperature: 0.7
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (content) {
+        // Try to parse JSON response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            suggestions: parsed,
+            warnings: parsed.warnings || []
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      return null;
+    }
+  }
+
+  private getFallbackSuggestions(request: EnhancedAIRequest): EnhancedAIResponse {
+    const { riskLevel } = request;
+
+    const baseSuggestions = {
+      medicines: [
+        'Omega-3 fatty acids (fish oil supplements)',
+        'Coenzyme Q10 for heart health',
+        'Magnesium supplements (consult doctor for dosage)',
+        'Vitamin D3 if deficient',
+        'Low-dose aspirin (only if recommended by doctor)'
+      ],
+      ayurveda: [
+        'Arjuna bark powder (1-2 tsp with warm water)',
+        'Garlic cloves (2-3 daily on empty stomach)',
+        'Turmeric with black pepper in warm milk',
+        'Triphala for digestive health',
+        'Ashwagandha for stress management'
+      ],
+      yoga: [
+        'Shavasana (Corpse Pose) for relaxation',
+        'Anulom Vilom (Alternate Nostril Breathing)',
+        'Bhramari Pranayama (Humming Bee Breath)',
+        'Gentle Surya Namaskara (Sun Salutations)',
+        'Meditation for 10-15 minutes daily'
+      ],
+      diet: [
+        'Increase fruits and vegetables (5-7 servings daily)',
+        'Choose whole grains over refined grains',
+        'Include fatty fish 2-3 times per week',
+        'Limit sodium intake to less than 2300mg daily',
+        'Stay hydrated with 8-10 glasses of water daily'
+      ]
+    };
+
+    let warnings: string[] = [];
+
+    if (riskLevel === 'high' || riskLevel === 'critical') {
+      warnings = [
+        'HIGH RISK: Consult a cardiologist immediately',
+        'Do not start any new supplements without medical supervision',
+        'Avoid intense physical activities until cleared by doctor',
+        'Monitor blood pressure and heart rate regularly'
+      ];
+    } else if (riskLevel === 'medium') {
+      warnings = [
+        'Regular medical check-ups recommended',
+        'Start new activities gradually',
+        'Monitor your response to dietary changes'
+      ];
+    }
+
+    return {
+      suggestions: baseSuggestions,
+      warnings,
+      disclaimer: this.getMedicalDisclaimer(),
+      source: 'fallback'
+    };
+  }
+
+  private getMedicalDisclaimer(): string {
+    return `
+    MEDICAL DISCLAIMER: This information is for educational purposes only and should not replace professional medical advice. 
+    Always consult with qualified healthcare providers before making any changes to your medication, diet, or exercise routine. 
+    In case of chest pain, shortness of breath, or other emergency symptoms, seek immediate medical attention.
+    Emergency: Call your local emergency number immediately.
+    `;
+  }
+
+  // Method to check if AI services are available
+  isAIAvailable(): boolean {
+    return !!(this.gemini || this.openai);
+  }
+
+  // Method to get available AI providers
+  getAvailableProviders(): string[] {
+    const providers: string[] = [];
+    if (this.gemini) providers.push('Google Gemini');
+    if (this.openai) providers.push('OpenAI GPT');
+    if (providers.length === 0) providers.push('Rule-based fallback');
+    return providers;
   }
 }
 

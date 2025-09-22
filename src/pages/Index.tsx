@@ -243,7 +243,7 @@ const Index = () => {
             <Card className="text-center hover:shadow-lg transition-shadow p-8">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold mb-2">Professional</CardTitle>
-                <div className="text-4xl font-bold text-medical-secondary mb-2">₹1,499</div>
+                <div className="text-4xl font-bold text-medical-secondary mb-2">₹999</div>
                 <p className="text-muted-foreground">per month</p>
               </CardHeader>
               <CardContent className="space-y-4">

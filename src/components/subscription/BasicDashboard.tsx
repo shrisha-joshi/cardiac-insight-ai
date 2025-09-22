@@ -32,22 +32,35 @@ export default function BasicDashboard() {
 
   const checkAuthAndRedirect = useCallback(async () => {
     try {
+      // First check if there's a session in progress
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+        setAuthLoading(false);
+        return;
+      }
+      
+      // If no session, check user
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to access the Basic Dashboard",
-          variant: "destructive",
-        });
-        navigate('/login');
+        // Only redirect if we're certain there's no authentication
+        if (error?.message !== 'Auth session missing!' && error?.message !== 'JWT expired') {
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to access the Basic Dashboard",
+            variant: "destructive",
+          });
+          navigate('/login');
+        }
         return;
       }
       
       setUser(user);
     } catch (error) {
       console.error('Auth check error:', error);
-      navigate('/login');
+      // Don't redirect on network or temporary errors
     } finally {
       setAuthLoading(false);
     }
@@ -55,7 +68,23 @@ export default function BasicDashboard() {
 
   useEffect(() => {
     checkAuthAndRedirect();
-  }, [checkAuthAndRedirect]);
+    
+    // Listen for auth state changes to maintain session
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/login');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        setAuthLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAuthAndRedirect, navigate]);
 
   // Show loading while checking authentication
   if (authLoading) {
