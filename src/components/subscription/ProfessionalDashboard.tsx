@@ -32,11 +32,20 @@ import {
   Star,
   AlertTriangle,
   BarChart3,
-  LineChart
+  LineChart,
+  X,
+  Loader2,
+  Clock,
+  Pill,
+  Leaf,
+  HeartPulse,
+  Apple
 } from 'lucide-react';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { PDFService, type PDFReportData } from '@/services/pdfService';
+import { enhancedAiService, type EnhancedAIRequest, type EnhancedAIResponse } from '@/services/enhancedAIService';
 import type { User } from '@supabase/supabase-js';
 
 interface FamilyMember {
@@ -130,28 +139,43 @@ export default function ProfessionalDashboard() {
     reportId: string;
     nextFollowUp: string;
   } | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<EnhancedAIResponse | null>(null);
+  const [loadingAISuggestions, setLoadingAISuggestions] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const checkAuthAndRedirect = useCallback(async () => {
     try {
+      // First check if there's a session in progress
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+        setAuthLoading(false);
+        return;
+      }
+      
+      // If no session, check user
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to access the Professional Dashboard",
-          variant: "destructive",
-        });
-        navigate('/');
+        // Only redirect if we're certain there's no authentication
+        if (error?.message !== 'Auth session missing!' && error?.message !== 'JWT expired') {
+          toast({
+            title: "Authentication Required",
+            description: "Please sign in to access the Professional Dashboard",
+            variant: "destructive",
+          });
+          navigate('/');
+        }
         return;
       }
       
       setUser(user);
     } catch (error) {
       console.error('Auth check error:', error);
-      navigate('/');
+      // Don't redirect on network or temporary errors
     } finally {
       setAuthLoading(false);
     }
@@ -159,7 +183,23 @@ export default function ProfessionalDashboard() {
 
   useEffect(() => {
     checkAuthAndRedirect();
-  }, [checkAuthAndRedirect]);
+    
+    // Listen for auth state changes to maintain session
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        setAuthLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAuthAndRedirect, navigate]);
 
   // Show loading while checking authentication
   if (authLoading) {
@@ -355,16 +395,110 @@ export default function ProfessionalDashboard() {
     setGeneratedReport(report);
     setShowReport(true);
     setProcessingLoading(false);
+    
+    // Generate AI-powered suggestions
+    await getAISuggestions(report.urgencyLevel, formData);
   };
 
-  const downloadReportAsPDF = () => {
-    // In a real implementation, this would use a PDF generation library like jsPDF
-    alert('Professional PDF report generation will be implemented with medical-grade PDF library for clinical documentation');
+  const getAISuggestions = async (riskLevel: 'low' | 'moderate' | 'high' | 'critical', patientData: PatientData) => {
+    setLoadingAISuggestions(true);
+    
+    try {
+      // Map risk level to match AI service interface
+      const mappedRiskLevel: 'low' | 'medium' | 'high' | 'critical' = 
+        riskLevel === 'moderate' ? 'medium' : riskLevel as 'low' | 'high' | 'critical';
+      
+      const aiRequest: EnhancedAIRequest = {
+        riskLevel: mappedRiskLevel,
+        patientData: {
+          age: patientData.age || 0,
+          gender: patientData.gender || 'Not specified',
+          medicalHistory: [
+            ...(patientData.diabetes ? ['Diabetes'] : []),
+            ...(patientData.smoking ? ['Smoking'] : []),
+            ...(patientData.previousHeartAttack ? ['Previous Heart Attack'] : []),
+            ...(patientData.cholesterolMedication ? ['High Cholesterol'] : []),
+            ...(patientData.bpMedication ? ['High Blood Pressure'] : [])
+          ],
+          currentConditions: [
+            `Chest Pain Type: ${patientData.chestPainType}`,
+            `Resting BP: ${patientData.restingBP}`,
+            `Cholesterol: ${patientData.cholesterol}`,
+            `Max HR: ${patientData.maxHR}`
+          ],
+          lifestyle: [
+            ...(patientData.exerciseAngina ? ['Exercise-induced Angina'] : []),
+            `ECG: ${patientData.restingECG}`,
+            `ST Slope: ${patientData.stSlope}`
+          ]
+        },
+        requestType: 'comprehensive'
+      };
+
+      const suggestions = await enhancedAiService.getEnhancedSuggestions(aiRequest);
+      setAiSuggestions(suggestions);
+      
+      toast({
+        title: "AI Suggestions Generated",
+        description: `Enhanced recommendations from ${suggestions.source === 'gemini' ? 'Google Gemini' : suggestions.source === 'openai' ? 'OpenAI' : 'Rule-based AI'}`,
+      });
+    } catch (error) {
+      console.error('Error getting AI suggestions:', error);
+      toast({
+        title: "AI Suggestions Unavailable",
+        description: "Using standard medical recommendations instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAISuggestions(false);
+    }
+  };
+
+  const downloadReportAsPDF = async () => {
+    if (!generatedReport) return;
+
+    try {
+      const pdfData: PDFReportData = {
+        patientInfo: {
+          name: `Patient ${generatedReport.reportId}`,
+          age: formData.age || 0,
+          gender: formData.gender || 'Not specified',
+          assessmentDate: generatedReport.testDate
+        },
+        riskAssessment: {
+          overallRisk: generatedReport.clinicalAssessment.overallRisk,
+          riskLevel: generatedReport.urgencyLevel,
+          factors: [
+            ...generatedReport.biomarkerAnalysis.critical,
+            ...generatedReport.biomarkerAnalysis.elevated
+          ]
+        },
+        recommendations: generatedReport.professionalRecommendations,
+        reportType: 'professional',
+        reportId: generatedReport.reportId
+      };
+
+      await PDFService.generateReport(pdfData);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: "Professional clinical report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Download Error",
+        description: "Failed to generate PDF report. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const resetForm = () => {
     setShowReport(false);
     setGeneratedReport(null);
+    setAiSuggestions(null);
+    setLoadingAISuggestions(false);
     setFormData({
       ...defaultPatientData,
       stressLevel: 5,
@@ -649,6 +783,160 @@ export default function ProfessionalDashboard() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI-Powered Enhanced Suggestions */}
+          {(aiSuggestions || loadingAISuggestions) && (
+            <Card className="shadow-xl border-0">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-6 w-6 text-emerald-600" />
+                  AI-Powered Medical Recommendations
+                  {aiSuggestions && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      Powered by {aiSuggestions.source === 'gemini' ? 'Google Gemini' : aiSuggestions.source === 'openai' ? 'OpenAI' : 'AI'}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loadingAISuggestions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+                    <span className="ml-3 text-lg font-medium text-gray-600">
+                      Generating personalized medical recommendations...
+                    </span>
+                  </div>
+                ) : aiSuggestions ? (
+                  <div className="space-y-6">
+                    {/* Medicines Section */}
+                    {aiSuggestions.suggestions.medicines && aiSuggestions.suggestions.medicines.length > 0 && (
+                      <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
+                        <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2">
+                          <Pill className="h-5 w-5" />
+                          Recommended Medicines
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {aiSuggestions.suggestions.medicines.map((medicine, index) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-blue-200">
+                              <div className="font-semibold text-blue-700 mb-2">{medicine}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ayurveda Section */}
+                    {aiSuggestions.suggestions.ayurveda && aiSuggestions.suggestions.ayurveda.length > 0 && (
+                      <div className="bg-amber-50 rounded-xl p-6 border border-amber-100">
+                        <h3 className="text-xl font-bold text-amber-800 mb-4 flex items-center gap-2">
+                          <Leaf className="h-5 w-5" />
+                          Ayurvedic Recommendations
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {aiSuggestions.suggestions.ayurveda.map((remedy, index) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-amber-200">
+                              <div className="font-semibold text-amber-700 mb-2">{remedy}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Yoga Section */}
+                    {aiSuggestions.suggestions.yoga && aiSuggestions.suggestions.yoga.length > 0 && (
+                      <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
+                        <h3 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
+                          <HeartPulse className="h-5 w-5" />
+                          Yoga & Exercise Recommendations
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {aiSuggestions.suggestions.yoga.map((yoga, index) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-purple-200">
+                              <div className="font-semibold text-purple-700 mb-2">{yoga}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Diet Section */}
+                    {aiSuggestions.suggestions.diet && aiSuggestions.suggestions.diet.length > 0 && (
+                      <div className="bg-green-50 rounded-xl p-6 border border-green-100">
+                        <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
+                          <Apple className="h-5 w-5" />
+                          Dietary Recommendations
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {aiSuggestions.suggestions.diet.map((diet, index) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-green-200">
+                              <div className="font-semibold text-green-700 mb-2">{diet}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lifestyle & General Recommendations */}
+                    {aiSuggestions.suggestions.lifestyle && aiSuggestions.suggestions.lifestyle.length > 0 && (
+                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                          <Clock className="h-5 w-5" />
+                          Lifestyle Recommendations
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {aiSuggestions.suggestions.lifestyle.map((lifestyle, index) => (
+                            <div key={index} className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200">
+                              <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <div className="font-semibold text-gray-800 mb-1">{lifestyle}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warnings */}
+                    {aiSuggestions.warnings && aiSuggestions.warnings.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <h3 className="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5" />
+                          Important Warnings
+                        </h3>
+                        <ul className="space-y-2">
+                          {aiSuggestions.warnings.map((warning, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-red-700">{warning}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Disclaimer */}
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-yellow-800 mb-2">
+                            AI Source: {aiSuggestions.source === 'gemini' ? 'Google Gemini' : aiSuggestions.source === 'openai' ? 'OpenAI' : 'Rule-based AI'}
+                          </p>
+                          <p className="text-xs text-yellow-700 whitespace-pre-line">
+                            {aiSuggestions.disclaimer}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">AI suggestions could not be generated at this time.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

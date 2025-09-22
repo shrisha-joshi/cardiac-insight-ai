@@ -12,8 +12,15 @@ export const config = {
   ai: {
     providers: {
       openai: {
-        enabled: false, // Set to true when API keys are configured
-        apiKey: import.meta.env.VITE_OPENAI_API_KEY
+        enabled: !!import.meta.env.VITE_OPENAI_API_KEY,
+        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+        model: 'gpt-3.5-turbo',
+        maxTokens: 1000
+      },
+      gemini: {
+        enabled: !!import.meta.env.VITE_GOOGLE_GEMINI_API_KEY,
+        apiKey: import.meta.env.VITE_GOOGLE_GEMINI_API_KEY,
+        model: 'gemini-pro'
       },
       huggingface: {
         enabled: false, // Set to true when API keys are configured
@@ -41,7 +48,8 @@ export const config = {
     chatbot: true,
     medicalHistory: true,
     datasetUpload: true,
-    profileManagement: true
+    profileManagement: true,
+    enhancedAI: true // For Gemini and OpenAI enhanced suggestions
   }
 };
 
