@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
-import { Heart, Activity, User, Stethoscope, Upload, FileText } from 'lucide-react';
+import { validatePatientDataComprehensive, getChecksBySeverity } from '@/lib/edgeCaseHandler';
+import { Heart, Activity, User, Stethoscope, Upload, FileText, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface PatientFormProps {
   onSubmit: (data: PatientData) => void;
@@ -17,9 +19,22 @@ interface PatientFormProps {
 export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
   const [formData, setFormData] = useState<PatientData>(defaultPatientData);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate data before submitting
+    const validation = validatePatientDataComprehensive(formData);
+    setValidationResult(validation);
+    
+    if (validation.hasError) {
+      setShowValidationErrors(true);
+      return; // Don't submit if there are errors
+    }
+    
+    // If validation passes or only has warnings, proceed
     onSubmit(formData);
   };
 
@@ -551,7 +566,7 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
                   value={formData.pincode || ''}
                   onChange={(e) => updateField('pincode', e.target.value)}
                   placeholder="e.g., 560001"
-                  maxLength="6"
+                  maxLength={6}
                 />
                 <div className="text-xs text-muted-foreground">Optional: Auto-detect region from pincode</div>
               </div>
@@ -624,6 +639,63 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               </div>
             </div>
           </div>
+
+          {/* Validation Alerts */}
+          {showValidationErrors && validationResult && (
+            <div className="space-y-3">
+              {/* Error Alerts */}
+              {validationResult.hasError && (
+                <Alert className="border-destructive/50 bg-destructive/10">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <AlertDescription className="text-destructive">
+                    <div className="font-semibold mb-2">❌ Data Validation Failed</div>
+                    {getChecksBySeverity(validationResult, 'error').map((check, idx) => (
+                      <div key={idx} className="mb-2 text-sm">
+                        <div className="font-medium">{check.field.toUpperCase()}:</div>
+                        <div className="ml-2">{check.message}</div>
+                        {check.suggestion && (
+                          <div className="ml-2 text-xs italic">💡 {check.suggestion}</div>
+                        )}
+                      </div>
+                    ))}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Warning Alerts */}
+              {!validationResult.hasError && validationResult.isWarning && (
+                <Alert className="border-yellow-600/50 bg-yellow-50">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    <div className="font-semibold mb-2">⚠️ Data Warnings</div>
+                    {getChecksBySeverity(validationResult, 'warning').map((check, idx) => (
+                      <div key={idx} className="mb-2 text-sm">
+                        <div className="font-medium">{check.field.toUpperCase()}:</div>
+                        <div className="ml-2">{check.message}</div>
+                        {check.suggestion && (
+                          <div className="ml-2 text-xs italic">💡 {check.suggestion}</div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="mt-3 text-xs">
+                      <strong>Note:</strong> You can proceed with submission, but please review the warnings carefully.
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Info Alerts */}
+              {!validationResult.hasError && !validationResult.isWarning && validationResult.checks.length > 0 && (
+                <Alert className="border-blue-600/50 bg-blue-50">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    <div className="font-semibold">✅ Data Validation Passed</div>
+                    <div className="text-sm mt-1">{validationResult.summary}</div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? 'Analyzing...' : 'Predict Heart Attack Risk'}

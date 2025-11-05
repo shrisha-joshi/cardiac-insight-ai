@@ -73,6 +73,24 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
   const [predictions, setPredictions] = useState<PredictionWithFeedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🔥 FIXED: Real-time database refresh on new predictions
+  const reloadPredictionsFromDatabase = useCallback(async (currentUserId: string) => {
+    if (!currentUserId || !isSupabaseConfigured) return;
+    
+    try {
+      console.log('🔄 Refreshing predictions from database...');
+      const dbPredictions = await loadPredictionsFromDatabase(currentUserId);
+      
+      if (dbPredictions && dbPredictions.length > 0) {
+        const transformed = dbPredictions.map(transformDatabasePrediction);
+        console.log(`✅ Refreshed ${transformed.length} predictions from database`);
+        setPredictions(transformed);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error refreshing from database:', error);
+    }
+  }, []);
+
   // Initialize user ID and load predictions from database
   useEffect(() => {
     const initializeUser = async () => {
@@ -83,7 +101,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
         if (user?.id) {
           setUserId(user.id);
           
-          // 🔥 NEW: Try to load from Supabase database first
+          // 🔥 Try to load from Supabase database first
           if (isSupabaseConfigured) {
             try {
               console.log('📥 Loading predictions from Supabase database...');
@@ -136,7 +154,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
     if (!authLoading) {
       initializeUser();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, reloadPredictionsFromDatabase]);
 
   // Save predictions to localStorage for this user
   const savePredictionsToStorage = useCallback((preds: PredictionWithFeedback[]) => {
@@ -177,7 +195,16 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
       
       return limited;
     });
-  }, [savePredictionsToStorage]);
+    
+    // 🔥 FIXED: Refresh from database after prediction added
+    // This ensures the UI shows the newly saved prediction from database
+    if (userId && isSupabaseConfigured) {
+      // Use setTimeout to allow database to process the insert
+      setTimeout(() => {
+        reloadPredictionsFromDatabase(userId);
+      }, 500);
+    }
+  }, [savePredictionsToStorage, userId, reloadPredictionsFromDatabase]);
 
   // Remove prediction by id
   const removePrediction = useCallback((id: string) => {

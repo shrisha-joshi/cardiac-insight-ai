@@ -111,9 +111,14 @@ function assessFemaleRiskFactors(patient: PatientData): {
 } {
   const factors: string[] = [];
   let adjustment = 0;
-  const reproductiveHistory = {
-    pregnancyComplications: [] as string[],
-    menopauseStatus: 'unknown' as const,
+  const reproductiveHistory: {
+    pregnancyComplications: string[];
+    menopauseStatus: 'pre' | 'peri' | 'post' | 'unknown';
+    yearsPostMenopause?: number;
+    hormonalTherapyStatus?: 'never' | 'current' | 'past';
+  } = {
+    pregnancyComplications: [],
+    menopauseStatus: 'unknown',
   };
 
   // Age thresholds for women (later onset than men)
