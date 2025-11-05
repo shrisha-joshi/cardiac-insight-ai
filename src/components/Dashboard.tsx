@@ -9,7 +9,7 @@ import { PatientData, PredictionResult, generateMockPrediction } from '@/lib/moc
 import { usePredictionHistory } from '@/hooks/use-prediction-history';
 import { useAuth } from '@/hooks/useAuth';
 import { mlService } from '@/services/mlService';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, savePredictionToDatabase } from '@/lib/supabase';
 import { Heart, History, User, BarChart3, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +65,25 @@ export default function Dashboard() {
       
       // Add prediction to history and save to localStorage
       addPrediction(prediction);
+      
+      // ✅ NEW: Save prediction to Supabase database for permanent storage
+      if (user?.id) {
+        const dbResult = await savePredictionToDatabase(user.id, patientData, prediction);
+        if (dbResult.success) {
+          toast({
+            title: "💾 Saved to Database",
+            description: "Your prediction has been permanently saved to your history.",
+            variant: 'default',
+          });
+        } else {
+          console.warn('⚠️ Failed to save to database:', dbResult.error);
+          toast({
+            title: "⚠️ Database Save Failed",
+            description: "Prediction saved to history locally, but database save failed.",
+            variant: 'destructive',
+          });
+        }
+      }
       
       // Automatically switch to results tab
       setActiveTab('results');

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PredictionResult, mockPredictions } from '@/lib/mockData';
 import { useAuth } from './useAuth';
-import { supabase } from '@/lib/supabase';
+import { supabase, loadPredictionsFromDatabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const STORAGE_KEY_PREFIX = 'cardiac_insight_user_';
 const MAX_HISTORY_ITEMS = 100; // Maximum predictions to store
@@ -25,13 +25,55 @@ interface UsePredictionHistoryReturn {
   isLoading: boolean;
 }
 
+/**
+ * Transform database prediction record to PredictionWithFeedback format
+ */
+function transformDatabasePrediction(dbPred: any): PredictionWithFeedback {
+  return {
+    id: dbPred.id,
+    timestamp: new Date(dbPred.created_at),
+    riskLevel: (dbPred.risk_level || 'low').toLowerCase() as 'low' | 'medium' | 'high',
+    riskScore: dbPred.risk_score || 0,
+    confidence: dbPred.confidence || 0,
+    prediction: dbPred.prediction || 'No Risk',
+    explanation: dbPred.explanation || '',
+    recommendations: dbPred.recommendations || [],
+    patientData: {
+      age: dbPred.patient_age,
+      gender: (dbPred.patient_gender as 'male' | 'female') || 'male',
+      chestPainType: 'typical',
+      restingBP: dbPred.resting_bp || 120,
+      cholesterol: dbPred.cholesterol || 200,
+      fastingBS: dbPred.blood_sugar_fasting || false,
+      restingECG: 'normal',
+      maxHR: dbPred.max_heart_rate || 150,
+      exerciseAngina: dbPred.exercise_induced_angina || false,
+      oldpeak: dbPred.oldpeak || 0,
+      stSlope: (dbPred.st_slope as 'up' | 'flat' | 'down') || 'flat',
+      smoking: false,
+      diabetes: false,
+      previousHeartAttack: false,
+      cholesterolMedication: false,
+      diabetesMedication: 'none',
+      bpMedication: false,
+      lifestyleChanges: false,
+      dietType: 'non-vegetarian',
+      stressLevel: 5,
+      sleepHours: 7,
+      physicalActivity: 'moderate'
+    },
+    feedback: null,
+    feedbackDate: undefined
+  };
+}
+
 export function usePredictionHistory(): UsePredictionHistoryReturn {
   const { user, loading: authLoading } = useAuth();
   const [userId, setUserId] = useState<string>('');
   const [predictions, setPredictions] = useState<PredictionWithFeedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize user ID based on authenticated user
+  // Initialize user ID and load predictions from database
   useEffect(() => {
     const initializeUser = async () => {
       try {
@@ -41,7 +83,26 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
         if (user?.id) {
           setUserId(user.id);
           
-          // Load predictions for this authenticated user
+          // 🔥 NEW: Try to load from Supabase database first
+          if (isSupabaseConfigured) {
+            try {
+              console.log('📥 Loading predictions from Supabase database...');
+              const dbPredictions = await loadPredictionsFromDatabase(user.id);
+              
+              if (dbPredictions && dbPredictions.length > 0) {
+                // Transform database records to our format
+                const transformed = dbPredictions.map(transformDatabasePrediction);
+                console.log(`✅ Loaded ${transformed.length} predictions from database`);
+                setPredictions(transformed);
+                return; // Exit - we have data from database
+              }
+            } catch (error) {
+              console.warn('⚠️ Error loading from database, falling back to localStorage:', error);
+            }
+          }
+          
+          // Fallback: Load from localStorage if database is unavailable
+          console.log('📦 Loading predictions from localStorage...');
           const storageKey = STORAGE_KEY_PREFIX + user.id;
           const stored = localStorage.getItem(storageKey);
           
@@ -52,9 +113,11 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
               ...p,
               timestamp: new Date(p.timestamp)
             }));
+            console.log(`✅ Loaded ${converted.length} predictions from localStorage`);
             setPredictions(converted);
           } else {
             // No history for this user yet
+            console.log('ℹ️ No prediction history found');
             setPredictions([]);
           }
         } else {
