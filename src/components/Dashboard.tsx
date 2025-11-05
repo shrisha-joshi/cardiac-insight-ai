@@ -1,21 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import PatientForm from './PatientForm';
 import RiskDisplay from './RiskDisplay';
 import PredictionHistory from './PredictionHistory';
-import { PatientData, PredictionResult, generateMockPrediction, mockPredictions } from '@/lib/mockData';
+import { PatientData, PredictionResult, generateMockPrediction } from '@/lib/mockData';
+import { usePredictionHistory } from '@/hooks/use-prediction-history';
+import { useAuth } from '@/hooks/useAuth';
 import { mlService } from '@/services/mlService';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Heart, History, User, BarChart3 } from 'lucide-react';
+import { Heart, History, User, BarChart3, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const [currentPrediction, setCurrentPrediction] = useState<PredictionResult | null>(null);
-  const [predictions, setPredictions] = useState<PredictionResult[]>(mockPredictions);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('predict');
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Use custom hook for prediction history management
+  const { predictions, addPrediction, addFeedback, getFeedbackStats, userId, isLoading: historyLoading } = usePredictionHistory();
 
   const handlePrediction = async (patientData: PatientData) => {
     setLoading(true);
@@ -54,15 +62,17 @@ export default function Dashboard() {
       }
       
       setCurrentPrediction(prediction);
-      setPredictions(prev => [prediction, ...prev]);
+      
+      // Add prediction to history and save to localStorage
+      addPrediction(prediction);
       
       // Automatically switch to results tab
       setActiveTab('results');
       
       // Show success toast
       toast({
-        title: "Assessment Complete",
-        description: `Heart attack risk assessment completed. Risk level: ${prediction.riskLevel}`,
+        title: "✅ Assessment Complete",
+        description: `Heart attack risk assessment completed. Risk level: ${prediction.riskLevel.toUpperCase()}. Saved to your history!`,
         variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
       });
       
@@ -71,12 +81,15 @@ export default function Dashboard() {
       // Fallback to enhanced mock prediction on any error
       const prediction = generateMockPrediction(patientData);
       setCurrentPrediction(prediction);
-      setPredictions(prev => [prediction, ...prev]);
+      
+      // Add prediction to history and save to localStorage even in offline mode
+      addPrediction(prediction);
+      
       setActiveTab('results');
       
       toast({
-        title: "Assessment Complete (Offline Mode)",
-        description: `Risk assessment completed using offline analysis. Risk level: ${prediction.riskLevel}`,
+        title: "✅ Assessment Complete (Offline Mode)",
+        description: `Risk assessment completed. Risk level: ${prediction.riskLevel.toUpperCase()}. Saved to your history!`,
         variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
       });
     }
@@ -87,6 +100,58 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
+        {/* Auth Loading State */}
+        {authLoading && (
+          <Card className="w-full max-w-md mx-auto">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-4">
+                <div className="w-8 h-8 border-4 border-medical-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <div>
+                  <p className="font-medium">Loading...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Auth Check - Show message if not authenticated properly */}
+        {!authLoading && !user && (
+          <Card className="w-full max-w-md mx-auto border-amber-200 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-900">
+                <Lock className="h-5 w-5" />
+                Login Required
+              </CardTitle>
+              <CardDescription className="text-amber-800">
+                You need to sign in to access the prediction model
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-amber-800">
+                To test the prediction model and save your personal history, please log in or create an account.
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => navigate('/login')}
+                  className="flex-1"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  onClick={() => navigate('/signup')}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Sign Up
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Dashboard - Only show if user is authenticated */}
+        {!authLoading && user && (
+          <>
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">
@@ -150,9 +215,16 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <PredictionHistory predictions={predictions} />
+            <PredictionHistory 
+              predictions={predictions}
+              userId={userId}
+              onAddFeedback={addFeedback}
+              feedbackStats={getFeedbackStats()}
+            />
           </TabsContent>
         </Tabs>
+          </>
+        )}
       </div>
     </div>
   );

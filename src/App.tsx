@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Dashboard from "./components/Dashboard";
 import ProfilePage from "./components/profile/ProfilePage";
 import ChatBot from "./components/chatbot/ChatBot";
@@ -28,17 +29,77 @@ const App = () => (
         <div className="min-h-screen bg-background">
           <Header />
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/chatbot" element={<ChatBot />} />
-            <Route path="/history" element={<MedicalHistory />} />
-            <Route path="/basic-dashboard" element={<BasicDashboard />} />
-            <Route path="/premium-dashboard" element={<PremiumDashboard />} />
-            <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
-            <Route path="/database-status" element={<DatabaseStatus />} />
+            
+            {/* Protected Routes - Require Authentication */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/chatbot" 
+              element={
+                <ProtectedRoute>
+                  <ChatBot />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/history" 
+              element={
+                <ProtectedRoute>
+                  <MedicalHistory />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/basic-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <BasicDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/premium-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <PremiumDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/professional-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <ProfessionalDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/database-status" 
+              element={
+                <ProtectedRoute>
+                  <DatabaseStatus />
+                </ProtectedRoute>
+              } 
+            />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

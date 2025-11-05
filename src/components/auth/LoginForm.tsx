@@ -38,7 +38,7 @@ export default function LoginForm() {
           title: "Welcome back!",
           description: "You've successfully logged in.",
         });
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       }
     } catch (err) {
       setError('An unexpected error occurred');
