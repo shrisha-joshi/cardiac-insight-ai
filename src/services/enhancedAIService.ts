@@ -53,14 +53,14 @@ class EnhancedAIService {
 
   constructor() {
     // Initialize Google Gemini
-    if (config.ai.providers.gemini.enabled && config.ai.providers.gemini.apiKey) {
-      this.gemini = new GoogleGenerativeAI(config.ai.providers.gemini.apiKey);
+    if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
+      this.gemini = new GoogleGenerativeAI(config.ai.gemini.apiKey);
     }
 
     // Initialize OpenAI
-    if (config.ai.providers.openai.enabled && config.ai.providers.openai.apiKey) {
+    if (config.ai.openai.enabled && config.ai.openai.apiKey) {
       this.openai = new OpenAI({
-        apiKey: config.ai.providers.openai.apiKey,
+        apiKey: config.ai.openai.apiKey,
         dangerouslyAllowBrowser: true // Note: In production, calls should go through a backend
       });
     }
@@ -997,7 +997,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
     if (!this.gemini) return null;
 
     try {
-      const model = this.gemini.getGenerativeModel({ model: config.ai.providers.gemini.model });
+      const model = this.gemini.getGenerativeModel({ model: config.ai.gemini.model });
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
@@ -1024,7 +1024,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
 
     try {
       const completion = await this.openai.chat.completions.create({
-        model: config.ai.providers.openai.model,
+        model: config.ai.openai.model,
         messages: [
           {
             role: 'system',
@@ -1035,7 +1035,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
             content: prompt
           }
         ],
-        max_tokens: config.ai.providers.openai.maxTokens,
+        max_tokens: config.ai.openai.maxTokens,
         temperature: 0.7
       });
 
