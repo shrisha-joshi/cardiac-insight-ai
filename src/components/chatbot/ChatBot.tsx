@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
-import { enhancedAiService } from '@/services/enhancedAIService';
+import { cardiacChatService } from '@/services/cardiacChatService';
 import { PatientData, PredictionResult } from '@/lib/mockData';
 import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -116,8 +116,31 @@ How can I help you learn about heart health today?`,
 
   const processUserMessage = async (message: string): Promise<{ content: string; data?: Record<string, unknown> }> => {
     try {
-      // Use the enhanced AI service with comprehensive medical disclaimers
-      const response = await enhancedAiService.getChatResponse(message, 'user123', { user });
+      // ✅ NEW: Check for emergencies
+      if (cardiacChatService.detectEmergency(message)) {
+        return {
+          content: `🚨 **MEDICAL EMERGENCY DETECTED**
+
+If you're experiencing chest pain, shortness of breath, or other severe symptoms:
+
+**CALL EMERGENCY SERVICES IMMEDIATELY:**
+- 🇺🇸 USA: Call 911
+- 🇬🇧 UK: Call 999  
+- 🇪🇺 Europe: Call 112
+- 🇮🇳 India: Call 108 or 102
+
+**Do not wait. Do not delay. Seek emergency help now.**
+
+If this is not an emergency, I'm here to provide cardiac health information.`
+        };
+      }
+
+      // ✅ NEW: Use cardiac-specific chat service with medical system prompt
+      const cardiacResponse = await cardiacChatService.getCardiacResponse(message, {
+        age: user ? 50 : undefined,  // Placeholder - could be enhanced with real user data
+        gender: user ? 'male' : undefined,
+        riskLevel: 'medium'
+      });
       
       // If user is asking about their medical history and is logged in
       if (user && message.toLowerCase().includes('history')) {
@@ -128,22 +151,21 @@ How can I help you learn about heart health today?`,
             const riskLevel = recentAssessment.prediction_result?.prediction?.riskLevel || 'Unknown';
             const riskScore = recentAssessment.prediction_result?.prediction?.riskScore || 0;
             
-            response.content += `\n\n**Your Recent Assessment Data:**\n`;
-            response.content += `• Total Assessments: ${history.length}\n`;
-            response.content += `• Most Recent Risk Level: ${riskLevel}\n`;
-            response.content += `• Most Recent Risk Score: ${riskScore.toFixed(1)}%\n\n`;
-            response.content += `**⚠️ MEDICAL DISCLAIMER:** This historical data is for educational review only. Please discuss these results with your healthcare provider for proper medical interpretation and guidance.`;
-            
-            response.data = { history: history.slice(0, 3) };
+            return {
+              content: cardiacResponse + `\n\n**📊 Your Recent Assessment Data:**\n• Total Assessments: ${history.length}\n• Most Recent Risk Level: ${riskLevel}\n• Most Recent Risk Score: ${riskScore.toFixed(1)}%\n\n**⚠️ MEDICAL DISCLAIMER:** This historical data is for educational review only. Please discuss these results with your healthcare provider for proper medical interpretation and guidance.`,
+              data: { history: history.slice(0, 3) }
+            };
           }
         } catch (error) {
           console.error('Error fetching medical history:', error);
         }
       }
       
-      return response;
+      return {
+        content: cardiacResponse
+      };
     } catch (error) {
-      console.error('AI service error:', error);
+      console.error('Cardiac chat service error:', error);
       return {
         content: `I apologize, but I'm experiencing technical difficulties. 
 

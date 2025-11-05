@@ -321,6 +321,39 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               </div>
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-1">
+                  <Label htmlFor="hasPositiveFamilyHistory" className="font-medium">✅ Family History of Heart Disease</Label>
+                  <div className="text-xs text-muted-foreground">Parent/sibling with heart attack or cardiac disease</div>
+                </div>
+                <Switch
+                  id="hasPositiveFamilyHistory"
+                  checked={formData.hasPositiveFamilyHistory || false}
+                  onCheckedChange={(checked) => updateField('hasPositiveFamilyHistory', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-1">
+                  <Label htmlFor="hasHypertension" className="font-medium">✅ Diagnosed Hypertension</Label>
+                  <div className="text-xs text-muted-foreground">Doctor diagnosed with high blood pressure condition</div>
+                </div>
+                <Switch
+                  id="hasHypertension"
+                  checked={formData.hasHypertension || false}
+                  onCheckedChange={(checked) => updateField('hasHypertension', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-1">
+                  <Label htmlFor="hasMentalHealthIssues" className="font-medium">✅ Depression/Anxiety History</Label>
+                  <div className="text-xs text-muted-foreground">History of depression, anxiety, or mental health conditions</div>
+                </div>
+                <Switch
+                  id="hasMentalHealthIssues"
+                  checked={formData.hasMentalHealthIssues || false}
+                  onCheckedChange={(checked) => updateField('hasMentalHealthIssues', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <div className="space-y-1">
                   <Label htmlFor="previousHeartAttack" className="font-medium">Previous Heart Attack</Label>
                   <div className="text-xs text-muted-foreground">History of heart attack or cardiac event</div>
                 </div>
@@ -402,6 +435,133 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               </div>
             </div>
           )}
+
+          {/* ✅ NEW: Current Medications */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
+              <Stethoscope className="h-5 w-5" />
+              ✅ Current Medications
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currentMedicationsList">List All Current Medications</Label>
+              <Textarea
+                id="currentMedicationsList"
+                value={formData.currentMedicationsList || ''}
+                onChange={(e) => updateField('currentMedicationsList', e.target.value)}
+                placeholder="E.g., Metformin 500mg twice daily, Lisinopril 10mg, Aspirin 81mg, etc."
+                className="min-h-20"
+              />
+              <div className="text-xs text-muted-foreground">List all medications, supplements, and dosages. This helps assess medication interactions and adherence to treatment.</div>
+            </div>
+          </div>
+
+          {/* ✅ NEW (Phase 2): Advanced Cardiac Markers */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
+              <Stethoscope className="h-5 w-5" />
+              ✅ Advanced Cardiac Markers (Optional)
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="lipoproteinA">Lipoprotein(a) - Lp(a) (mg/dL)</Label>
+                <Input
+                  id="lipoproteinA"
+                  type="number"
+                  value={formData.lipoproteinA || ''}
+                  onChange={(e) => updateField('lipoproteinA', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  placeholder="Normal: less than 30"
+                  step="0.1"
+                />
+                <div className="text-xs text-muted-foreground">Genetically determined. 30% of Indians have elevated levels. (Normal: &lt;30 mg/dL)</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hscrp">High-Sensitivity CRP (mg/L)</Label>
+                <Input
+                  id="hscrp"
+                  type="number"
+                  value={formData.hscrp || ''}
+                  onChange={(e) => updateField('hscrp', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  placeholder="Normal: less than 1.0"
+                  step="0.1"
+                />
+                <div className="text-xs text-muted-foreground">Inflammation marker. (Normal: &lt;1.0 mg/L, Low risk: 1-3, High risk: &gt;3)</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="homocysteine">Homocysteine (µmol/L)</Label>
+                <Input
+                  id="homocysteine"
+                  type="number"
+                  value={formData.homocysteine || ''}
+                  onChange={(e) => updateField('homocysteine', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  placeholder="Normal: less than 15"
+                  step="0.1"
+                />
+                <div className="text-xs text-muted-foreground">Independent CVD risk factor. (Normal: &lt;15 µmol/L)</div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+              <p className="text-sm text-blue-900">
+                💡 <strong>Optional Advanced Markers:</strong> If you have recent lab test results, enter these values for more accurate risk assessment. These advanced markers are especially important for Indian populations with genetic predisposition to CVD.
+              </p>
+            </div>
+          </div>
+
+          {/* ✅ NEW (Phase 2 Task 3): Regional Calibration for Indian Demographics */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
+              <Stethoscope className="h-5 w-5" />
+              ✅ Regional Calibration (Optional)
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="region">Indian Region</Label>
+                <Select value={formData.region || 'unknown'} onValueChange={(value) => updateField('region', value)}>
+                  <SelectTrigger id="region">
+                    <SelectValue placeholder="Select region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">Unknown/Not specified</SelectItem>
+                    <SelectItem value="north">North India (+5% risk adjustment)</SelectItem>
+                    <SelectItem value="south">South India (+8% risk adjustment)</SelectItem>
+                    <SelectItem value="east">East India (+4% risk adjustment)</SelectItem>
+                    <SelectItem value="west">West India (+6% risk adjustment)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground">Regional CVD prevalence varies across India</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="areaType">Area Type</Label>
+                <Select value={formData.areaType || 'unknown'} onValueChange={(value) => updateField('areaType', value)}>
+                  <SelectTrigger id="areaType">
+                    <SelectValue placeholder="Select area type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                    <SelectItem value="urban">Urban (+3% adjustment)</SelectItem>
+                    <SelectItem value="rural">Rural (+2% adjustment)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-xs text-muted-foreground">Urban stress vs. rural physical activity patterns</div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pincode">Pincode (for auto-detection)</Label>
+                <Input
+                  id="pincode"
+                  type="text"
+                  value={formData.pincode || ''}
+                  onChange={(e) => updateField('pincode', e.target.value)}
+                  placeholder="e.g., 560001"
+                  maxLength="6"
+                />
+                <div className="text-xs text-muted-foreground">Optional: Auto-detect region from pincode</div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+              <p className="text-sm text-blue-900">
+                🗺️ <strong>Regional Calibration:</strong> CVD risk varies significantly by region in India. South India has the highest prevalence. Your risk assessment will be adjusted based on regional CVD epidemiology to provide more accurate predictions.
+              </p>
+            </div>
+          </div>
 
           {/* Lifestyle Assessment */}
           <div className="space-y-4">
