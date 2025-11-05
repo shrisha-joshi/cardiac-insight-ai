@@ -10,11 +10,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Upload, FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+
+// Import new dashboard components
+import { DashboardHeader } from '@/components/ui/dashboard-header';
+import { StatsGrid, StatCard } from '@/components/ui/stat-card';
+import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
+import { LoadingState } from '@/components/ui/loading-state';
+import { ActionButton } from '@/components/ui/action-button';
 
 export default function BasicDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -88,18 +95,7 @@ export default function BasicDashboard() {
 
   // Show loading while checking authentication
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-primary"></div>
-              <span>Checking authentication...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingState message="Checking authentication..." tier="basic" />;
   }
 
   // If no user after loading, this shouldn't happen due to redirect, but safety check
@@ -132,10 +128,19 @@ export default function BasicDashboard() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length + uploadedFiles.length > 2) {
-      alert('Free tier allows maximum 2 documents. Upgrade to Premium for unlimited uploads!');
+      toast({
+        title: "Upload Limit Reached",
+        description: "Free tier allows maximum 2 documents. Upgrade to Premium for unlimited uploads!",
+        variant: "destructive",
+      });
       return;
     }
     setUploadedFiles(prev => [...prev, ...files]);
+    
+    toast({
+      title: "Files Uploaded",
+      description: `${files.length} document(s) uploaded successfully.`,
+    });
     
     // Basic document processing for free tier (limited features)
     for (const file of files) {
@@ -157,35 +162,96 @@ export default function BasicDashboard() {
     try {
       // Basic assessment processing (limited compared to premium tiers)
       await new Promise(resolve => setTimeout(resolve, 2000));
-      alert(`Basic Risk Assessment Complete!\nRisk Level: ${riskIndicators.level.toUpperCase()}\nScore: ${riskIndicators.score}/12\n\nUpgrade to Premium for detailed analysis and recommendations!`);
+      
+      toast({
+        title: "✅ Basic Risk Assessment Complete!",
+        description: (
+          <div className="space-y-2 mt-2">
+            <div className="flex items-center gap-2">
+              <Badge variant={riskIndicators.level === 'high' ? 'destructive' : riskIndicators.level === 'medium' ? 'default' : 'secondary'}>
+                {riskIndicators.level.toUpperCase()} RISK
+              </Badge>
+              <span className="text-sm">Score: {riskIndicators.score}/12</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              🚀 Upgrade to Premium for detailed analysis and recommendations!
+            </p>
+          </div>
+        ),
+        duration: 6000,
+      });
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Assessment Error",
+        description: "Failed to complete assessment. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setProcessingLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6">
-          <Badge className="mb-3 bg-blue-100 text-blue-800">Free Tier - Basic Assessment</Badge>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Basic Heart Health Check</h1>
-          <p className="text-gray-600">Get started with basic cardiovascular risk assessment</p>
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              💡 Upgrade to <strong>Premium</strong> for advanced analysis or <strong>Professional</strong> for clinical-grade assessment
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Dashboard Header */}
+        <DashboardHeader
+          tier="basic"
+          title="Basic Heart Health Check"
+          description="Get started with foundational cardiovascular risk assessment"
+          icon={<Heart className="w-10 h-10 text-white" />}
+        />
+
+        {/* Statistics Grid */}
+        <StatsGrid>
+          <StatCard
+            title="Total Assessments"
+            value={uploadedFiles.length.toString()}
+            subtitle="Documents uploaded"
+            icon={FileText}
+            trend="neutral"
+            color="blue"
+            delay={0}
+          />
+          <StatCard
+            title="Risk Score"
+            value={riskIndicators.score > 0 ? `${riskIndicators.score}/12` : "—"}
+            subtitle="Current risk level"
+            icon={Activity}
+            trend={riskIndicators.level === 'high' ? 'down' : riskIndicators.level === 'medium' ? 'neutral' : 'up'}
+            trendValue={riskIndicators.level.toUpperCase()}
+            color={riskIndicators.level === 'high' ? 'rose' : riskIndicators.level === 'medium' ? 'amber' : 'emerald'}
+            delay={0.1}
+          />
+          <StatCard
+            title="Risk Factors"
+            value={riskIndicators.factors.length.toString()}
+            subtitle="Key factors identified"
+            icon={AlertTriangle}
+            trend="neutral"
+            color="blue"
+            delay={0.2}
+          />
+          <StatCard
+            title="Free Tier"
+            value="2/2"
+            subtitle="File upload limit"
+            icon={Star}
+            trend="neutral"
+            color="purple"
+            delay={0.3}
+          />
+        </StatsGrid>
 
         {/* Real-time Risk Indicator */}
         {riskIndicators.score > 0 && (
-          <Card className="mb-6 border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500 shadow-xl dark:bg-gray-800/50 backdrop-blur-sm">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-500" />
+                <h3 className="font-semibold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                  <Heart className="h-5 w-5 text-red-500 dark:text-red-400" />
                   Basic Risk Assessment
                 </h3>
                 <Badge variant={riskIndicators.level === 'high' ? 'destructive' : riskIndicators.level === 'medium' ? 'default' : 'secondary'}>
@@ -193,10 +259,10 @@ export default function BasicDashboard() {
                 </Badge>
               </div>
               <Progress value={(riskIndicators.score / 12) * 100} className="mb-3" />
-              <p className="text-sm text-muted-foreground mb-2">Risk Score: {riskIndicators.score}/12</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Risk Score: {riskIndicators.score}/12</p>
               {riskIndicators.factors.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-2">Key Risk Factors:</p>
+                  <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">Key Risk Factors:</p>
                   <div className="flex flex-wrap gap-1">
                     {riskIndicators.factors.slice(0, 3).map((factor, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
@@ -215,41 +281,30 @@ export default function BasicDashboard() {
           </Card>
         )}
 
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-              <Heart className="h-6 w-6 text-medical-primary" />
-              Basic Heart Health Assessment
-            </CardTitle>
-            <CardDescription>
-              Enter patient details for basic cardiovascular risk evaluation (Free Tier)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Main Assessment Form */}
+        <Card className="shadow-xl border-blue-200/50 dark:border-blue-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <CardContent className="pt-8 pb-8 px-6 md:px-8">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Medical Documents Upload - Limited for Free Tier */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                    <Upload className="h-5 w-5" />
-                    Medical Documents (Basic Upload)
-                  </div>
-                  <Badge variant="secondary" className="text-xs">Free: Max 2 files</Badge>
-                </div>
+              
+              {/* Medical Documents Upload */}
+              <FormSection
+                title="Medical Documents"
+                description="Upload basic medical reports (Max 2 files)"
+                icon={Upload}
+                accent="blue"
+                delay={0.1}
+              >
                 <div className="space-y-4">
-                  <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
+                  <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center bg-blue-50/30 dark:bg-blue-900/10">
                     <div className="flex flex-col items-center gap-2">
-                      <FileText className="h-8 w-8 text-muted-foreground" />
+                      <FileText className="h-8 w-8 text-blue-500" />
                       <div className="text-sm text-muted-foreground">
                         Upload basic medical reports (PDF, images) - Max 2 files
                       </div>
-                      <div className="text-xs text-blue-600">
+                      <div className="text-xs text-blue-600 font-medium">
                         ⚡ Basic AI extraction • 📊 Limited analysis
                       </div>
                       <Input
-                        type="file"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                         className="hidden"
                         id="file-upload"
                         onChange={handleFileUpload}
@@ -294,15 +349,17 @@ export default function BasicDashboard() {
                     </div>
                   )}
                 </div>
-              </div>
+              </FormSection>
 
               {/* Basic Information */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                  <Stethoscope className="h-5 w-5" />
-                  Basic Information
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSection
+                title="Basic Information"
+                description="Personal details and demographics"
+                icon={Stethoscope}
+                accent="blue"
+                delay={0.2}
+              >
+                <FormFieldGroup columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="age">Age</Label>
                     <Input
@@ -347,18 +404,20 @@ export default function BasicDashboard() {
                       min="30"
                       max="300"
                     />
-                    <div className="text-xs text-muted-foreground">Your weight in kilograms</div>
-                  </div>
-                </div>
-              </div>
+                      <div className="text-xs text-muted-foreground">Your weight in kilograms</div>
+                    </div>
+                  </FormFieldGroup>
+                </FormSection>
 
-              {/* Health Metrics */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                  <Activity className="h-5 w-5" />
-                  Health Metrics
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Health Metrics */}
+                <FormSection
+                  title="Health Metrics"
+                  description="Vital signs and measurements"
+                  icon={Activity}
+                  accent="blue"
+                  delay={0.3}
+                >
+                  <FormFieldGroup columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="restingBP">Blood Pressure Category</Label>
                     <Select value={formData.restingBP > 140 ? 'high' : formData.restingBP > 120 ? 'elevated' : 'normal'} 
@@ -419,18 +478,20 @@ export default function BasicDashboard() {
                         <SelectItem value="low">Limited - Difficulty with most physical activities</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="text-xs text-muted-foreground">Your general ability to perform physical activities</div>
-                  </div>
-                </div>
-              </div>
+                      <div className="text-xs text-muted-foreground">Your general ability to perform physical activities</div>
+                    </div>
+                  </FormFieldGroup>
+                </FormSection>
 
-              {/* Symptoms & Medical History */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                  <Stethoscope className="h-5 w-5" />
-                  Symptoms & Medical History
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Symptoms & Medical History */}
+                <FormSection
+                  title="Symptoms & Medical History"
+                  description="Clinical observations and past conditions"
+                  icon={Stethoscope}
+                  accent="blue"
+                  delay={0.4}
+                >
+                  <FormFieldGroup columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="chestPainType">Chest Pain Experience</Label>
                     <Select value={formData.chestPainType} onValueChange={(value) => updateField('chestPainType', value)}>
@@ -472,17 +533,19 @@ export default function BasicDashboard() {
                         <SelectItem value="down">Concerning - Poor response to exercise</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="text-xs text-muted-foreground">Results from stress test or exercise ECG (if done)</div>
-                  </div>
-                </div>
-              </div>
+                      <div className="text-xs text-muted-foreground">Results from stress test or exercise ECG (if done)</div>
+                    </div>
+                  </FormFieldGroup>
+                </FormSection>
 
-              {/* Lifestyle & Health Conditions */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                  <Heart className="h-5 w-5" />
-                  Lifestyle & Health Conditions
-                </div>
+                {/* Lifestyle & Health Conditions */}
+                <FormSection
+                  title="Lifestyle & Health Conditions"
+                  description="Daily habits and existing conditions"
+                  icon={Heart}
+                  accent="blue"
+                  delay={0.5}
+                >
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="flex items-center justify-between space-x-2">
                     <div className="space-y-1">
@@ -529,16 +592,18 @@ export default function BasicDashboard() {
                     />
                   </div>
                 </div>
-              </div>
+              </FormSection>
 
               {/* Conditional Questions */}
               {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                    <Heart className="h-5 w-5" />
-                    Additional Medical Information
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormSection
+                  title="Additional Medical Information"
+                  description="Follow-up questions based on your conditions"
+                  icon={Heart}
+                  accent="rose"
+                  delay={0.6}
+                >
+                  <FormFieldGroup columns={2}>
                     {formData.previousHeartAttack && (
                       <div className="space-y-2">
                         <Label>Are you taking cholesterol medication?</Label>
@@ -597,17 +662,19 @@ export default function BasicDashboard() {
                         </div>
                       </>
                     )}
-                  </div>
-                </div>
+                  </FormFieldGroup>
+                </FormSection>
               )}
 
               {/* Lifestyle Assessment */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-lg font-semibold text-medical-primary">
-                  <Activity className="h-5 w-5" />
-                  Lifestyle Assessment
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSection
+                title="Lifestyle Assessment"
+                description="Daily habits and activities"
+                icon={Activity}
+                accent="emerald"
+                delay={0.7}
+              >
+                <FormFieldGroup columns={2}>
                   <div className="space-y-2">
                     <Label>Dietary Preference</Label>
                     <Select value={formData.dietType} onValueChange={(value) => updateField('dietType', value)}>
@@ -660,16 +727,16 @@ export default function BasicDashboard() {
                     />
                     <div className="text-xs text-muted-foreground">Hours of sleep per night on average</div>
                   </div>
-                </div>
-              </div>
+                </FormFieldGroup>
+              </FormSection>
 
               {/* Upgrade Promotion */}
-              <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border">
-                <h3 className="font-semibold text-blue-900 mb-2">🚀 Unlock Advanced Features</h3>
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800/50 backdrop-blur-sm">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-3 text-lg">🚀 Unlock Advanced Features</h3>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <h4 className="font-medium text-blue-800">Premium Tier</h4>
-                    <ul className="text-blue-700 mt-1 space-y-1">
+                    <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Premium Tier</h4>
+                    <ul className="text-blue-700 dark:text-blue-400 mt-1 space-y-1">
                       <li>• Advanced AI document analysis</li>
                       <li>• Interactive lifestyle sliders</li>
                       <li>• Detailed risk breakdowns</li>
@@ -677,8 +744,8 @@ export default function BasicDashboard() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-medium text-green-800">Professional Tier</h4>
-                    <ul className="text-green-700 mt-1 space-y-1">
+                    <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Professional Tier</h4>
+                    <ul className="text-green-700 dark:text-green-400 mt-1 space-y-1">
                       <li>• Clinical-grade analysis</li>
                       <li>• Family history tracking</li>
                       <li>• Professional reports</li>
@@ -689,16 +756,32 @@ export default function BasicDashboard() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full" size="lg" disabled={processingLoading}>
-                  {processingLoading ? 'Processing Basic Analysis...' : 'Get Basic Risk Assessment (Free)'}
-                </Button>
+                <ActionButton 
+                  loading={processingLoading}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  icon={Heart}
+                >
+                  Get Basic Risk Assessment (Free)
+                </ActionButton>
                 <div className="grid md:grid-cols-2 gap-2">
-                  <Button variant="outline" className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700">
+                  <ActionButton 
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    icon={TrendingUp}
+                  >
                     Upgrade to Premium
-                  </Button>
-                  <Button variant="outline" className="w-full bg-green-50 hover:bg-green-100 text-green-700">
+                  </ActionButton>
+                  <ActionButton 
+                    variant="success"
+                    size="md"
+                    fullWidth
+                    icon={BarChart3}
+                  >
                     Go Professional
-                  </Button>
+                  </ActionButton>
                 </div>
               </div>
             </form>

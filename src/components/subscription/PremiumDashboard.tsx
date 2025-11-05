@@ -33,7 +33,9 @@ import {
   Leaf,
   HeartPulse,
   Apple,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +43,13 @@ import { useToast } from '@/hooks/use-toast';
 import { PDFService, type PDFReportData } from '@/services/pdfService';
 import { enhancedAiService, type EnhancedAIRequest, type EnhancedAIResponse } from '@/services/enhancedAIService';
 import type { User } from '@supabase/supabase-js';
+
+// Import new dashboard components
+import { DashboardHeader } from '@/components/ui/dashboard-header';
+import { StatsGrid, StatCard } from '@/components/ui/stat-card';
+import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
+import { LoadingState } from '@/components/ui/loading-state';
+import { ActionButton } from '@/components/ui/action-button';
 
 export default function PremiumDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -141,18 +150,7 @@ export default function PremiumDashboard() {
 
   // Show loading while checking authentication
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-              <span>Checking authentication...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingState message="Checking authentication..." tier="premium" />;
   }
 
   // If no user after loading, this shouldn't happen due to redirect, but safety check
@@ -166,7 +164,14 @@ export default function PremiumDashboard() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
     setUploadedFiles(prev => [...prev, ...files]);
+    
+    toast({
+      title: "Files Uploaded",
+      description: `${files.length} document(s) uploaded successfully.`,
+    });
   };
 
   const generateComprehensiveReport = async () => {
@@ -314,14 +319,21 @@ export default function PremiumDashboard() {
   };
 
   const downloadReportAsPDF = async () => {
-    if (!generatedReport) return;
+    if (!generatedReport) {
+      toast({
+        title: "No Report Available",
+        description: "Please generate a report first before downloading.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const reportId = `PRM-${Date.now().toString().slice(-6)}`;
       
       const pdfData: PDFReportData = {
         patientInfo: {
-          name: generatedReport.patientInfo.name,
+          name: patientName || generatedReport.patientInfo.name,
           age: generatedReport.patientInfo.age,
           gender: generatedReport.patientInfo.gender,
           assessmentDate: generatedReport.patientInfo.assessmentDate
@@ -333,9 +345,9 @@ export default function PremiumDashboard() {
         },
         recommendations: {
           medicines: generatedReport.recommendations || [],
-          ayurveda: [],
-          yoga: [],
-          diet: []
+          ayurveda: aiSuggestions?.suggestions?.ayurveda || [],
+          yoga: aiSuggestions?.suggestions?.yoga || [],
+          diet: aiSuggestions?.suggestions?.diet || []
         },
         reportType: 'premium',
         reportId: reportId
@@ -374,10 +386,10 @@ export default function PremiumDashboard() {
 
   if (showReport && generatedReport) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900/20 p-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Report Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-8 rounded-xl shadow-lg">
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-900 dark:to-blue-900 text-white p-8 rounded-xl shadow-2xl border border-purple-200/20 dark:border-purple-800/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Crown className="h-8 w-8" />
@@ -394,8 +406,8 @@ export default function PremiumDashboard() {
           </div>
 
           {/* Patient Information Card */}
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+          <Card className="shadow-xl border-purple-200/50 dark:border-purple-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-b dark:border-gray-700">
               <CardTitle className="flex items-center gap-2">
                 <Stethoscope className="h-5 w-5 text-blue-600" />
                 Patient Information
@@ -424,8 +436,8 @@ export default function PremiumDashboard() {
           </Card>
 
           {/* Risk Assessment Summary */}
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50">
+          <Card className="shadow-xl border-rose-200/50 dark:border-rose-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-b dark:border-gray-700">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-red-600" />
                 Risk Assessment Summary
@@ -471,8 +483,8 @@ export default function PremiumDashboard() {
           </Card>
 
           {/* AI Insights */}
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+          <Card className="shadow-xl border-purple-200/50 dark:border-purple-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b dark:border-gray-700">
               <CardTitle className="flex items-center gap-2">
                 <Brain className="h-5 w-5 text-purple-600" />
                 AI-Generated Clinical Insights
@@ -491,8 +503,8 @@ export default function PremiumDashboard() {
           </Card>
 
           {/* Clinical Recommendations */}
-          <Card className="shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
+          <Card className="shadow-xl border-green-200/50 dark:border-green-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-b dark:border-gray-700">
               <CardTitle className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5 text-green-600" />
                 Clinical Recommendations
@@ -512,7 +524,7 @@ export default function PremiumDashboard() {
 
           {/* Uploaded Documents */}
           {uploadedFiles.length > 0 && (
-            <Card className="shadow-lg border-0">
+            <Card className="shadow-xl border-indigo-200/50 dark:border-indigo-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50">
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
@@ -535,7 +547,7 @@ export default function PremiumDashboard() {
 
           {/* AI-Powered Enhanced Suggestions */}
           {(aiSuggestions || loadingAISuggestions) && (
-            <Card className="shadow-lg border-0">
+            <Card className="shadow-xl border-emerald-200/50 dark:border-emerald-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-6 w-6 text-emerald-600" />
@@ -691,7 +703,7 @@ export default function PremiumDashboard() {
           <div className="flex gap-4 justify-center">
             <Button
               onClick={downloadReportAsPDF}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-700 dark:to-purple-700 dark:hover:from-blue-800 dark:hover:to-purple-800 text-white px-6 py-3 shadow-xl hover:shadow-2xl transition-all"
               size="lg"
             >
               <Download className="mr-2 h-5 w-5" />
@@ -701,15 +713,15 @@ export default function PremiumDashboard() {
               onClick={resetForm}
               variant="outline"
               size="lg"
-              className="px-6 py-3"
+              className="px-6 py-3 border-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
             >
               New Assessment
             </Button>
           </div>
 
           {/* Footer */}
-          <div className="text-center text-sm text-gray-500 py-4">
-            <p>This report is generated by AI and should be reviewed by a qualified healthcare professional.</p>
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4 border-t dark:border-gray-700">
+            <p className="font-medium">This report is generated by AI and should be reviewed by a qualified healthcare professional.</p>
             <p className="mt-1">Report generated on {generatedReport.patientInfo.assessmentDate} • Premium AI Assessment</p>
           </div>
         </div>
@@ -718,67 +730,86 @@ export default function PremiumDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Enhanced Premium Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 text-white p-8 rounded-2xl shadow-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <Crown className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Premium Cardiovascular Assessment</h1>
-              <p className="opacity-90 text-lg">AI-Powered Comprehensive Analysis & Report Generation</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="flex items-center gap-2 bg-white/10 p-3 rounded-lg">
-              <Shield className="h-5 w-5" />
-              <span className="text-sm">Advanced AI Analysis</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 p-3 rounded-lg">
-              <FileDown className="h-5 w-5" />
-              <span className="text-sm">PDF Report Download</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 p-3 rounded-lg">
-              <Upload className="h-5 w-5" />
-              <span className="text-sm">Unlimited Document Upload</span>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-teal-900/20 p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Dashboard Header */}
+        <DashboardHeader
+          tier="premium"
+          title="Premium Analytics Dashboard"
+          description="Advanced AI-powered cardiovascular analysis with unlimited features"
+          icon={<Crown className="w-10 h-10 text-white" />}
+        />
 
-        {/* Assessment Form */}
-        <Card className="shadow-xl border-0">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Heart className="h-6 w-6 text-red-500" />
-              Complete Health Assessment
-            </CardTitle>
-            <CardDescription className="text-base">
-              Fill out the comprehensive assessment below to generate your detailed cardiovascular report
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 space-y-8">
+        {/* Statistics Grid */}
+        <StatsGrid>
+          <StatCard
+            title="Total Assessments"
+            value={uploadedFiles.length.toString()}
+            subtitle="Documents uploaded"
+            icon={FileText}
+            trend="up"
+            trendValue="+12%"
+            color="teal"
+            delay={0}
+          />
+          <StatCard
+            title="AI Analysis"
+            value="Advanced"
+            subtitle="Enhanced insights"
+            icon={Brain}
+            trend="up"
+            trendValue="Active"
+            color="emerald"
+            delay={0.1}
+          />
+          <StatCard
+            title="Reports"
+            value="Unlimited"
+            subtitle="PDF downloads"
+            icon={FileDown}
+            trend="neutral"
+            color="teal"
+            delay={0.2}
+          />
+          <StatCard
+            title="Premium Tier"
+            value="∞"
+            subtitle="No upload limits"
+            icon={Crown}
+            trend="up"
+            trendValue="Active"
+            color="emerald"
+            delay={0.3}
+          />
+        </StatsGrid>
+
+        {/* Main Assessment Form */}
+        <Card className="shadow-xl border-teal-200/50 dark:border-teal-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <CardContent className="pt-8 pb-8 px-6 md:px-8">
+            <form className="space-y-8">
             
             {/* Patient Information */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xl font-semibold text-purple-700 mb-4">
-                <Stethoscope className="h-6 w-6" />
-                Patient Information
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="patientName" className="text-base font-medium">Patient Name</Label>
+            <FormSection
+              title="Patient Information"
+              description="Basic demographic and contact details"
+              icon={Stethoscope}
+              accent="teal"
+              delay={0.1}
+            >
+              <FormFieldGroup columns={2}>
+                <div className="space-y-2.5">
+                  <Label htmlFor="patientName" className="text-base font-medium text-gray-700 dark:text-gray-200">Patient Name</Label>
                   <Input
                     id="patientName"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="Enter patient name"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="age" className="text-base font-medium">Age</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="age" className="text-base font-medium text-gray-700 dark:text-gray-200">Age</Label>
                   <Input
                     id="age"
                     type="number"
@@ -787,327 +818,334 @@ export default function PremiumDashboard() {
                     min="1"
                     max="120"
                     placeholder="Enter age"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender" className="text-base font-medium">Gender</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="gender" className="text-base font-medium text-gray-700 dark:text-gray-200">Gender</Label>
                   <Select value={formData.gender} onValueChange={(value) => updateField('gender', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="male" className="dark:text-gray-100 dark:focus:bg-gray-700">Male</SelectItem>
+                      <SelectItem value="female" className="dark:text-gray-100 dark:focus:bg-gray-700">Female</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="chestPainType" className="text-base font-medium">Chest Pain Type</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="chestPainType" className="text-base font-medium text-gray-700 dark:text-gray-200">Chest Pain Type</Label>
                   <Select value={formData.chestPainType} onValueChange={(value) => updateField('chestPainType', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select chest pain type" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="typical">Severe chest pain during physical activity</SelectItem>
-                      <SelectItem value="atypical">Mild chest discomfort occasionally</SelectItem>
-                      <SelectItem value="non-anginal">Chest pain not related to heart</SelectItem>
-                      <SelectItem value="asymptomatic">No chest pain</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="typical" className="dark:text-gray-100 dark:focus:bg-gray-700">Severe chest pain during physical activity</SelectItem>
+                      <SelectItem value="atypical" className="dark:text-gray-100 dark:focus:bg-gray-700">Mild chest discomfort occasionally</SelectItem>
+                      <SelectItem value="non-anginal" className="dark:text-gray-100 dark:focus:bg-gray-700">Chest pain not related to heart</SelectItem>
+                      <SelectItem value="asymptomatic" className="dark:text-gray-100 dark:focus:bg-gray-700">No chest pain</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="height" className="text-base font-medium">Height (cm) - Optional</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="height" className="text-base font-medium text-gray-700 dark:text-gray-200">Height (cm) - Optional</Label>
                   <Input
                     id="height"
                     type="number"
                     placeholder="170"
                     min="100"
                     max="250"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all"
                   />
-                  <div className="text-sm text-muted-foreground">Your height in centimeters</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">Your height in centimeters</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight" className="text-base font-medium">Weight (kg) - Optional</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="weight" className="text-base font-medium text-gray-700 dark:text-gray-200">Weight (kg) - Optional</Label>
                   <Input
                     id="weight"
                     type="number"
                     placeholder="70"
                     min="30"
                     max="300"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all"
                   />
-                  <div className="text-sm text-muted-foreground">Your weight in kilograms</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">Your weight in kilograms</p>
                 </div>
-              </div>
-            </div>
+              </FormFieldGroup>
+            </FormSection>
 
-            <Separator className="my-8" />
+            <Separator className="my-10 dark:bg-gray-700" />
 
             {/* Health Metrics */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-xl font-semibold text-blue-700 mb-4">
-                <Stethoscope className="h-6 w-6" />
-                Vital Signs & Health Metrics
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Blood Pressure Category</Label>
+            <FormSection
+              title="Vital Signs & Health Metrics"
+              description="Blood pressure, heart rate, and key measurements"
+              icon={Stethoscope}
+              accent="teal"
+              delay={0.2}
+            >
+              <FormFieldGroup columns={2}>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Blood Pressure Category</Label>
                   <Select value={formData.restingBP > 140 ? 'high' : formData.restingBP > 120 ? 'elevated' : 'normal'} 
                           onValueChange={(value) => updateField('restingBP', value === 'high' ? 160 : value === 'elevated' ? 130 : 110)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select blood pressure range" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal (Less than 120/80)</SelectItem>
-                      <SelectItem value="elevated">Elevated (120-129/Less than 80)</SelectItem>
-                      <SelectItem value="high">High (130/80 or higher)</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="normal" className="dark:text-gray-100 dark:focus:bg-gray-700">Normal (Less than 120/80)</SelectItem>
+                      <SelectItem value="elevated" className="dark:text-gray-100 dark:focus:bg-gray-700">Elevated (120-129/Less than 80)</SelectItem>
+                      <SelectItem value="high" className="dark:text-gray-100 dark:focus:bg-gray-700">High (130/80 or higher)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Cholesterol Level</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Cholesterol Level</Label>
                   <Select value={formData.cholesterol > 240 ? 'high' : formData.cholesterol > 200 ? 'borderline' : 'normal'} 
                           onValueChange={(value) => updateField('cholesterol', value === 'high' ? 280 : value === 'borderline' ? 220 : 180)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select cholesterol range" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal (Less than 200 mg/dL)</SelectItem>
-                      <SelectItem value="borderline">Borderline High (200-239 mg/dL)</SelectItem>
-                      <SelectItem value="high">High (240 mg/dL or higher)</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="normal" className="dark:text-gray-100 dark:focus:bg-gray-700">Normal (Less than 200 mg/dL)</SelectItem>
+                      <SelectItem value="borderline" className="dark:text-gray-100 dark:focus:bg-gray-700">Borderline High (200-239 mg/dL)</SelectItem>
+                      <SelectItem value="high" className="dark:text-gray-100 dark:focus:bg-gray-700">High (240 mg/dL or higher)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Resting Heart Rate</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Resting Heart Rate</Label>
                   <Select 
                     value={formData.maxHR < 70 ? 'low' : formData.maxHR > 100 ? 'high' : 'normal'} 
                     onValueChange={(value) => updateField('maxHR', value === 'low' ? 60 : value === 'high' ? 110 : 80)}
                   >
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select heart rate range" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low (50-69 bpm) - Athletic/Very Fit</SelectItem>
-                      <SelectItem value="normal">Normal (70-100 bpm) - Healthy Range</SelectItem>
-                      <SelectItem value="high">High (100+ bpm) - May Need Attention</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="low" className="dark:text-gray-100 dark:focus:bg-gray-700">Low (50-69 bpm) - Athletic/Very Fit</SelectItem>
+                      <SelectItem value="normal" className="dark:text-gray-100 dark:focus:bg-gray-700">Normal (70-100 bpm) - Healthy Range</SelectItem>
+                      <SelectItem value="high" className="dark:text-gray-100 dark:focus:bg-gray-700">High (100+ bpm) - May Need Attention</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Recent ECG Results</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Recent ECG Results</Label>
                   <Select value={formData.restingECG} onValueChange={(value) => updateField('restingECG', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select ECG result" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="normal">Normal - No issues found</SelectItem>
-                      <SelectItem value="st-t">Abnormal - Minor irregularities detected</SelectItem>
-                      <SelectItem value="lvh">Abnormal - Heart enlargement detected</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="normal" className="dark:text-gray-100 dark:focus:bg-gray-700">Normal - No issues found</SelectItem>
+                      <SelectItem value="st-t" className="dark:text-gray-100 dark:focus:bg-gray-700">Abnormal - Minor irregularities detected</SelectItem>
+                      <SelectItem value="lvh" className="dark:text-gray-100 dark:focus:bg-gray-700">Abnormal - Heart enlargement detected</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Exercise Capacity</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Exercise Capacity</Label>
                   <Select value={formData.oldpeak > 2 ? 'low' : formData.oldpeak > 1 ? 'moderate' : 'good'} 
                           onValueChange={(value) => updateField('oldpeak', value === 'low' ? 3 : value === 'moderate' ? 1.5 : 0.5)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="How well can you exercise?" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="good">Good - Can exercise vigorously without issues</SelectItem>
-                      <SelectItem value="moderate">Moderate - Some difficulty with intense exercise</SelectItem>
-                      <SelectItem value="low">Limited - Difficulty with most physical activities</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="good" className="dark:text-gray-100 dark:focus:bg-gray-700">Good - Can exercise vigorously without issues</SelectItem>
+                      <SelectItem value="moderate" className="dark:text-gray-100 dark:focus:bg-gray-700">Moderate - Some difficulty with intense exercise</SelectItem>
+                      <SelectItem value="low" className="dark:text-gray-100 dark:focus:bg-gray-700">Limited - Difficulty with most physical activities</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Your general ability to perform physical activities</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">Your general ability to perform physical activities</p>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Exercise Test Results</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Exercise Test Results</Label>
                   <Select value={formData.stSlope} onValueChange={(value) => updateField('stSlope', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 transition-all">
                       <SelectValue placeholder="Select exercise test result" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="up">Normal - Heart responds well to exercise</SelectItem>
-                      <SelectItem value="flat">Mild concern - Flat response to exercise</SelectItem>
-                      <SelectItem value="down">Concerning - Poor response to exercise</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="up" className="dark:text-gray-100 dark:focus:bg-gray-700">Normal - Heart responds well to exercise</SelectItem>
+                      <SelectItem value="flat" className="dark:text-gray-100 dark:focus:bg-gray-700">Mild concern - Flat response to exercise</SelectItem>
+                      <SelectItem value="down" className="dark:text-gray-100 dark:focus:bg-gray-700">Concerning - Poor response to exercise</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Results from stress test or exercise ECG (if done)</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">Results from stress test or exercise ECG (if done)</p>
                 </div>
-              </div>
-            </div>
+              </FormFieldGroup>
+            </FormSection>
 
-            <Separator className="my-8" />
+            <Separator className="my-10 dark:bg-gray-700" />
 
             {/* Health Conditions */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-xl font-semibold text-red-700 mb-4">
-                <Heart className="h-6 w-6" />
-                Health Conditions
-              </div>
+            <FormSection
+              title="Health Conditions"
+              description="Medical history and existing conditions"
+              icon={Heart}
+              accent="rose"
+              delay={0.3}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <Label className="text-base font-medium">Diabetes</Label>
-                    <div className="text-sm text-gray-600">Diagnosed with diabetes or high blood sugar</div>
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="flex-1 pr-4">
+                    <Label className="text-base font-medium text-gray-800 dark:text-gray-100 cursor-pointer">Diabetes</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Diagnosed with diabetes or high blood sugar</p>
                   </div>
                   <Switch
                     checked={formData.diabetes}
                     onCheckedChange={(checked) => updateField('diabetes', checked)}
-                    className="ml-4"
+                    className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
                   />
                 </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <Label className="text-base font-medium">Smoking</Label>
-                    <div className="text-sm text-gray-600">Current or past smoker</div>
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="flex-1 pr-4">
+                    <Label className="text-base font-medium text-gray-800 dark:text-gray-100 cursor-pointer">Smoking</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Current or past smoker</p>
                   </div>
                   <Switch
                     checked={formData.smoking}
                     onCheckedChange={(checked) => updateField('smoking', checked)}
-                    className="ml-4"
+                    className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
                   />
                 </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <Label className="text-base font-medium">Exercise Angina</Label>
-                    <div className="text-sm text-gray-600">Chest pain during exercise</div>
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="flex-1 pr-4">
+                    <Label className="text-base font-medium text-gray-800 dark:text-gray-100 cursor-pointer">Exercise Angina</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Chest pain during exercise</p>
                   </div>
                   <Switch
                     checked={formData.exerciseAngina}
                     onCheckedChange={(checked) => updateField('exerciseAngina', checked)}
-                    className="ml-4"
+                    className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
                   />
                 </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <Label className="text-base font-medium">Previous Heart Attack</Label>
-                    <div className="text-sm text-gray-600">History of myocardial infarction</div>
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="flex-1 pr-4">
+                    <Label className="text-base font-medium text-gray-800 dark:text-gray-100 cursor-pointer">Previous Heart Attack</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">History of myocardial infarction</p>
                   </div>
                   <Switch
                     checked={formData.previousHeartAttack}
                     onCheckedChange={(checked) => updateField('previousHeartAttack', checked)}
-                    className="ml-4"
+                    className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
                   />
                 </div>
               </div>
-            </div>
+            </FormSection>
 
             {/* Conditional Questions */}
             {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
               <>
-                <Separator className="my-8" />
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-xl font-semibold text-orange-700 mb-4">
-                    <Heart className="h-6 w-6" />
-                    Additional Medical Information
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Separator className="my-10 dark:bg-gray-700" />
+                <FormSection
+                  title="Additional Medical Information"
+                  description="Follow-up questions based on your conditions"
+                  icon={Heart}
+                  accent="rose"
+                  delay={0.4}
+                >
+                  <FormFieldGroup columns={2}>
                     {formData.previousHeartAttack && (
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Are you taking cholesterol medication?</Label>
+                      <div className="space-y-2.5">
+                        <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Are you taking cholesterol medication?</Label>
                         <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
-                          <SelectTrigger className="h-12 text-base">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
                             <SelectValue placeholder="Select option" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="yes">Yes, taking cholesterol medication</SelectItem>
-                            <SelectItem value="no">No, not taking medication</SelectItem>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            <SelectItem value="yes" className="dark:text-gray-100 dark:focus:bg-gray-700">Yes, taking cholesterol medication</SelectItem>
+                            <SelectItem value="no" className="dark:text-gray-100 dark:focus:bg-gray-700">No, not taking medication</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     )}
                     {formData.diabetes && (
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">What diabetes treatment are you taking?</Label>
+                      <div className="space-y-2.5">
+                        <Label className="text-base font-medium text-gray-700 dark:text-gray-200">What diabetes treatment are you taking?</Label>
                         <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
-                          <SelectTrigger className="h-12 text-base">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
                             <SelectValue placeholder="Select treatment type" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="insulin">Insulin injections</SelectItem>
-                            <SelectItem value="tablets">Oral tablets/pills</SelectItem>
-                            <SelectItem value="both">Both insulin and tablets</SelectItem>
-                            <SelectItem value="none">No medication currently</SelectItem>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            <SelectItem value="insulin" className="dark:text-gray-100 dark:focus:bg-gray-700">Insulin injections</SelectItem>
+                            <SelectItem value="tablets" className="dark:text-gray-100 dark:focus:bg-gray-700">Oral tablets/pills</SelectItem>
+                            <SelectItem value="both" className="dark:text-gray-100 dark:focus:bg-gray-700">Both insulin and tablets</SelectItem>
+                            <SelectItem value="none" className="dark:text-gray-100 dark:focus:bg-gray-700">No medication currently</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     )}
                     {formData.restingBP > 130 && (
                       <>
-                        <div className="space-y-2">
-                          <Label className="text-base font-medium">Are you taking blood pressure medication?</Label>
+                        <div className="space-y-2.5">
+                          <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Are you taking blood pressure medication?</Label>
                           <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
-                            <SelectTrigger className="h-12 text-base">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes, taking BP medication</SelectItem>
-                              <SelectItem value="no">No, not taking medication</SelectItem>
+                            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                              <SelectItem value="yes" className="dark:text-gray-100 dark:focus:bg-gray-700">Yes, taking BP medication</SelectItem>
+                              <SelectItem value="no" className="dark:text-gray-100 dark:focus:bg-gray-700">No, not taking medication</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-base font-medium">Have you made lifestyle/diet changes recently?</Label>
+                        <div className="space-y-2.5">
+                          <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Have you made lifestyle/diet changes recently?</Label>
                           <Select value={formData.lifestyleChanges ? 'yes' : 'no'} onValueChange={(value) => updateField('lifestyleChanges', value === 'yes')}>
-                            <SelectTrigger className="h-12 text-base">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes, made significant changes</SelectItem>
-                              <SelectItem value="no">No, no major changes</SelectItem>
+                            <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                              <SelectItem value="yes" className="dark:text-gray-100 dark:focus:bg-gray-700">Yes, made significant changes</SelectItem>
+                              <SelectItem value="no" className="dark:text-gray-100 dark:focus:bg-gray-700">No, no major changes</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </>
                     )}
-                  </div>
-                </div>
+                  </FormFieldGroup>
+                </FormSection>
               </>
             )}
 
-            <Separator className="my-8" />
+            <Separator className="my-10 dark:bg-gray-700" />
 
             {/* Lifestyle Assessment */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-xl font-semibold text-green-700 mb-4">
-                <TrendingUp className="h-6 w-6" />
-                Lifestyle Assessment
-                <Badge variant="secondary" className="ml-2">Premium</Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Dietary Preference</Label>
+            <FormSection
+              title="Lifestyle Assessment"
+              description="Daily habits and wellness metrics (Premium Interactive Sliders)"
+              icon={TrendingUp}
+              accent="emerald"
+              delay={0.5}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Dietary Preference</Label>
                   <Select value={formData.dietType} onValueChange={(value) => updateField('dietType', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 transition-all">
                       <SelectValue placeholder="Select diet type" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vegetarian">Vegetarian</SelectItem>
-                      <SelectItem value="non-vegetarian">Non-Vegetarian</SelectItem>
-                      <SelectItem value="vegan">Vegan</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="vegetarian" className="dark:text-gray-100 dark:focus:bg-gray-700">Vegetarian</SelectItem>
+                      <SelectItem value="non-vegetarian" className="dark:text-gray-100 dark:focus:bg-gray-700">Non-Vegetarian</SelectItem>
+                      <SelectItem value="vegan" className="dark:text-gray-100 dark:focus:bg-gray-700">Vegan</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-base font-medium">Physical Activity Level</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Physical Activity Level</Label>
                   <Select value={formData.physicalActivity} onValueChange={(value) => updateField('physicalActivity', value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 transition-all">
                       <SelectValue placeholder="Select activity level" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low - Minimal exercise</SelectItem>
-                      <SelectItem value="moderate">Moderate - Regular light exercise</SelectItem>
-                      <SelectItem value="high">High - Intensive regular exercise</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="low" className="dark:text-gray-100 dark:focus:bg-gray-700">Low - Minimal exercise</SelectItem>
+                      <SelectItem value="moderate" className="dark:text-gray-100 dark:focus:bg-gray-700">Moderate - Regular light exercise</SelectItem>
+                      <SelectItem value="high" className="dark:text-gray-100 dark:focus:bg-gray-700">High - Intensive regular exercise</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sleepHours" className="text-base font-medium">Average Sleep Hours</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="sleepHours" className="text-base font-medium text-gray-700 dark:text-gray-200">Average Sleep Hours</Label>
                   <Input
                     id="sleepHours"
                     type="number"
@@ -1116,12 +1154,12 @@ export default function PremiumDashboard() {
                     min="3"
                     max="12"
                     placeholder="7"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 transition-all"
                   />
-                  <div className="text-sm text-muted-foreground">Hours of sleep per night on average</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">Hours of sleep per night on average</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stressLevelInput" className="text-base font-medium">Stress Level (1-10)</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="stressLevelInput" className="text-base font-medium text-gray-700 dark:text-gray-200">Stress Level (1-10)</Label>
                   <Input
                     id="stressLevelInput"
                     type="number"
@@ -1130,85 +1168,86 @@ export default function PremiumDashboard() {
                     min="1"
                     max="10"
                     placeholder="5"
-                    className="h-12 text-base"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 transition-all"
                   />
-                  <div className="text-sm text-muted-foreground">1 = Very relaxed, 10 = Extremely stressed</div>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">1 = Very relaxed, 10 = Extremely stressed</p>
                 </div>
               </div>
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-base font-medium mb-3 block">Stress Level (1-10) - Interactive</Label>
+              <div className="space-y-8">
+                <div className="p-5 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-800/50 dark:to-gray-800/30 rounded-xl border border-emerald-200 dark:border-gray-700">
+                  <Label className="text-base font-medium mb-4 block text-gray-800 dark:text-gray-100">Stress Level (1-10) - Interactive</Label>
                   <div className="flex items-center space-x-4">
-                    <span className="text-sm">Low</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[40px]">Low</span>
                     <Slider
                       value={[formData.stressLevel || 5]}
                       onValueChange={(value) => updateField('stressLevel', value[0])}
                       max={10}
                       min={1}
                       step={1}
-                      className="flex-1"
+                      className="flex-1 [&_[role=slider]]:bg-emerald-600 dark:[&_[role=slider]]:bg-emerald-500 [&_[role=slider]]:border-emerald-700 dark:[&_[role=slider]]:border-emerald-400"
                     />
-                    <span className="text-sm">High</span>
-                    <Badge variant="outline" className="ml-2">{formData.stressLevel}/10</Badge>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[40px]">High</span>
+                    <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold min-w-[50px] justify-center">{formData.stressLevel}/10</Badge>
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-base font-medium mb-3 block">Sleep Quality (1-10)</Label>
+                <div className="p-5 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800/50 dark:to-gray-800/30 rounded-xl border border-blue-200 dark:border-gray-700">
+                  <Label className="text-base font-medium mb-4 block text-gray-800 dark:text-gray-100">Sleep Quality (1-10)</Label>
                   <div className="flex items-center space-x-4">
-                    <span className="text-sm">Poor</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[40px]">Poor</span>
                     <Slider
                       value={[formData.sleepQuality || 7]}
                       onValueChange={(value) => updateField('sleepQuality', value[0])}
                       max={10}
                       min={1}
                       step={1}
-                      className="flex-1"
+                      className="flex-1 [&_[role=slider]]:bg-blue-600 dark:[&_[role=slider]]:bg-blue-500 [&_[role=slider]]:border-blue-700 dark:[&_[role=slider]]:border-blue-400"
                     />
-                    <span className="text-sm">Excellent</span>
-                    <Badge variant="outline" className="ml-2">{formData.sleepQuality}/10</Badge>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[60px]">Excellent</span>
+                    <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 font-semibold min-w-[50px] justify-center">{formData.sleepQuality}/10</Badge>
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-base font-medium mb-3 block">Exercise Frequency (days per week)</Label>
+                <div className="p-5 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800/50 dark:to-gray-800/30 rounded-xl border border-purple-200 dark:border-gray-700">
+                  <Label className="text-base font-medium mb-4 block text-gray-800 dark:text-gray-100">Exercise Frequency (days per week)</Label>
                   <div className="flex items-center space-x-4">
-                    <span className="text-sm">0</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[20px]">0</span>
                     <Slider
                       value={[formData.exerciseFrequency || 3]}
                       onValueChange={(value) => updateField('exerciseFrequency', value[0])}
                       max={7}
                       min={0}
                       step={1}
-                      className="flex-1"
+                      className="flex-1 [&_[role=slider]]:bg-purple-600 dark:[&_[role=slider]]:bg-purple-500 [&_[role=slider]]:border-purple-700 dark:[&_[role=slider]]:border-purple-400"
                     />
-                    <span className="text-sm">7</span>
-                    <Badge variant="outline" className="ml-2">{formData.exerciseFrequency} days</Badge>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[20px]">7</span>
+                    <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-purple-500 dark:border-purple-400 text-purple-700 dark:text-purple-300 font-semibold min-w-[70px] justify-center">{formData.exerciseFrequency} days</Badge>
                   </div>
                 </div>
               </div>
-            </div>
+            </FormSection>
 
-            <Separator className="my-8" />
+            <Separator className="my-10 dark:bg-gray-700" />
 
             {/* Document Upload */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xl font-semibold text-purple-700 mb-4">
-                <Upload className="h-6 w-6" />
-                Medical Document Upload
-                <Badge variant="secondary" className="ml-2">Unlimited</Badge>
-              </div>
-              <div className="relative border-2 border-dashed border-purple-300 rounded-xl p-8 text-center bg-purple-50 hover:bg-purple-100 transition-colors">
-                <Upload className="mx-auto h-16 w-16 text-purple-400 mb-4" />
+            <FormSection
+              title="Medical Document Upload"
+              description="Upload unlimited medical reports and documents (Premium Feature)"
+              icon={Upload}
+              accent="teal"
+              delay={0.6}
+            >
+              <div className="relative border-2 border-dashed border-teal-300 dark:border-teal-700 rounded-xl p-10 text-center bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/10 dark:to-emerald-900/10 hover:from-teal-100 hover:to-emerald-100 dark:hover:from-teal-900/20 dark:hover:to-emerald-900/20 transition-all duration-300 cursor-pointer group">
+                <Upload className="mx-auto h-16 w-16 text-teal-500 dark:text-teal-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
                 <div className="space-y-2">
-                  <p className="text-lg font-medium text-gray-700">
+                  <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                     Drag and drop files here, or click to select
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Upload ECG reports, lab results, medical images, and other relevant documents
                   </p>
-                  <p className="text-xs text-purple-600 font-medium">
-                    Premium: Unlimited uploads • Supports all medical file formats
+                  <p className="text-xs text-teal-700 dark:text-teal-400 font-medium mt-3 inline-block px-3 py-1 bg-teal-100 dark:bg-teal-900/30 rounded-full">
+                    ✨ Premium: Unlimited uploads • Supports all medical file formats
                   </p>
                 </div>
                 <input
@@ -1221,76 +1260,76 @@ export default function PremiumDashboard() {
               </div>
 
               {uploadedFiles.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-semibold mb-3 text-lg">Uploaded Documents ({uploadedFiles.length}):</h4>
+                <div className="mt-8 p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-800/30 dark:to-gray-800/20 rounded-xl border border-blue-200 dark:border-gray-700">
+                  <h4 className="font-semibold mb-4 text-lg text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    Uploaded Documents ({uploadedFiles.length})
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <span className="text-sm font-medium flex-1">{file.name}</span>
-                        <Badge variant="outline" className="text-green-600 border-green-600">Ready for Analysis</Badge>
+                      <div key={index} className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                        <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <span className="text-sm font-medium flex-1 text-gray-700 dark:text-gray-200 truncate">{file.name}</span>
+                        <Badge variant="outline" className="text-green-700 dark:text-green-400 border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/20 flex-shrink-0">Ready</Badge>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
+            </FormSection>
 
             {/* Generate Report Button */}
-            <div className="pt-8">
-              <Button
+            <div className="pt-10">
+              <ActionButton
                 onClick={generateComprehensiveReport}
-                disabled={processingLoading || !patientName.trim()}
-                className="w-full h-16 text-xl bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 hover:from-purple-700 hover:via-blue-700 hover:to-purple-700 text-white shadow-xl"
+                loading={processingLoading}
+                disabled={!patientName.trim()}
+                variant="primary"
                 size="lg"
+                fullWidth
+                icon={Brain}
               >
-                {processingLoading ? (
-                  <>
-                    <Zap className="mr-3 h-6 w-6 animate-spin" />
-                    Generating Premium Analysis Report...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="mr-3 h-6 w-6" />
-                    Generate Complete AI Assessment Report
-                  </>
-                )}
-              </Button>
+                Generate Premium AI Report
+              </ActionButton>
               {!patientName.trim() && (
-                <p className="text-sm text-red-500 mt-2 text-center">Please enter patient name to generate report</p>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-3 text-center font-medium">⚠️ Please enter patient name to generate report</p>
               )}
             </div>
 
             {/* Premium Features Highlight */}
-            <div className="bg-gradient-to-r from-purple-100 to-blue-100 p-6 rounded-xl">
-              <h4 className="font-semibold text-purple-800 mb-4 text-lg">Your Premium Features:</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Comprehensive AI Analysis</span>
+            <div className="bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-100 dark:from-teal-900/30 dark:via-emerald-900/30 dark:to-teal-900/30 p-8 rounded-xl border-2 border-teal-300 dark:border-teal-700/50 shadow-lg mt-8">
+              <h4 className="font-bold text-teal-900 dark:text-teal-200 mb-5 text-xl flex items-center gap-2">
+                <Crown className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+                Your Premium Features
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Comprehensive AI Analysis</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Unlimited Document Uploads</span>
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Unlimited Document Uploads</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Detailed PDF Report</span>
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Detailed PDF Report</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Clinical Recommendations</span>
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Clinical Recommendations</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Advanced Risk Stratification</span>
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Advanced Risk Stratification</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Personalized Insights</span>
+                <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-gray-800/50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Personalized Insights</span>
                 </div>
               </div>
             </div>
+            </form>
           </CardContent>
         </Card>
       </div>

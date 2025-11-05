@@ -8,8 +8,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 215 25% 27%;
+    /* Base Colors - Medical Teal Theme */
+    --background: 248 50% 99%; /* Slate-50 with slight coolness */
+    --foreground: 215 25% 27%; /* Slate-800 */
 
     --card: 0 0% 100%;
     --card-foreground: 215 25% 27%;
@@ -17,77 +18,74 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 202 83% 41%;
-    --primary-foreground: 210 40% 98%;
-    --primary-glow: 202 83% 51%;
+    /* Primary - Medical Teal */
+    --primary: 173 80% 40%; /* Teal-600 #0D9488 */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 172 66% 50%; /* Teal-500 #14B8A6 glow */
 
-    --secondary: 146 60% 47%;
+    /* Secondary - Slate */
+    --secondary: 215 25% 27%; /* Slate-800 */
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 208 15% 94%;
+    --muted: 210 40% 96.1%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 202 100% 95%;
-    --accent-foreground: 202 83% 41%;
+    --accent: 172 66% 95%; /* Soft teal accent */
+    --accent-foreground: 173 80% 40%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status Colors */
+    --destructive: 350 89% 60%; /* Rose-500 #F43F5E */
+    --destructive-foreground: 0 0% 100%;
 
-    --warning: 35 91% 65%;
+    --warning: 25 95% 53%;
     --warning-foreground: 26 83% 14%;
 
-    --success: 146 60% 47%;
-    --success-foreground: 210 40% 98%;
+    --success: 142 76% 36%; /* Emerald-600 */
+    --success-foreground: 0 0% 100%;
 
-    --border: 214 20% 89%;
-    --input: 214 20% 89%;
-    --ring: 202 83% 41%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 172 66% 50%; /* Teal-500 */
 
-    --medical-primary: 202 83% 41%;
-    --medical-secondary: 146 60% 47%;
-    --risk-low: 146 60% 47%;
-    --risk-medium: 35 91% 65%;
-    --risk-high: 0 84% 60%;
+    /* Medical Theme Colors */
+    --medical-primary: 173 80% 40%; /* Teal-600 */
+    --medical-secondary: 142 76% 36%; /* Emerald-600 */
+    --medical-accent: 172 66% 50%; /* Teal-500 */
     
-    --gradient-medical: linear-gradient(135deg, hsl(202 83% 41%), hsl(146 60% 47%));
-    --gradient-risk: linear-gradient(90deg, hsl(146 60% 47%), hsl(35 91% 65%), hsl(0 84% 60%));
-    
-    --shadow-medical: 0 4px 20px -4px hsl(202 83% 41% / 0.25);
-    --shadow-card: 0 2px 12px -2px hsl(215 25% 27% / 0.1);
+    /* Risk Colors */
+    --risk-low: 142 76% 36%; /* Emerald-600 */
+    --risk-medium: 25 95% 53%; /* Orange */
+    --risk-high: 350 89% 60%; /* Rose-500 */
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Deep Night Blue Background */
+    --background: 217 33% 6%; /* #0A0F14 Deep Night Blue */
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 217 33% 6%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 217 33% 6%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --primary-glow: 210 40% 88%;
+    /* Primary - Cyan/Teal Glow */
+    --primary: 172 66% 50%; /* Teal-500 #14B8A6 */
+    --primary-foreground: 217 33% 6%;
+    --primary-glow: 172 66% 60%;
 
+    /* Secondary */
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
 
@@ -97,24 +95,30 @@ All colors MUST be HSL.
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    /* Status Colors - Enhanced for Dark Mode */
+    --destructive: 0 72% 70%; /* Warm Pulse Glow #F87171 */
     --destructive-foreground: 210 40% 98%;
 
-    --warning: 35 91% 65%;
+    --warning: 25 95% 53%;
     --warning-foreground: 26 83% 14%;
 
-    --success: 146 60% 47%;
+    --success: 142 71% 45%; /* Soft Green Glow #4ADE80 */
     --success-foreground: 210 40% 98%;
 
-    --medical-primary: 202 83% 51%;
-    --medical-secondary: 146 60% 57%;
-    --risk-low: 146 60% 57%;
-    --risk-medium: 35 91% 65%;
-    --risk-high: 0 84% 70%;
+    /* Medical Colors for Dark Mode */
+    --medical-primary: 172 66% 50%; /* Cyan/Teal */
+    --medical-secondary: 142 71% 45%; /* Soft Green */
+    --medical-accent: 189 94% 43%; /* Cyan-500 */
+    
+    /* Risk Colors - Adjusted for Dark */
+    --risk-low: 142 71% 45%; /* Green Glow */
+    --risk-medium: 25 95% 53%;
+    --risk-high: 0 72% 70%; /* Warm Pulse */
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 172 66% 50%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -133,5 +137,132 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 }
+
+@layer utilities {
+  /* Glass morphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .glass-dark {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Gradients */
+  .gradient-medical {
+    background: linear-gradient(135deg, hsl(var(--medical-primary)) 0%, hsl(var(--medical-accent)) 100%);
+  }
+
+  .gradient-teal {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.4) 0%, rgba(16, 185, 129, 0.3) 50%, rgba(52, 211, 153, 0.2) 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, rgba(20, 184, 166, 0.05) 100%);
+  }
+
+  /* Glow effects */
+  .glow-teal {
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
+  }
+
+  .glow-pulse {
+    animation: pulse-glow 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 10px rgba(20, 184, 166, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 25px rgba(20, 184, 166, 0.5);
+    }
+  }
+
+  /* Heartbeat animation */
+  .heartbeat {
+    animation: heartbeat 2.4s ease-in-out infinite;
+  }
+
+  @keyframes heartbeat {
+    0%, 100% {
+      transform: scale(1);
+    }
+    10% {
+      transform: scale(1.1);
+    }
+    20% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(1.15);
+    }
+    40% {
+      transform: scale(1);
+    }
+  }
+
+  /* Shimmer effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(20, 184, 166, 0.1),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Premium shadows */
+  .shadow-medical {
+    box-shadow: 0 4px 20px -4px rgba(20, 184, 166, 0.25);
+  }
+
+  .shadow-card-hover {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .shadow-card-hover:hover {
+    box-shadow: 0 30px 60px -15px rgba(13, 148, 136, 0.35), 0 0 40px rgba(20, 184, 166, 0.15);
+    transform: translateY(-6px) scale(1.02);
+  }
+
+  /* Premium Glow Effects */
+  @keyframes glow-pulse-intense {
+    0%, 100% {
+      box-shadow: 
+        0 0 20px rgba(13, 148, 136, 0.3),
+        0 0 40px rgba(13, 148, 136, 0.2),
+        0 0 60px rgba(13, 148, 136, 0.1);
+    }
+    50% {
+      box-shadow: 
+        0 0 30px rgba(13, 148, 136, 0.5),
+        0 0 60px rgba(13, 148, 136, 0.3),
+        0 0 90px rgba(13, 148, 136, 0.2);
+    }
+  }
+
+  .glow-intense {
+    animation: glow-pulse-intense 3s ease-in-out infinite;
+  }
+}
+
+/* Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');

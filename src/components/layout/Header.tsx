@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, User, LogOut, Settings, History, MessageCircle } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { motion } from 'framer-motion';
 
 interface UserProfile {
   id: string;
@@ -92,37 +94,49 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-card border-b border-border sticky top-0 z-50">
+    <motion.header
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="glass dark:glass-dark border-b border-border/50 sticky top-0 z-50 backdrop-blur-md"
+    >
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-medical-primary rounded-full flex items-center justify-center">
-            <Heart className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-foreground">HeartCare AI</span>
+        <Link to="/" className="flex items-center gap-3 group">
+          <motion.div
+            className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Heart className="h-5 w-5 text-white heartbeat" />
+          </motion.div>
+          <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
+            Cardiac Insight AI
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
           <Link
             to="/history"
-            className="text-foreground hover:text-medical-primary transition-colors"
+            className="text-foreground/80 hover:text-medical-primary transition-colors font-medium"
           >
             History
           </Link>
           <Link
             to="/chatbot"
-            className="text-foreground hover:text-medical-primary transition-colors"
+            className="text-foreground/80 hover:text-medical-primary transition-colors font-medium"
           >
             AI Assistant
           </Link>
           <Link
-            to="/database-status"
-            className="text-foreground hover:text-medical-primary transition-colors text-sm"
+            to="/health-simulation"
+            className="text-foreground/80 hover:text-medical-primary transition-colors font-medium text-sm"
           >
-            Database Status
+            Health Simulation
           </Link>
         </nav>
 
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -181,6 +195,6 @@ export default function Header() {
           )}
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,13 @@ import { useToast } from '@/hooks/use-toast';
 import { PDFService, type PDFReportData } from '@/services/pdfService';
 import { enhancedAiService, type EnhancedAIRequest, type EnhancedAIResponse } from '@/services/enhancedAIService';
 import type { User } from '@supabase/supabase-js';
+
+// Import dashboard enhancement components
+import { DashboardHeader } from '@/components/ui/dashboard-header';
+import { StatCard, StatsGrid } from '@/components/ui/stat-card';
+import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
+import { LoadingState } from '@/components/ui/loading-state';
+import { ActionButton } from '@/components/ui/action-button';
 
 interface FamilyMember {
   name: string;
@@ -203,14 +211,7 @@ export default function ProfessionalDashboard() {
 
   // Show loading while checking authentication
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Checking authentication..." tier="professional" />;
   }
 
   // If no user after loading, this shouldn't happen due to redirect, but safety check
@@ -244,7 +245,14 @@ export default function ProfessionalDashboard() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
     setUploadedFiles(prev => [...prev, ...files]);
+    
+    toast({
+      title: "Files Uploaded",
+      description: `${files.length} clinical document(s) uploaded successfully.`,
+    });
   };
 
   const generateProfessionalReport = async () => {
@@ -455,12 +463,19 @@ export default function ProfessionalDashboard() {
   };
 
   const downloadReportAsPDF = async () => {
-    if (!generatedReport) return;
+    if (!generatedReport) {
+      toast({
+        title: "No Report Available",
+        description: "Please generate a report first before downloading.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const pdfData: PDFReportData = {
         patientInfo: {
-          name: `Patient ${generatedReport.reportId}`,
+          name: patientName || `Patient ${generatedReport.reportId}`,
           age: formData.age || 0,
           gender: formData.gender || 'Not specified',
           assessmentDate: generatedReport.testDate
@@ -475,9 +490,9 @@ export default function ProfessionalDashboard() {
         },
         recommendations: {
           medicines: generatedReport.professionalRecommendations || [],
-          ayurveda: [],
-          yoga: [],
-          diet: []
+          ayurveda: aiSuggestions?.suggestions?.ayurveda || [],
+          yoga: aiSuggestions?.suggestions?.yoga || [],
+          diet: aiSuggestions?.suggestions?.diet || []
         },
         reportType: 'professional',
         reportId: generatedReport.reportId
@@ -538,139 +553,155 @@ export default function ProfessionalDashboard() {
 
   if (showReport && generatedReport) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/20 p-4">
         <div className="max-w-5xl mx-auto space-y-6">
           {/* Professional Report Header */}
-          <div className="bg-gradient-to-r from-indigo-700 via-blue-600 to-cyan-600 text-white p-8 rounded-2xl shadow-2xl">
+          <div className="bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 dark:from-yellow-900 dark:via-amber-900 dark:to-orange-900 text-white p-8 rounded-2xl shadow-2xl backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-full">
+                <motion.div 
+                  className="bg-white/20 dark:bg-white/10 backdrop-blur-sm p-3 rounded-full border border-white/30"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
                   <Award className="h-10 w-10" />
-                </div>
+                </motion.div>
                 <div>
-                  <h1 className="text-3xl font-bold">Professional Clinical Assessment Report</h1>
+                  <h1 className="text-3xl font-bold drop-shadow-lg">Professional Clinical Assessment Report</h1>
                   <p className="opacity-90 mt-1 text-lg">Comprehensive Cardiovascular Risk Analysis</p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm opacity-75">Clinical Report ID</div>
-                <div className="font-mono text-xl">{generatedReport.reportId}</div>
+                <div className="font-mono text-xl font-bold bg-white/10 px-3 py-1 rounded-lg">{generatedReport.reportId}</div>
                 <div className="text-sm opacity-75 mt-1">Generated: {generatedReport.testDate}</div>
               </div>
             </div>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 p-3 rounded-lg">
+              <motion.div 
+                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                whileHover={{ scale: 1.02, y: -2 }}
+              >
                 <div className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
                   <span className="text-sm font-medium">Clinical Grade Analysis</span>
                 </div>
-              </div>
-              <div className="bg-white/10 p-3 rounded-lg">
+              </motion.div>
+              <motion.div 
+                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                whileHover={{ scale: 1.02, y: -2 }}
+              >
                 <div className="flex items-center gap-2">
                   <Microscope className="h-5 w-5" />
                   <span className="text-sm font-medium">Biomarker Assessment</span>
                 </div>
-              </div>
-              <div className="bg-white/10 p-3 rounded-lg">
+              </motion.div>
+              <motion.div 
+                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                whileHover={{ scale: 1.02, y: -2 }}
+              >
                 <div className="flex items-center gap-2">
                   <FileDown className="h-5 w-5" />
                   <span className="text-sm font-medium">Professional PDF Export</span>
                 </div>
-              </div>
-              <div className="bg-white/10 p-3 rounded-lg">
+              </motion.div>
+              <motion.div 
+                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
+                whileHover={{ scale: 1.02, y: -2 }}
+              >
                 <div className="flex items-center gap-2">
                   <Brain className="h-5 w-5" />
                   <span className="text-sm font-medium">AI Clinical Insights</span>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
 
           {/* Patient Demographics */}
-          <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardTitle className="flex items-center gap-2">
-                <Stethoscope className="h-6 w-6 text-blue-600" />
+          <Card className="shadow-xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20">
+              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Stethoscope className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                 Patient Demographics & Clinical Information
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
-                  <div className="text-sm text-gray-500 font-medium">Patient Name</div>
-                  <div className="font-bold text-xl text-gray-800">{generatedReport.patientInfo.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Patient Name</div>
+                  <div className="font-bold text-xl text-gray-800 dark:text-gray-100">{generatedReport.patientInfo.name}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 font-medium">Age</div>
-                  <div className="font-bold text-xl text-gray-800">{generatedReport.patientInfo.age} years</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Age</div>
+                  <div className="font-bold text-xl text-gray-800 dark:text-gray-100">{generatedReport.patientInfo.age} years</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 font-medium">Gender</div>
-                  <div className="font-bold text-xl text-gray-800 capitalize">{generatedReport.patientInfo.gender}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Gender</div>
+                  <div className="font-bold text-xl text-gray-800 dark:text-gray-100 capitalize">{generatedReport.patientInfo.gender}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-500 font-medium">Assessment Date</div>
-                  <div className="font-bold text-xl text-gray-800">{generatedReport.patientInfo.assessmentDate}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">Assessment Date</div>
+                  <div className="font-bold text-xl text-gray-800 dark:text-gray-100">{generatedReport.patientInfo.assessmentDate}</div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Clinical Risk Assessment */}
-          <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50">
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-6 w-6 text-red-600" />
+          <Card className="shadow-xl border-rose-200/50 dark:border-rose-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-rose-50 to-orange-50 dark:from-rose-900/20 dark:to-orange-900/20">
+              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Activity className="h-6 w-6 text-rose-600 dark:text-rose-400" />
                 Professional Risk Stratification
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="text-center mb-8">
                 <div className={`text-7xl font-bold mb-3 ${
-                  generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-green-600' :
-                  generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-yellow-600' :
-                  generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-orange-600' : 'text-red-600'
+                  generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-green-600 dark:text-green-400' :
+                  generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                  generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {generatedReport.clinicalAssessment.overallRisk}%
                 </div>
                 <div className={`text-2xl font-bold px-6 py-3 rounded-full inline-block ${
-                  generatedReport.urgencyLevel === 'low' ? 'bg-green-100 text-green-800' :
-                  generatedReport.urgencyLevel === 'moderate' ? 'bg-yellow-100 text-yellow-800' :
-                  generatedReport.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'
+                  generatedReport.urgencyLevel === 'low' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' :
+                  generatedReport.urgencyLevel === 'moderate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200' :
+                  generatedReport.urgencyLevel === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
                 }`}>
                   {generatedReport.urgencyLevel.toUpperCase()} RISK
                 </div>
-                <div className="mt-3 text-lg text-gray-600">
-                  Next Follow-up: <span className="font-semibold">{generatedReport.nextFollowUp}</span>
+                <div className="mt-3 text-lg text-gray-600 dark:text-gray-400">
+                  Next Follow-up: <span className="font-semibold text-gray-800 dark:text-gray-200">{generatedReport.nextFollowUp}</span>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100">
-                  <div className="text-3xl font-bold text-red-600">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
-                  <div className="text-sm text-gray-600 font-medium">Cardiovascular Risk</div>
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Cardiovascular Risk</div>
                 </div>
-                <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100">
-                  <div className="text-3xl font-bold text-blue-600">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
-                  <div className="text-sm text-gray-600 font-medium">Clinical Risk</div>
+                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Clinical Risk</div>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-100">
-                  <div className="text-3xl font-bold text-purple-600">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
-                  <div className="text-sm text-gray-600 font-medium">Biomarker Risk</div>
+                <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Biomarker Risk</div>
                 </div>
-                <div className="text-center p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                  <div className="text-3xl font-bold text-indigo-600">{generatedReport.clinicalAssessment.demographicRisk}%</div>
-                  <div className="text-sm text-gray-600 font-medium">Demographic Risk</div>
+                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.demographicRisk}%</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Demographic Risk</div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Biomarker Analysis */}
-          <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-              <CardTitle className="flex items-center gap-2">
-                <Microscope className="h-6 w-6 text-purple-600" />
+          <Card className="shadow-xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20">
+              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Microscope className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                 Laboratory Biomarker Analysis
               </CardTitle>
             </CardHeader>
@@ -696,8 +727,8 @@ export default function ProfessionalDashboard() {
 
                 {/* Elevated Values */}
                 {generatedReport.biomarkerAnalysis.elevated.length > 0 && (
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h4 className="font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <h4 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       Elevated Values
                     </h4>
@@ -730,19 +761,19 @@ export default function ProfessionalDashboard() {
           </Card>
 
           {/* Clinical Insights */}
-          <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50">
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-6 w-6 text-cyan-600" />
+          <Card className="shadow-xl border-cyan-200/50 dark:border-cyan-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20">
+              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <Brain className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
                 AI-Powered Clinical Insights
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {generatedReport.clinicalInsights.map((insight, index) => (
-                  <div key={index} className="flex items-start gap-3 p-4 bg-cyan-50 rounded-lg border border-cyan-100">
-                    <Star className="h-5 w-5 text-cyan-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-gray-700 font-medium">{insight}</div>
+                  <div key={index} className="flex items-start gap-3 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800/50 backdrop-blur-sm">
+                    <Star className="h-5 w-5 text-cyan-600 dark:text-cyan-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-gray-700 dark:text-gray-300 font-medium">{insight}</div>
                   </div>
                 ))}
               </div>
@@ -750,19 +781,19 @@ export default function ProfessionalDashboard() {
           </Card>
 
           {/* Professional Recommendations */}
-          <Card className="shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6 text-green-600" />
+          <Card className="shadow-xl border-green-200/50 dark:border-green-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                <ClipboardList className="h-6 w-6 text-green-600 dark:text-green-400" />
                 Professional Clinical Recommendations
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {generatedReport.professionalRecommendations.map((recommendation, index) => (
-                  <div key={index} className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-100">
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-gray-700 font-medium">{recommendation}</div>
+                  <div key={index} className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 backdrop-blur-sm">
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-gray-700 dark:text-gray-300 font-medium">{recommendation}</div>
                   </div>
                 ))}
               </div>
@@ -771,20 +802,20 @@ export default function ProfessionalDashboard() {
 
           {/* Uploaded Clinical Documents */}
           {uploadedFiles.length > 0 && (
-            <Card className="shadow-xl border-0">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-indigo-600" />
+            <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
+                <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
+                  <FileText className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                   Analyzed Clinical Documents
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-3 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                      <FileText className="h-5 w-5 text-indigo-600" />
-                      <span className="text-sm font-medium flex-1">{file.name}</span>
-                      <Badge variant="outline" className="text-green-600 border-green-600">Analyzed</Badge>
+                    <div key={index} className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800/50 backdrop-blur-sm">
+                      <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-sm font-medium flex-1 text-gray-800 dark:text-gray-200">{file.name}</span>
+                      <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-600 dark:border-green-500">Analyzed</Badge>
                     </div>
                   ))}
                 </div>
@@ -794,9 +825,9 @@ export default function ProfessionalDashboard() {
 
           {/* AI-Powered Enhanced Suggestions */}
           {(aiSuggestions || loadingAISuggestions) && (
-            <Card className="shadow-xl border-0">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
-                <CardTitle className="flex items-center gap-2">
+            <Card className="shadow-xl border-emerald-200/50 dark:border-emerald-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20">
+                <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
                   <Brain className="h-6 w-6 text-emerald-600" />
                   AI-Powered Medical Recommendations
                   {aiSuggestions && (
@@ -950,7 +981,7 @@ export default function ProfessionalDashboard() {
           <div className="flex gap-4 justify-center pb-8">
             <Button
               onClick={downloadReportAsPDF}
-              className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-8 py-4 text-lg"
+              className="bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 dark:from-yellow-700 dark:to-amber-700 dark:hover:from-yellow-800 dark:hover:to-amber-800 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all"
               size="lg"
             >
               <Download className="mr-3 h-6 w-6" />
@@ -960,17 +991,21 @@ export default function ProfessionalDashboard() {
               onClick={resetForm}
               variant="outline"
               size="lg"
-              className="px-8 py-4 text-lg"
+              className="px-8 py-4 text-lg border-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
             >
               New Clinical Assessment
             </Button>
           </div>
 
           {/* Professional Footer */}
-          <div className="text-center text-sm text-gray-500 py-4 border-t">
-            <p className="font-medium">PROFESSIONAL CLINICAL ASSESSMENT REPORT</p>
-            <p className="mt-1">This report is generated using advanced AI algorithms and should be interpreted by qualified healthcare professionals.</p>
-            <p className="mt-1">Report ID: {generatedReport.reportId} • Generated: {generatedReport.testDate} • Professional Grade Assessment</p>
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4 border-t dark:border-gray-700">
+            <p className="font-bold text-gray-700 dark:text-gray-300">PROFESSIONAL CLINICAL ASSESSMENT REPORT</p>
+            <p className="mt-2">This report is generated using advanced AI algorithms and should be interpreted by qualified healthcare professionals.</p>
+            <p className="mt-2 flex items-center justify-center gap-2 flex-wrap">
+              <Badge variant="outline" className="text-xs">Report ID: {generatedReport.reportId}</Badge>
+              <Badge variant="outline" className="text-xs">Generated: {generatedReport.testDate}</Badge>
+              <Badge variant="secondary" className="text-xs">Professional Grade Assessment</Badge>
+            </p>
           </div>
         </div>
       </div>
@@ -978,71 +1013,95 @@ export default function ProfessionalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-4">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Professional Header */}
-        <div className="bg-gradient-to-r from-indigo-700 via-blue-600 to-cyan-600 text-white p-10 rounded-3xl shadow-2xl">
-          <div className="flex items-center gap-6 mb-6">
-            <div className="bg-white/20 p-4 rounded-full">
-              <Award className="h-12 w-12" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold">Professional Clinical Dashboard</h1>
-              <p className="opacity-90 text-xl mt-2">Comprehensive Cardiovascular Risk Assessment Platform</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl">
-              <Stethoscope className="h-6 w-6" />
-              <span className="font-medium">Patient Assessment</span>
-            </div>
-            <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl">
-              <Microscope className="h-6 w-6" />
-              <span className="font-medium">Clinical Data & Biomarkers</span>
-            </div>
-            <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl">
-              <Brain className="h-6 w-6" />
-              <span className="font-medium">AI Analysis</span>
-            </div>
-            <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl">
-              <FileDown className="h-6 w-6" />
-              <span className="font-medium">Professional Reports</span>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/20 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Dashboard Header */}
+        <DashboardHeader
+          tier="professional"
+          title="Professional Clinical Dashboard"
+          description="Advanced clinical-grade cardiovascular assessment with biomarker analysis"
+          icon={<Brain className="w-10 h-10 text-yellow-400" />}
+          titleClassName="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500"
+        />
+
+        {/* Statistics Grid */}
+        <StatsGrid>
+          <StatCard
+            title="Patient Records"
+            value={uploadedFiles.length.toString()}
+            subtitle="Clinical documents"
+            icon={Users}
+            trend="up"
+            trendValue="+5"
+            color="amber"
+            delay={0}
+          />
+          <StatCard
+            title="Biomarker Analysis"
+            value="Advanced"
+            subtitle="9 markers tracked"
+            icon={Microscope}
+            trend="up"
+            trendValue="Active"
+            color="amber"
+            delay={0.1}
+          />
+          <StatCard
+            title="Clinical Reports"
+            value="Unlimited"
+            subtitle="Professional grade"
+            icon={FileText}
+            trend="neutral"
+            color="amber"
+            delay={0.2}
+          />
+          <StatCard
+            title="Professional Tier"
+            value="∞"
+            subtitle="All features unlocked"
+            icon={Crown}
+            trend="up"
+            trendValue="Premium"
+            color="amber"
+            delay={0.3}
+          />
+        </StatsGrid>
 
         {/* Comprehensive Assessment Form */}
-        <Card className="shadow-2xl border-0">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-            <CardTitle className="flex items-center gap-3 text-3xl">
-              <Heart className="h-8 w-8 text-red-500" />
+        <Card className="shadow-xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-t-lg border-b dark:border-gray-700">
+            <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl text-gray-800 dark:text-gray-100">
+              <Heart className="h-7 w-7 md:h-8 md:w-8 text-red-500 dark:text-red-400" />
               Comprehensive Clinical Assessment
             </CardTitle>
-            <CardDescription className="text-lg">
+            <CardDescription className="text-base md:text-lg text-gray-600 dark:text-gray-400">
               Complete all sections below for comprehensive cardiovascular risk analysis and professional clinical report generation
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-10 space-y-10">
+          <CardContent className="pt-8 pb-8 px-6 md:px-8">
+            <form className="space-y-8">
             
             {/* Patient Assessment Section */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-indigo-700 mb-6">
-                <Stethoscope className="h-7 w-7" />
-                Patient Assessment & Demographics
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="patientName" className="text-lg font-semibold">Patient Name</Label>
+            <FormSection
+              icon={Stethoscope}
+              title="Patient Assessment & Demographics"
+              description="Basic patient information and demographics"
+              accent="amber"
+            >
+              <FormFieldGroup columns={2}>
+                <div className="space-y-2.5">
+                  <Label htmlFor="patientName" className="text-base font-semibold text-gray-700 dark:text-gray-200">Patient Name</Label>
                   <Input
                     id="patientName"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="Enter patient name"
-                    className="h-14 text-lg"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
                   />
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="age" className="text-lg font-semibold">Age</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="age" className="text-base font-semibold text-gray-700 dark:text-gray-200">Age</Label>
                   <Input
                     id="age"
                     type="number"
@@ -1051,109 +1110,124 @@ export default function ProfessionalDashboard() {
                     min="1"
                     max="120"
                     placeholder="Enter age"
-                    className="h-14 text-lg"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
                   />
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Gender</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Gender</Label>
                   <Select value={formData.gender} onValueChange={(value) => updateField('gender', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="male" className="dark:text-white dark:focus:bg-gray-700">Male</SelectItem>
+                      <SelectItem value="female" className="dark:text-white dark:focus:bg-gray-700">Female</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Chest Pain Type</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Chest Pain Type</Label>
                   <Select value={formData.chestPainType} onValueChange={(value) => updateField('chestPainType', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400">
                       <SelectValue placeholder="Select chest pain type" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="typical">Typical Angina</SelectItem>
-                      <SelectItem value="atypical">Atypical Angina</SelectItem>
-                      <SelectItem value="non-anginal">Non-Anginal Pain</SelectItem>
-                      <SelectItem value="asymptomatic">Asymptomatic</SelectItem>
+                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                      <SelectItem value="typical" className="dark:text-white dark:focus:bg-gray-700">Typical Angina</SelectItem>
+                      <SelectItem value="atypical" className="dark:text-white dark:focus:bg-gray-700">Atypical Angina</SelectItem>
+                      <SelectItem value="non-anginal" className="dark:text-white dark:focus:bg-gray-700">Non-Anginal Pain</SelectItem>
+                      <SelectItem value="asymptomatic" className="dark:text-white dark:focus:bg-gray-700">Asymptomatic</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="height" className="text-lg font-semibold">Height (cm) - Optional</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="height" className="text-base font-semibold text-gray-700 dark:text-gray-200">Height (cm) - Optional</Label>
                   <Input
                     id="height"
                     type="number"
                     placeholder="170"
                     min="100"
                     max="250"
-                    className="h-14 text-lg"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400"
                   />
-                  <div className="text-sm text-muted-foreground">Your height in centimeters</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Your height in centimeters</div>
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="weight" className="text-lg font-semibold">Weight (kg) - Optional</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="weight" className="text-base font-semibold text-gray-700 dark:text-gray-200">Weight (kg) - Optional</Label>
                   <Input
                     id="weight"
                     type="number"
                     placeholder="70"
                     min="30"
                     max="300"
-                    className="h-14 text-lg"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-yellow-500 dark:focus:ring-yellow-400"
                   />
-                  <div className="text-sm text-muted-foreground">Your weight in kilograms</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Your weight in kilograms</div>
                 </div>
-              </div>
+              </FormFieldGroup>
 
-              {/* Medical History */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center justify-between p-5 bg-gray-50 rounded-xl">
-                  <div>
-                    <Label className="text-lg font-semibold">Diabetes Mellitus</Label>
-                    <div className="text-sm text-gray-600">Type 1 or Type 2 diabetes diagnosis</div>
-                  </div>
-                  <Switch
-                    checked={formData.diabetes}
-                    onCheckedChange={(checked) => updateField('diabetes', checked)}
-                    className="scale-125"
-                  />
-                </div>
-                <div className="flex items-center justify-between p-5 bg-gray-50 rounded-xl">
-                  <div>
-                    <Label className="text-lg font-semibold">Smoking History</Label>
-                    <div className="text-sm text-gray-600">Current or former smoker</div>
-                  </div>
-                  <Switch
-                    checked={formData.smoking}
-                    onCheckedChange={(checked) => updateField('smoking', checked)}
-                    className="scale-125"
-                  />
-                </div>
-                <div className="flex items-center justify-between p-5 bg-gray-50 rounded-xl">
-                  <div>
-                    <Label className="text-lg font-semibold">Exercise-Induced Angina</Label>
-                    <div className="text-sm text-gray-600">Chest pain triggered by exercise</div>
-                  </div>
-                  <Switch
-                    checked={formData.exerciseAngina}
-                    onCheckedChange={(checked) => updateField('exerciseAngina', checked)}
-                    className="scale-125"
-                  />
-                </div>
-                <div className="flex items-center justify-between p-5 bg-gray-50 rounded-xl">
-                  <div>
-                    <Label className="text-lg font-semibold">Previous MI</Label>
-                    <div className="text-sm text-gray-600">History of myocardial infarction</div>
-                  </div>
-                  <Switch
-                    checked={formData.previousHeartAttack}
-                    onCheckedChange={(checked) => updateField('previousHeartAttack', checked)}
-                    className="scale-125"
-                  />
+              {/* Medical History Switches */}
+              <div className="space-y-4 mt-6">
+                <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Medical History</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                  >
+                    <div>
+                      <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Diabetes Mellitus</Label>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Type 1 or Type 2 diabetes diagnosis</div>
+                    </div>
+                    <Switch
+                      checked={formData.diabetes}
+                      onCheckedChange={(checked) => updateField('diabetes', checked)}
+                      className="scale-125 data-[state=checked]:bg-purple-600"
+                    />
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                  >
+                    <div>
+                      <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Smoking History</Label>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Current or former smoker</div>
+                    </div>
+                    <Switch
+                      checked={formData.smoking}
+                      onCheckedChange={(checked) => updateField('smoking', checked)}
+                      className="scale-125 data-[state=checked]:bg-pink-600"
+                    />
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                  >
+                    <div>
+                      <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Exercise-Induced Angina</Label>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Chest pain triggered by exercise</div>
+                    </div>
+                    <Switch
+                      checked={formData.exerciseAngina}
+                      onCheckedChange={(checked) => updateField('exerciseAngina', checked)}
+                      className="scale-125 data-[state=checked]:bg-purple-600"
+                    />
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                  >
+                    <div>
+                      <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Previous MI</Label>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">History of myocardial infarction</div>
+                    </div>
+                    <Switch
+                      checked={formData.previousHeartAttack}
+                      onCheckedChange={(checked) => updateField('previousHeartAttack', checked)}
+                      className="scale-125 data-[state=checked]:bg-pink-600"
+                    />
+                  </motion.div>
                 </div>
               </div>
-            </div>
+            </FormSection>
 
             <Separator className="my-10" />
 
@@ -1473,7 +1547,7 @@ export default function ProfessionalDashboard() {
 
             {/* Clinical Data & Biomarkers Section */}
             <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-purple-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-yellow-700 mb-6">
                 <Microscope className="h-7 w-7" />
                 Clinical Data & Laboratory Biomarkers
               </div>
@@ -1713,13 +1787,13 @@ export default function ProfessionalDashboard() {
 
             {/* Document Upload Section */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-indigo-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 mb-6">
                 <Upload className="h-7 w-7" />
                 Clinical Document Upload
                 <Badge variant="secondary" className="ml-3">Unlimited</Badge>
               </div>
-              <div className="relative border-2 border-dashed border-indigo-300 rounded-2xl p-12 text-center bg-indigo-50 hover:bg-indigo-100 transition-colors">
-                <Upload className="mx-auto h-20 w-20 text-indigo-400 mb-6" />
+              <div className="relative border-2 border-dashed border-amber-300 rounded-2xl p-12 text-center bg-amber-50 hover:bg-amber-100 transition-colors">
+                <Upload className="mx-auto h-20 w-20 text-amber-400 mb-6" />
                 <div className="space-y-3">
                   <p className="text-xl font-semibold text-gray-700">
                     Upload Clinical Documents & Reports
@@ -1761,7 +1835,7 @@ export default function ProfessionalDashboard() {
               <Button
                 onClick={generateProfessionalReport}
                 disabled={processingLoading || !patientName.trim()}
-                className="w-full h-20 text-2xl bg-gradient-to-r from-indigo-700 via-blue-600 to-cyan-600 hover:from-indigo-800 hover:via-blue-700 hover:to-cyan-700 text-white shadow-2xl rounded-xl"
+                className="w-full h-20 text-2xl bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 text-white shadow-2xl rounded-xl"
                 size="lg"
               >
                 {processingLoading ? (
@@ -1780,42 +1854,43 @@ export default function ProfessionalDashboard() {
                 <p className="text-sm text-red-500 mt-3 text-center">Please enter patient name to generate professional report</p>
               )}
             </div>
+            </form>
 
             {/* Professional Features Highlight */}
-            <div className="bg-gradient-to-r from-indigo-100 to-cyan-100 p-8 rounded-2xl border border-indigo-200">
-              <h4 className="font-bold text-indigo-800 mb-6 text-xl">Professional Clinical Features:</h4>
+            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 p-8 rounded-2xl border border-yellow-200 dark:border-yellow-800/50">
+              <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-6 text-xl">Professional Clinical Features:</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Clinical-Grade Risk Stratification</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Clinical-Grade Risk Stratification</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Advanced Biomarker Analysis</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Advanced Biomarker Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Professional PDF Reports</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Professional PDF Reports</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Unlimited Document Analysis</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Unlimited Document Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Family History Assessment</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Family History Assessment</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Clinical Decision Support</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Clinical Decision Support</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Multi-Parameter Risk Analysis</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Multi-Parameter Risk Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">AI-Powered Clinical Insights</span>
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">AI-Powered Clinical Insights</span>
                 </div>
               </div>
             </div>
