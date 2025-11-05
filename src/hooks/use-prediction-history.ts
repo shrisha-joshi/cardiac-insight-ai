@@ -1,0 +1,218 @@
+import { useState, useEffect, useCallback } from 'react';
+import { PredictionResult, mockPredictions } from '@/lib/mockData';
+import { useAuth } from './useAuth';
+import { supabase } from '@/lib/supabase';
+
+const STORAGE_KEY_PREFIX = 'cardiac_insight_user_';
+const MAX_HISTORY_ITEMS = 100; // Maximum predictions to store
+
+// Extended prediction with feedback
+export interface PredictionWithFeedback extends PredictionResult {
+  feedback?: 'correct' | 'incorrect' | null;
+  feedbackDate?: string;
+}
+
+interface UsePredictionHistoryReturn {
+  userId: string;
+  predictions: PredictionWithFeedback[];
+  addPrediction: (prediction: PredictionResult) => void;
+  removePrediction: (id: string) => void;
+  clearHistory: () => void;
+  exportHistory: () => string;
+  importHistory: (data: string) => boolean;
+  addFeedback: (predictionId: string, feedback: 'correct' | 'incorrect') => void;
+  getFeedbackStats: () => { correct: number; incorrect: number; total: number };
+  isLoading: boolean;
+}
+
+export function usePredictionHistory(): UsePredictionHistoryReturn {
+  const { user, loading: authLoading } = useAuth();
+  const [userId, setUserId] = useState<string>('');
+  const [predictions, setPredictions] = useState<PredictionWithFeedback[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize user ID based on authenticated user
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Use authenticated user ID from Supabase
+        if (user?.id) {
+          setUserId(user.id);
+          
+          // Load predictions for this authenticated user
+          const storageKey = STORAGE_KEY_PREFIX + user.id;
+          const stored = localStorage.getItem(storageKey);
+          
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            // Convert timestamp strings back to Date objects
+            const converted = parsed.map((p: any) => ({
+              ...p,
+              timestamp: new Date(p.timestamp)
+            }));
+            setPredictions(converted);
+          } else {
+            // No history for this user yet
+            setPredictions([]);
+          }
+        } else {
+          // Not authenticated yet
+          setUserId('');
+          setPredictions([]);
+        }
+      } catch (error) {
+        console.error('Error initializing user:', error);
+        setPredictions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!authLoading) {
+      initializeUser();
+    }
+  }, [user, authLoading]);
+
+  // Save predictions to localStorage for this user
+  const savePredictionsToStorage = useCallback((preds: PredictionWithFeedback[]) => {
+    if (!userId) return;
+    
+    try {
+      const storageKey = STORAGE_KEY_PREFIX + userId;
+      localStorage.setItem(storageKey, JSON.stringify(preds));
+    } catch (error) {
+      console.error('Error saving predictions to storage:', error);
+      // Handle quota exceeded error
+      if (error instanceof DOMException && error.code === 22) {
+        console.warn('LocalStorage quota exceeded. Keeping only last 50 predictions.');
+        const limited = preds.slice(0, 50);
+        const storageKey = STORAGE_KEY_PREFIX + userId;
+        localStorage.setItem(storageKey, JSON.stringify(limited));
+      }
+    }
+  }, [userId]);
+
+  // Add new prediction
+  const addPrediction = useCallback((prediction: PredictionResult) => {
+    setPredictions(prev => {
+      // Convert to prediction with feedback
+      const predictionWithFeedback: PredictionWithFeedback = {
+        ...prediction,
+        feedback: null
+      };
+      
+      // Add new prediction to the beginning
+      const updated = [predictionWithFeedback, ...prev];
+      
+      // Keep only the last MAX_HISTORY_ITEMS predictions
+      const limited = updated.slice(0, MAX_HISTORY_ITEMS);
+      
+      // Save to localStorage
+      savePredictionsToStorage(limited);
+      
+      return limited;
+    });
+  }, [savePredictionsToStorage]);
+
+  // Remove prediction by id
+  const removePrediction = useCallback((id: string) => {
+    setPredictions(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      savePredictionsToStorage(updated);
+      return updated;
+    });
+  }, [savePredictionsToStorage]);
+
+  // Clear all history for this user
+  const clearHistory = useCallback(() => {
+    setPredictions([]);
+    try {
+      if (userId) {
+        const storageKey = STORAGE_KEY_PREFIX + userId;
+        localStorage.removeItem(storageKey);
+      }
+    } catch (error) {
+      console.error('Error clearing history:', error);
+    }
+  }, [userId]);
+
+  // Add feedback to a prediction
+  const addFeedback = useCallback((predictionId: string, feedback: 'correct' | 'incorrect') => {
+    setPredictions(prev => {
+      const updated = prev.map(p => 
+        p.id === predictionId 
+          ? { 
+              ...p, 
+              feedback, 
+              feedbackDate: new Date().toISOString() 
+            }
+          : p
+      );
+      savePredictionsToStorage(updated);
+      return updated;
+    });
+  }, [savePredictionsToStorage]);
+
+  // Get feedback statistics
+  const getFeedbackStats = useCallback(() => {
+    const correct = predictions.filter(p => p.feedback === 'correct').length;
+    const incorrect = predictions.filter(p => p.feedback === 'incorrect').length;
+    const total = predictions.length;
+    
+    return { correct, incorrect, total };
+  }, [predictions]);
+
+  // Export history as JSON string
+  const exportHistory = useCallback(() => {
+    try {
+      return JSON.stringify(predictions, null, 2);
+    } catch (error) {
+      console.error('Error exporting history:', error);
+      return '';
+    }
+  }, [predictions]);
+
+  // Import history from JSON string
+  const importHistory = useCallback((data: string) => {
+    try {
+      const parsed = JSON.parse(data);
+      
+      // Validate that it's an array of predictions
+      if (!Array.isArray(parsed)) {
+        throw new Error('Invalid format: expected an array');
+      }
+      
+      // Convert timestamps back to Date objects
+      const converted = parsed.map((p: any) => ({
+        ...p,
+        timestamp: new Date(p.timestamp)
+      }));
+      
+      // Keep only the last MAX_HISTORY_ITEMS predictions
+      const limited = converted.slice(0, MAX_HISTORY_ITEMS);
+      
+      setPredictions(limited);
+      savePredictionsToStorage(limited);
+      
+      return true;
+    } catch (error) {
+      console.error('Error importing history:', error);
+      return false;
+    }
+  }, [savePredictionsToStorage]);
+
+  return {
+    userId,
+    predictions,
+    addPrediction,
+    removePrediction,
+    clearHistory,
+    exportHistory,
+    importHistory,
+    addFeedback,
+    getFeedbackStats,
+    isLoading
+  };
+}

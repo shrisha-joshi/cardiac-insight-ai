@@ -78,8 +78,11 @@ export default function SignupForm() {
 
         toast({
           title: "Account created successfully!",
-          description: "Please check your email to verify your account.",
+          description: "Redirecting to home page...",
         });
+        
+        // Redirect to home page
+        window.location.href = '/';
       }
     } catch (err) {
       setError('An unexpected error occurred');

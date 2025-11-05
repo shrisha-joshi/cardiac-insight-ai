@@ -331,7 +331,12 @@ export default function PremiumDashboard() {
           riskLevel: generatedReport.riskLevel,
           factors: generatedReport.keyRiskFactors
         },
-        recommendations: generatedReport.recommendations,
+        recommendations: {
+          medicines: generatedReport.recommendations || [],
+          ayurveda: [],
+          yoga: [],
+          diet: []
+        },
         reportType: 'premium',
         reportId: reportId
       };

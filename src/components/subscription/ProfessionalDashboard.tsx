@@ -473,7 +473,12 @@ export default function ProfessionalDashboard() {
             ...generatedReport.biomarkerAnalysis.elevated
           ]
         },
-        recommendations: generatedReport.professionalRecommendations,
+        recommendations: {
+          medicines: generatedReport.professionalRecommendations || [],
+          ayurveda: [],
+          yoga: [],
+          diet: []
+        },
         reportType: 'professional',
         reportId: generatedReport.reportId
       };
