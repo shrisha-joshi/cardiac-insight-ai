@@ -162,7 +162,7 @@ export default function Header() {
         <nav className="hidden md:flex items-center gap-6">
           {user && (
             <>
-              <NavLink to="/dashboard">Dashboard</NavLink>
+              {/* <NavLink to="/dashboard">Dashboard</NavLink> */}
               <NavLink to="/history">History</NavLink>
               <NavLink to="/chatbot">AI Assistant</NavLink>
               <NavLink to="/health-simulation">Health Simulation</NavLink>
