@@ -24,8 +24,8 @@ export function EmergencyPrepCard() {
   const handleEmergencyCall = () => {
     setEmergencyDialing(true);
     
-    // Initiate phone call (works on mobile devices)
-    const phoneNumber = 'tel:911';
+    // Initiate phone call (works on mobile devices) - India Emergency Number
+    const phoneNumber = 'tel:108'; // National Ambulance Service India (108) or Medical Emergency (102)
     window.location.href = phoneNumber;
     
     toast({
@@ -34,10 +34,13 @@ export function EmergencyPrepCard() {
         <div className="space-y-2 mt-2">
           <div className="flex items-center gap-2">
             <Phone className="w-4 h-4 text-rose-500" />
-            <span className="font-semibold">Dialing 911...</span>
+            <span className="font-semibold">Dialing 108 (India Emergency)...</span>
           </div>
           <p className="text-xs text-muted-foreground">
             Stay calm. Help is on the way. Keep the line open and follow dispatcher instructions.
+          </p>
+          <p className="text-xs text-muted-foreground font-semibold">
+            Alternative: 102 (Medical Emergency) | 112 (All-in-One Emergency)
           </p>
         </div>
       ),
@@ -217,7 +220,7 @@ export function EmergencyPrepCard() {
                 <Phone className="w-5 h-5" />
               )}
             </motion.div>
-            <span>{emergencyDialing ? 'Connecting...' : 'Quick Dial Emergency (911)'}</span>
+            <span>{emergencyDialing ? 'Connecting...' : 'Quick Dial Emergency (108/112/102)'}</span>
           </motion.button>
 
           {/* Find Hospital Button */}
@@ -456,7 +459,7 @@ export function EmergencyPrepCard() {
                     Emergency Reminder:
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    If experiencing severe chest pain or heart attack symptoms, call 911 immediately instead of driving to hospital.
+                    If experiencing severe chest pain or heart attack symptoms, call 108 (National Ambulance), 102 (Medical Emergency), or 112 (All Emergency Services) immediately instead of driving to hospital.
                   </p>
                 </div>
               </div>
