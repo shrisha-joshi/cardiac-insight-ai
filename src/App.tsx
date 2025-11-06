@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
+import ForgotPasswordForm from "./components/auth/ForgotPasswordForm";
+import ResetPasswordForm from "./components/auth/ResetPasswordForm";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Dashboard from "./components/Dashboard";
 import ProfilePage from "./components/profile/ProfilePage";
@@ -19,6 +21,7 @@ import PremiumDashboard from "./components/subscription/PremiumDashboard";
 import ProfessionalDashboard from "./components/subscription/ProfessionalDashboard";
 import DatabaseStatus from "./components/database/DatabaseStatus";
 import HealthSimulationPage from "./pages/HealthSimulationPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +39,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
+            <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+            <Route path="/reset-password" element={<ResetPasswordForm />} />
             
             {/* Protected Routes - Require Authentication */}
             <Route 
@@ -67,6 +72,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MedicalHistory />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
                 </ProtectedRoute>
               } 
             />
