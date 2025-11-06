@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
 import { cardiacChatService } from '@/services/cardiacChatService';
+import { enhancedCardiacChatService } from '@/services/enhancedCardiacChatService';
 import { PatientData, PredictionResult } from '@/lib/mockData';
 import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity, AlertTriangle, Loader2, Copy, Check, Sparkles, TrendingUp, Shield } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -134,53 +135,51 @@ How can I help you learn about heart health today?`,
 
   const processUserMessage = async (message: string): Promise<{ content: string; data?: Record<string, unknown> }> => {
     try {
-      // Check for emergencies
-      if (cardiacChatService.detectEmergency(message)) {
-        return {
-          content: `🚨 **MEDICAL EMERGENCY DETECTED**
+      // Use enhanced cardiac chat service for intelligent, varied responses
+      const chatResponse = await enhancedCardiacChatService.processMessage(
+        message,
+        user?.id,
+        undefined, // riskScore - can be fetched from context
+        50, // placeholder age
+        'unknown' // placeholder gender
+      );
 
-If you're experiencing chest pain, shortness of breath, or other severe symptoms:
+      let fullContent = chatResponse.message;
 
-**CALL EMERGENCY SERVICES IMMEDIATELY:**
-- 🇺🇸 USA: Call 911
-- 🇬🇧 UK: Call 999  
-- 🇪🇺 Europe: Call 112
-- 🇮🇳 India: Call 108 or 102
-
-**Do not wait. Do not delay. Seek emergency help now.**
-
-If this is not an emergency, I'm here to provide cardiac health information.`
-        };
+      // Add follow-up questions if provided
+      if (chatResponse.followUpQuestions && chatResponse.followUpQuestions.length > 0) {
+        fullContent += '\n\n**🤔 You might also want to ask:**\n';
+        chatResponse.followUpQuestions.forEach(q => {
+          fullContent += `• ${q}\n`;
+        });
       }
 
-      // Get cardiac-specific response
-      const cardiacResponse = await cardiacChatService.getCardiacResponse(message, {
-        age: user ? 50 : undefined,
-        gender: user ? 'male' : undefined,
-        riskLevel: 'medium'
-      });
-      
-      // If user asking about history and is logged in
+      // Add references if educational
+      if (chatResponse.type === 'educational' && chatResponse.references) {
+        fullContent += '\n\n**📚 References:**\n';
+        chatResponse.references.forEach(ref => {
+          fullContent += `• ${ref}\n`;
+        });
+      }
+
+      // Add history if user logged in and asking about it
       if (user && message.toLowerCase().includes('history')) {
         try {
           const history = await mlService.getMedicalHistory(user.id);
           if (history.length > 0) {
-            const recentAssessment = history[0];
-            const riskLevel = recentAssessment.prediction_result?.prediction?.riskLevel || 'Unknown';
-            const riskScore = recentAssessment.prediction_result?.prediction?.riskScore || 0;
-            
-            return {
-              content: cardiacResponse + `\n\n**📊 Your Recent Assessment Data:**\n• Total Assessments: ${history.length}\n• Most Recent Risk Level: ${riskLevel}\n• Most Recent Risk Score: ${riskScore.toFixed(1)}%\n\n**⚠️ MEDICAL DISCLAIMER:** This historical data is for educational review only. Please discuss these results with your healthcare provider for proper medical interpretation and guidance.`,
-              data: { history: history.slice(0, 3) }
-            };
+            fullContent += `\n\n**📊 Your Assessment History:**\nTotal Assessments: ${history.length}`;
           }
         } catch (error) {
-          console.error('Error fetching medical history:', error);
+          console.error('Error fetching history:', error);
         }
       }
-      
+
       return {
-        content: cardiacResponse
+        content: fullContent,
+        data: {
+          type: chatResponse.type,
+          timestamp: new Date()
+        }
       };
     } catch (error) {
       console.error('Cardiac chat service error:', error);

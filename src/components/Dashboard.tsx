@@ -9,6 +9,7 @@ import { PatientData, PredictionResult, generateMockPrediction } from '@/lib/moc
 import { usePredictionHistory } from '@/hooks/use-prediction-history';
 import { useAuth } from '@/hooks/useAuth';
 import { mlService } from '@/services/mlService';
+import { improvedMLService } from '@/services/improvedMLService';
 import { supabase, isSupabaseConfigured, savePredictionToDatabase } from '@/lib/supabase';
 import { Heart, History, User, BarChart3, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,42 +32,33 @@ export default function Dashboard() {
     try {
       let prediction: PredictionResult;
       
-      // Only try Supabase if properly configured
-      if (isSupabaseConfigured) {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+      // 🚀 NEW: Use improved ML service with ensemble algorithms + Gemini
+      try {
+        // Call the new improved ML service with 4-algorithm ensemble
+        prediction = await improvedMLService.predictHeartAttackRisk(patientData);
         
-        // Use ML service for real prediction
-        const mlResponse = await mlService.predictHeartAttackRisk({
-          patientData,
-          userId: user?.id,
-          useHistoricalData: true
+        toast({
+          title: "✅ Advanced AI Assessment Complete",
+          description: `Ensemble of 4 ML algorithms analyzed your data. Risk: ${prediction.riskLevel.toUpperCase()}`,
+          variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
         });
-        
-        // Convert ML response to our PredictionResult format
-        prediction = {
-          id: Date.now().toString(),
-          timestamp: new Date(),
-          riskLevel: mlResponse.prediction.riskLevel.toLowerCase() as 'low' | 'medium' | 'high',
-          riskScore: mlResponse.prediction.riskScore,
-          confidence: mlResponse.prediction.confidence,
-          prediction: mlResponse.prediction.prediction === 'Risk Detected' ? 'Risk' : 'No Risk',
-          explanation: mlResponse.explanation,
-          recommendations: mlResponse.recommendations,
-          patientData: patientData
-        };
-      } else {
-        // Use enhanced mock prediction
-        console.log('Using enhanced mock prediction - Supabase not configured');
+      } catch (improvedError) {
+        console.warn('Improved ML service error, falling back to mock:', improvedError);
+        // Fallback to enhanced mock if improved service fails
         prediction = generateMockPrediction(patientData);
+        toast({
+          title: "⚠️ Using Fallback Analysis",
+          description: `Risk assessment completed with fallback algorithm. Risk: ${prediction.riskLevel.toUpperCase()}`,
+          variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
+        });
       }
       
       setCurrentPrediction(prediction);
       
-      // Add prediction to history and save to localStorage
+      // Add prediction to history
       addPrediction(prediction);
       
-      // ✅ NEW: Save prediction to Supabase database for permanent storage
+      // ✅ Save prediction to Supabase database for permanent storage
       if (user?.id) {
         const dbResult = await savePredictionToDatabase(user.id, patientData, prediction);
         if (dbResult.success) {
@@ -77,38 +69,24 @@ export default function Dashboard() {
           });
         } else {
           console.warn('⚠️ Failed to save to database:', dbResult.error);
-          toast({
-            title: "⚠️ Database Save Failed",
-            description: "Prediction saved to history locally, but database save failed.",
-            variant: 'destructive',
-          });
         }
       }
       
       // Automatically switch to results tab
       setActiveTab('results');
       
-      // Show success toast
-      toast({
-        title: "✅ Assessment Complete",
-        description: `Heart attack risk assessment completed. Risk level: ${prediction.riskLevel.toUpperCase()}. Saved to your history!`,
-        variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
-      });
-      
     } catch (error) {
       console.error('Prediction error:', error);
-      // Fallback to enhanced mock prediction on any error
+      
+      // Final fallback to mock prediction
       const prediction = generateMockPrediction(patientData);
       setCurrentPrediction(prediction);
-      
-      // Add prediction to history and save to localStorage even in offline mode
       addPrediction(prediction);
-      
       setActiveTab('results');
       
       toast({
         title: "✅ Assessment Complete (Offline Mode)",
-        description: `Risk assessment completed. Risk level: ${prediction.riskLevel.toUpperCase()}. Saved to your history!`,
+        description: `Risk assessment completed. Risk level: ${prediction.riskLevel.toUpperCase()}`,
         variant: prediction.riskLevel === 'high' ? 'destructive' : 'default',
       });
     }
