@@ -6,7 +6,7 @@ A professional cardiovascular disease (CVD) risk assessment application with Ind
 
 
 
-## 🚀 Quick Start**URL**: https://lovable.dev/projects/ce6c9c1a-4008-4e2e-b906-16be20fa5f72
+## 🚀 Quick Start**URL**: https://cardiac-insight-ai.vercel.app/
 
 
 
@@ -22,12 +22,11 @@ npm installThere are several ways of editing your application.
 
 npm run dev
 
-```Simply visit the [Lovable Project](https://lovable.dev/projects/ce6c9c1a-4008-4e2e-b906-16be20fa5f72) and start prompting.
 
 
 
-Visit: **http://localhost:8080/**Changes made via Lovable will be committed automatically to this repo.
 
+V
 
 
 ## 📋 Prerequisites**Use your preferred IDE**
@@ -142,7 +141,6 @@ npm test     # Run unit tests (requires vitest config)To connect a domain, navig
 
 ```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
 
 **Test Suite**: 140+ tests with 95%+ coverage
 
