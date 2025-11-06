@@ -3,6 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { 
   Database, 
@@ -26,6 +33,8 @@ export default function DatabaseStatus() {
   const [tables, setTables] = useState<DatabaseTable[]>([]);
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [projectUrl, setProjectUrl] = useState('');
+  const [showSqlEditorDialog, setShowSqlEditorDialog] = useState(false);
+  const [sqlEditorUrl, setSqlEditorUrl] = useState('');
   const { toast } = useToast();
 
   const requiredTables = ['profiles', 'medical_history', 'ml_datasets'];
@@ -270,10 +279,11 @@ CREATE POLICY "Users can only see their own datasets" ON public.ml_datasets
                     variant="outline"
                     className="ml-2"
                     onClick={() => {
-                      const sqlEditorUrl = projectUrl.includes('supabase.co') 
+                      const editorUrl = projectUrl.includes('supabase.co') 
                         ? `https://supabase.com/dashboard/project/${projectUrl.split('.')[0].split('//')[1]}/sql/new`
                         : `${projectUrl}/project/default/sql`;
-                      window.open(sqlEditorUrl, '_blank');
+                      setSqlEditorUrl(editorUrl);
+                      setShowSqlEditorDialog(true);
                     }}
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />
@@ -308,6 +318,78 @@ CREATE POLICY "Users can only see their own datasets" ON public.ml_datasets
           )}
         </CardContent>
       </Card>
+
+      {/* SQL Editor Dialog */}
+      <Dialog open={showSqlEditorDialog} onOpenChange={setShowSqlEditorDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-teal-500" />
+              Open Supabase SQL Editor
+            </DialogTitle>
+            <DialogDescription>
+              You'll be redirected to your Supabase project's SQL editor to run the database setup script.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-4 rounded-lg bg-muted space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold mb-1">Before opening:</p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Make sure you've copied the database setup script</li>
+                    <li>Have your Supabase credentials ready</li>
+                    <li>Be ready to paste and execute the script</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                onClick={() => {
+                  window.open(sqlEditorUrl, '_blank', 'noopener,noreferrer');
+                  toast({
+                    title: "Opening SQL Editor",
+                    description: "Supabase SQL Editor opened in a new tab.",
+                  });
+                  setShowSqlEditorDialog(false);
+                }}
+                className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700"
+                size="lg"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open in New Tab
+              </Button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(sqlEditorUrl);
+                    toast({
+                      title: "URL Copied",
+                      description: "SQL Editor URL copied to clipboard",
+                    });
+                  }}
+                  variant="outline"
+                >
+                  <Copy className="w-3 h-3 mr-2" />
+                  Copy URL
+                </Button>
+
+                <Button
+                  onClick={() => setShowSqlEditorDialog(false)}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

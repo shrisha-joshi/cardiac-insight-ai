@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { mlService } from '@/services/mlService';
 import { cardiacChatService } from '@/services/cardiacChatService';
 import { PatientData, PredictionResult } from '@/lib/mockData';
-import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity, AlertTriangle, Loader2, Copy, Check } from 'lucide-react';
+import { MessageCircle, Send, Bot, User, Heart, Stethoscope, Activity, AlertTriangle, Loader2, Copy, Check, Sparkles, TrendingUp, Shield } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Message {
@@ -36,6 +36,7 @@ export default function ChatBot() {
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -111,12 +112,19 @@ How can I help you learn about heart health today?`,
     setInputMessage('');
     addMessage('user', userMessage, undefined, 'sent');
     setLoading(true);
+    setIsTyping(true);
 
     try {
+      // Add slight delay for more natural feel
+      await new Promise(resolve => setTimeout(resolve, 500));
       const response = await processUserMessage(userMessage);
+      setIsTyping(false);
+      // Simulate typing effect
+      await new Promise(resolve => setTimeout(resolve, 300));
       addBotMessage(response.content, response.data);
     } catch (error) {
       console.error('Chat error:', error);
+      setIsTyping(false);
       addBotMessage("I apologize, but I'm having trouble processing your request right now. Please try again later.");
     } finally {
       setLoading(false);
@@ -210,91 +218,138 @@ For general heart health questions, please try asking again in a moment.`
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 py-8">
-      <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-medical-primary rounded-lg">
-              <Heart className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 py-8 px-4 transition-colors duration-300">
+      <div className="container mx-auto max-w-5xl">
+        {/* Animated Header */}
+        <div className="mb-8 animate-in fade-in slide-in-from-top duration-700">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-medical-primary to-medical-secondary rounded-2xl blur-xl opacity-50 dark:opacity-40 animate-pulse" />
+              <div className="relative p-3 bg-gradient-to-br from-medical-primary to-medical-secondary rounded-2xl shadow-lg dark:shadow-2xl dark:shadow-red-500/20">
+                <Heart className="h-8 w-8 text-white animate-pulse" />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">AI Health Assistant</h1>
-              <p className="text-muted-foreground text-sm">
-                Personalized cardiac health insights & guidance
+              <h1 className="text-4xl font-bold text-medical-primary ">
+                AI Health Assistant
+              </h1>
+              <p className="text-muted-foreground text-sm flex items-center gap-2 mt-1">
+                <Sparkles className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />
+                Personalized cardiac health insights powered by advanced AI
               </p>
             </div>
           </div>
         </div>
 
-        {/* Chat Container */}
-        <Card className="h-[700px] flex flex-col shadow-lg border-0">
-          {/* Header */}
-          <CardHeader className="pb-3 bg-gradient-to-r from-medical-primary/5 to-medical-secondary/5 border-b">
+        {/* Main Chat Container */}
+        <Card className="h-[750px] flex flex-col shadow-2xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden animate-in fade-in zoom-in-95 duration-500 dark:shadow-slate-950/50">
+          {/* Gradient Header */}
+          <CardHeader className="pb-4 bg-gradient-to-r from-medical-primary/10 via-purple-50 to-medical-secondary/10 dark:from-medical-primary/20 dark:via-purple-900/20 dark:to-medical-secondary/20 border-b border-gray-200/50 dark:border-slate-700/50 backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-medical-primary" />
-                Health Assistant Chat
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm dark:shadow-slate-950/50">
+                  <MessageCircle className="h-5 w-5 text-medical-primary dark:text-red-400" />
+                </div>
+                <span className="text-xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                  Health Chat
+                </span>
               </CardTitle>
-              <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">
-                <Activity className="h-3 w-3 mr-1 animate-pulse" />
-                Online
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 text-green-800 dark:text-green-300 border-green-200/50 dark:border-green-700/50 shadow-sm px-3 py-1">
+                  <div className="relative flex h-2 w-2 mr-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 dark:bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600 dark:bg-green-400"></span>
+                  </div>
+                  AI Active
+                </Badge>
+              </div>
             </div>
           </CardHeader>
           
-          {/* Messages Area */}
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          {/* Messages Area with Custom Scrollbar */}
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden bg-gradient-to-b from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-950/50">
             <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4">
-                {messages.map((message) => (
+              <div className="p-6 space-y-6">
+                {messages.map((message, index) => (
                   <div
                     key={message.id}
-                    className={`flex items-end gap-3 animate-in fade-in slide-in-from-bottom-2 ${
+                    className={`flex items-end gap-3 animate-in fade-in slide-in-from-bottom-3 ${
                       message.type === 'user' ? 'flex-row-reverse' : 'flex-row'
                     }`}
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {/* Avatar */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      message.type === 'user' 
-                        ? 'bg-medical-primary' 
-                        : 'bg-medical-secondary'
-                    } shadow-sm`}>
-                      {message.type === 'user' ? (
-                        <User className="h-4 w-4 text-white" />
-                      ) : (
-                        <Bot className="h-4 w-4 text-white" />
-                      )}
+                    {/* Enhanced Avatar with Gradient Border */}
+                    <div className={`relative flex-shrink-0 ${message.type === 'user' ? 'animate-in zoom-in' : 'animate-in zoom-in'}`}>
+                      <div className={`absolute inset-0 rounded-full blur-md opacity-50 dark:opacity-40 ${
+                        message.type === 'user' 
+                          ? 'bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-700' 
+                          : 'bg-gradient-to-r from-purple-400 to-pink-500 dark:from-purple-500 dark:to-pink-600'
+                      }`} />
+                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center shadow-lg dark:shadow-slate-950/50 ${
+                        message.type === 'user' 
+                          ? 'bg-gradient-to-br from-medical-primary to-blue-600 dark:from-blue-600 dark:to-blue-800' 
+                          : 'bg-gradient-to-br from-medical-secondary via-purple-500 to-pink-500 dark:from-purple-600 dark:via-purple-700 dark:to-pink-600'
+                      }`}>
+                        {message.type === 'user' ? (
+                          <User className="h-5 w-5 text-white" />
+                        ) : (
+                          <Bot className="h-5 w-5 text-white" />
+                        )}
+                      </div>
                     </div>
                     
-                    {/* Message Bubble */}
-                    <div className={`flex flex-col max-w-xs gap-1 ${
+                    {/* Enhanced Message Bubble */}
+                    <div className={`flex flex-col max-w-[70%] gap-2 ${
                       message.type === 'user' ? 'items-end' : 'items-start'
                     }`}>
-                      <div className={`rounded-lg px-4 py-3 shadow-sm transition-all ${
+                      <div className={`group relative rounded-2xl px-5 py-3 shadow-md transition-all duration-300 hover:shadow-xl dark:shadow-slate-950/50 ${
                         message.type === 'user'
-                          ? 'bg-medical-primary text-white rounded-br-none'
-                          : 'bg-white border border-gray-200 text-foreground rounded-bl-none'
+                          ? 'bg-gradient-to-br from-medical-primary to-blue-600 dark:from-blue-600 dark:to-blue-800 text-white rounded-br-sm'
+                          : 'bg-white dark:bg-slate-800 border border-gray-200/50 dark:border-slate-700/50 text-foreground dark:text-slate-100 rounded-bl-sm hover:border-gray-300 dark:hover:border-slate-600'
                       }`}>
-                        <p className="text-sm whitespace-pre-line leading-relaxed break-words">
+                        {/* Message Corner Accent */}
+                        <div className={`absolute ${
+                          message.type === 'user' ? '-right-1 bottom-0' : '-left-1 bottom-0'
+                        } w-4 h-4 ${
+                          message.type === 'user' 
+                            ? 'bg-blue-600 dark:bg-blue-800' 
+                            : 'bg-white dark:bg-slate-800 border-l border-b border-gray-200/50 dark:border-slate-700/50'
+                        } transform rotate-45`} />
+                        
+                        <p className="relative text-sm whitespace-pre-line leading-relaxed break-words">
                           {message.content}
                         </p>
+                        
+                        {/* Gradient Overlay for Bot Messages */}
+                        {message.type === 'bot' && (
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 via-purple-50/20 to-pink-50/0 dark:from-purple-500/0 dark:via-purple-500/5 dark:to-pink-500/0 rounded-2xl pointer-events-none" />
+                        )}
                       </div>
                       
-                      {/* History Data Display */}
+                      {/* Enhanced History Data Display */}
                       {message.data && message.data.history && (
-                        <div className="mt-2 space-y-2 w-full max-w-sm">
-                          <p className="text-xs font-semibold text-muted-foreground px-1">Recent Assessments:</p>
-                          {(message.data.history as AssessmentHistory[]).map((assessment: AssessmentHistory, index: number) => (
-                            <div key={index} className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 p-2 rounded text-xs">
+                        <div className="mt-2 space-y-2 w-full animate-in fade-in slide-in-from-bottom-2">
+                          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-2 flex items-center gap-2">
+                            <TrendingUp className="h-3 w-3" />
+                            Recent Assessments:
+                          </p>
+                          {(message.data.history as AssessmentHistory[]).map((assessment: AssessmentHistory, idx: number) => (
+                            <div 
+                              key={idx} 
+                              className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200/50 dark:border-blue-700/50 p-3 rounded-xl text-xs shadow-sm hover:shadow-md dark:shadow-slate-950/50 transition-all duration-300 transform hover:scale-[1.02]"
+                            >
                               <div className="flex justify-between items-center">
-                                <span className="font-medium text-blue-900">
+                                <span className="font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-2">
+                                  <Activity className="h-3 w-3" />
                                   {new Date(assessment.assessment_date).toLocaleDateString()}
                                 </span>
-                                <Badge variant={
-                                  assessment.prediction_result?.riskLevel === 'low' ? 'secondary' :
-                                  assessment.prediction_result?.riskLevel === 'medium' ? 'default' : 'destructive'
-                                } className="text-xs">
+                                <Badge 
+                                  variant={
+                                    assessment.prediction_result?.riskLevel === 'low' ? 'secondary' :
+                                    assessment.prediction_result?.riskLevel === 'medium' ? 'default' : 'destructive'
+                                  } 
+                                  className="text-xs shadow-sm"
+                                >
                                   {assessment.prediction_result?.riskLevel || 'Unknown'} Risk
                                 </Badge>
                               </div>
@@ -303,21 +358,21 @@ For general heart health questions, please try asking again in a moment.`
                         </div>
                       )}
                       
-                      {/* Message Actions */}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
+                      {/* Enhanced Message Actions */}
+                      <div className="flex items-center gap-3 px-1">
+                        <span className="text-xs text-muted-foreground font-medium">
                           {formatTimestamp(message.timestamp)}
                         </span>
                         {message.type === 'bot' && (
                           <button
                             onClick={() => copyToClipboard(message.id, message.content)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
                             title="Copy message"
                           >
                             {message.copied ? (
-                              <Check className="h-3 w-3 text-green-600" />
+                              <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                             ) : (
-                              <Copy className="h-3 w-3 text-gray-400" />
+                              <Copy className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                             )}
                           </button>
                         )}
@@ -326,18 +381,23 @@ For general heart health questions, please try asking again in a moment.`
                   </div>
                 ))}
                 
-                {/* Loading Indicator */}
-                {loading && (
-                  <div className="flex items-start gap-3 animate-in fade-in">
-                    <div className="w-8 h-8 rounded-full bg-medical-secondary text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <Bot className="h-4 w-4" />
+                {/* Enhanced Loading Indicator */}
+                {(loading || isTyping) && (
+                  <div className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full blur-md bg-gradient-to-r from-purple-400 to-pink-500 dark:from-purple-500 dark:to-pink-600 opacity-50 dark:opacity-40" />
+                      <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-medical-secondary via-purple-500 to-pink-500 dark:from-purple-600 dark:via-purple-700 dark:to-pink-600 text-white flex items-center justify-center shadow-lg dark:shadow-slate-950/50">
+                        <Bot className="h-5 w-5" />
+                      </div>
                     </div>
-                    <div className="bg-white border border-gray-200 rounded-lg rounded-bl-none px-4 py-3 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 border border-gray-200/50 dark:border-slate-700/50 rounded-2xl rounded-bl-sm px-5 py-4 shadow-md dark:shadow-slate-950/50">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-medical-secondary rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-medical-secondary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="w-2 h-2 bg-medical-secondary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                        <span className="text-sm text-muted-foreground ml-1">Processing...</span>
+                        <div className="flex gap-1">
+                          <div className="w-2.5 h-2.5 bg-gradient-to-r from-medical-secondary to-purple-500 dark:from-purple-500 dark:to-purple-600 rounded-full animate-bounce" />
+                          <div className="w-2.5 h-2.5 bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-600 dark:to-pink-600 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                          <div className="w-2.5 h-2.5 bg-gradient-to-r from-pink-500 to-medical-secondary dark:from-pink-600 dark:to-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                        </div>
+                        <span className="text-sm text-gray-600 dark:text-gray-300 ml-2 font-medium">AI is thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -346,90 +406,64 @@ For general heart health questions, please try asking again in a moment.`
               <div ref={messagesEndRef} />
             </ScrollArea>
             
-            {/* Input Area */}
-            <div className="border-t bg-white p-4">
-              {/* Alert Banner */}
-              <Alert className="mb-3 border-blue-200 bg-blue-50 text-blue-900">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  <strong>Medical Disclaimer:</strong> This is educational only. For emergencies, call 911/999/112. Always consult healthcare providers.
+            {/* Enhanced Input Area */}
+            <div className="border-t border-gray-200/50 dark:border-slate-700/50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm p-5">
+              {/* Enhanced Alert Banner */}
+              <Alert className="mb-4 border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 shadow-sm">
+                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription className="text-xs text-blue-900 dark:text-blue-200">
+                  <strong className="font-semibold">Medical Disclaimer:</strong> Educational purposes only. For emergencies, call 911/999/112. Always consult healthcare providers.
                 </AlertDescription>
               </Alert>
 
-              {/* Input Field */}
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  placeholder="Ask about heart health, risk factors, or your assessments..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={loading}
-                  className="flex-1 border-gray-300 focus:border-medical-primary"
-                />
+              {/* Enhanced Input Field */}
+              <div className="flex gap-3">
+                <div className="flex-1 relative group">
+                  <Input
+                    ref={inputRef}
+                    placeholder="Ask about heart health, risk factors, or your assessments..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={loading}
+                    className="pr-4 py-6 border-2 border-gray-200 dark:border-slate-700 focus:border-medical-primary dark:focus:border-blue-500 bg-white dark:bg-slate-800 dark:text-white rounded-2xl shadow-sm focus:shadow-lg transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  />
+                  {inputMessage && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Sparkles className="h-4 w-4 text-yellow-500 dark:text-yellow-400 animate-pulse" />
+                    </div>
+                  )}
+                </div>
                 <Button 
                   onClick={handleSendMessage} 
                   disabled={loading || !inputMessage.trim()}
                   size="icon"
-                  className="bg-medical-primary hover:bg-medical-primary/90"
+                  className="h-[52px] w-[52px] bg-gradient-to-r from-medical-primary to-blue-600 dark:from-blue-600 dark:to-blue-800 hover:from-medical-primary/90 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-900 shadow-lg hover:shadow-xl dark:shadow-blue-950/50 transition-all duration-300 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
                 >
                   {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="h-5 w-5" />
                   )}
                 </Button>
               </div>
               
-              {/* Footer */}
-              <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                <Stethoscope className="h-3 w-3" />
-                <span>
-                  Powered by AI • Educational information • Always consult healthcare professionals
-                </span>
+              {/* Enhanced Footer */}
+              <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-slate-800/50 rounded-full">
+                  <Stethoscope className="h-3.5 w-3.5 text-medical-primary dark:text-red-400" />
+                  <span className="font-medium">AI-Powered</span>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <span>Educational Content</span>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <span>Consult Professionals</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Tips */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <Heart className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-foreground mb-1">Ask About Risks</p>
-                  <p className="text-muted-foreground text-xs">Learn about heart disease risk factors and prevention</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <Activity className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-foreground mb-1">Lifestyle Tips</p>
-                  <p className="text-muted-foreground text-xs">Get personalized recommendations for heart health</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-dashed">
-            <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <Stethoscope className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-foreground mb-1">Your History</p>
-                  <p className="text-muted-foreground text-xs">Review your past assessments and progress</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        
       </div>
     </div>
   );

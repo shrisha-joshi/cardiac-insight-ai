@@ -648,26 +648,26 @@ export default function ProfessionalDashboard() {
           </Card>
 
           {/* Clinical Risk Assessment */}
-          <Card className="shadow-xl border-rose-200/50 dark:border-rose-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-rose-50 to-orange-50 dark:from-rose-900/20 dark:to-orange-900/20">
+          <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
               <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                <Activity className="h-6 w-6 text-rose-600 dark:text-rose-400" />
+                <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 Professional Risk Stratification
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="text-center mb-8">
                 <div className={`text-7xl font-bold mb-3 ${
-                  generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-green-600 dark:text-green-400' :
-                  generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                  generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'
+                  generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-emerald-600 dark:text-emerald-400' :
+                  generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-blue-600 dark:text-blue-400' :
+                  generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-amber-600 dark:text-amber-400' : 'text-orange-600 dark:text-orange-400'
                 }`}>
                   {generatedReport.clinicalAssessment.overallRisk}%
                 </div>
                 <div className={`text-2xl font-bold px-6 py-3 rounded-full inline-block ${
-                  generatedReport.urgencyLevel === 'low' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' :
-                  generatedReport.urgencyLevel === 'moderate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200' :
-                  generatedReport.urgencyLevel === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                  generatedReport.urgencyLevel === 'low' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' :
+                  generatedReport.urgencyLevel === 'moderate' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' :
+                  generatedReport.urgencyLevel === 'high' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200'
                 }`}>
                   {generatedReport.urgencyLevel.toUpperCase()} RISK
                 </div>
@@ -677,20 +677,20 @@ export default function ProfessionalDashboard() {
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
+                <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Cardiovascular Risk</div>
                 </div>
-                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
+                <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Clinical Risk</div>
                 </div>
-                <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
+                <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Biomarker Risk</div>
                 </div>
-                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.demographicRisk}%</div>
+                <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
+                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.demographicRisk}%</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Demographic Risk</div>
                 </div>
               </div>
@@ -710,14 +710,14 @@ export default function ProfessionalDashboard() {
                 
                 {/* Critical Values */}
                 {generatedReport.biomarkerAnalysis.critical.length > 0 && (
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h4 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+                  <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800/50">
+                    <h4 className="font-bold text-orange-800 dark:text-orange-200 mb-3 flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5" />
                       Critical Values
                     </h4>
                     <div className="space-y-2">
                       {generatedReport.biomarkerAnalysis.critical.map((item, index) => (
-                        <div key={index} className="text-sm text-red-700 bg-white p-2 rounded border-l-4 border-red-500">
+                        <div key={index} className="text-sm text-orange-700 dark:text-orange-300 bg-white dark:bg-gray-800 p-2 rounded border-l-4 border-orange-500 dark:border-orange-400">
                           {item}
                         </div>
                       ))}
@@ -727,14 +727,14 @@ export default function ProfessionalDashboard() {
 
                 {/* Elevated Values */}
                 {generatedReport.biomarkerAnalysis.elevated.length > 0 && (
-                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                    <h4 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
+                  <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                    <h4 className="font-bold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
                       Elevated Values
                     </h4>
                     <div className="space-y-2">
                       {generatedReport.biomarkerAnalysis.elevated.map((item, index) => (
-                        <div key={index} className="text-sm text-yellow-700 bg-white p-2 rounded border-l-4 border-yellow-500">
+                        <div key={index} className="text-sm text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 p-2 rounded border-l-4 border-amber-500 dark:border-amber-400">
                           {item}
                         </div>
                       ))}
@@ -743,14 +743,14 @@ export default function ProfessionalDashboard() {
                 )}
 
                 {/* Normal Values */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-bold text-green-800 mb-3 flex items-center gap-2">
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                  <h4 className="font-bold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5" />
                     Normal Values
                   </h4>
                   <div className="space-y-2">
                     {generatedReport.biomarkerAnalysis.normal.map((item, index) => (
-                      <div key={index} className="text-sm text-green-700 bg-white p-2 rounded border-l-4 border-green-500">
+                      <div key={index} className="text-sm text-emerald-700 dark:text-emerald-300 bg-white dark:bg-gray-800 p-2 rounded border-l-4 border-emerald-500 dark:border-emerald-400">
                         {item}
                       </div>
                     ))}
@@ -761,18 +761,18 @@ export default function ProfessionalDashboard() {
           </Card>
 
           {/* Clinical Insights */}
-          <Card className="shadow-xl border-cyan-200/50 dark:border-cyan-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20">
+          <Card className="shadow-xl border-teal-200/50 dark:border-teal-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20">
               <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                <Brain className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+                <Brain className="h-6 w-6 text-teal-600 dark:text-teal-400" />
                 AI-Powered Clinical Insights
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {generatedReport.clinicalInsights.map((insight, index) => (
-                  <div key={index} className="flex items-start gap-3 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800/50 backdrop-blur-sm">
-                    <Star className="h-5 w-5 text-cyan-600 dark:text-cyan-400 mt-0.5 flex-shrink-0" />
+                  <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-lg border border-teal-200 dark:border-teal-800/50 backdrop-blur-sm">
+                    <Star className="h-5 w-5 text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0" />
                     <div className="text-gray-700 dark:text-gray-300 font-medium">{insight}</div>
                   </div>
                 ))}
@@ -781,18 +781,18 @@ export default function ProfessionalDashboard() {
           </Card>
 
           {/* Professional Recommendations */}
-          <Card className="shadow-xl border-green-200/50 dark:border-green-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+          <Card className="shadow-xl border-emerald-200/50 dark:border-emerald-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20">
               <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                <ClipboardList className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <ClipboardList className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 Professional Clinical Recommendations
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {generatedReport.professionalRecommendations.map((recommendation, index) => (
-                  <div key={index} className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 backdrop-blur-sm">
-                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <div key={index} className="flex items-start gap-3 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800/50 backdrop-blur-sm">
+                    <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                     <div className="text-gray-700 dark:text-gray-300 font-medium">{recommendation}</div>
                   </div>
                 ))}
@@ -815,7 +815,7 @@ export default function ProfessionalDashboard() {
                     <div key={index} className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800/50 backdrop-blur-sm">
                       <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                       <span className="text-sm font-medium flex-1 text-gray-800 dark:text-gray-200">{file.name}</span>
-                      <Badge variant="outline" className="text-green-600 dark:text-green-400 border-green-600 dark:border-green-500">Analyzed</Badge>
+                      <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-500">Analyzed</Badge>
                     </div>
                   ))}
                 </div>
@@ -900,15 +900,15 @@ export default function ProfessionalDashboard() {
 
                     {/* Diet Section */}
                     {aiSuggestions.suggestions.diet && aiSuggestions.suggestions.diet.length > 0 && (
-                      <div className="bg-green-50 rounded-xl p-6 border border-green-100">
-                        <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
+                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800/50">
+                        <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mb-4 flex items-center gap-2">
                           <Apple className="h-5 w-5" />
                           Dietary Recommendations
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {aiSuggestions.suggestions.diet.map((diet, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg border border-green-200">
-                              <div className="font-semibold text-green-700 mb-2">{diet}</div>
+                            <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800/50">
+                              <div className="font-semibold text-emerald-700 dark:text-emerald-300 mb-2">{diet}</div>
                             </div>
                           ))}
                         </div>
@@ -937,16 +937,16 @@ export default function ProfessionalDashboard() {
 
                     {/* Warnings */}
                     {aiSuggestions.warnings && aiSuggestions.warnings.length > 0 && (
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                        <h3 className="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
+                      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl p-4">
+                        <h3 className="text-lg font-bold text-orange-800 dark:text-orange-200 mb-3 flex items-center gap-2">
                           <AlertTriangle className="h-5 w-5" />
                           Important Warnings
                         </h3>
                         <ul className="space-y-2">
                           {aiSuggestions.warnings.map((warning, index) => (
                             <li key={index} className="flex items-start gap-2">
-                              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-red-700">{warning}</span>
+                              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-orange-700 dark:text-orange-300">{warning}</span>
                             </li>
                           ))}
                         </ul>
@@ -1069,10 +1069,10 @@ export default function ProfessionalDashboard() {
         </StatsGrid>
 
         {/* Comprehensive Assessment Form */}
-        <Card className="shadow-xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-t-lg border-b dark:border-gray-700">
+        <Card className="shadow-2xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/20 dark:via-amber-900/20 dark:to-orange-900/20 rounded-t-lg border-b dark:border-gray-700">
             <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl text-gray-800 dark:text-gray-100">
-              <Heart className="h-7 w-7 md:h-8 md:w-8 text-red-500 dark:text-red-400" />
+              <Heart className="h-7 w-7 md:h-8 md:w-8 text-amber-500 dark:text-amber-400" />
               Comprehensive Clinical Assessment
             </CardTitle>
             <CardDescription className="text-base md:text-lg text-gray-600 dark:text-gray-400">
@@ -1171,7 +1171,7 @@ export default function ProfessionalDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
                   >
                     <div>
                       <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Diabetes Mellitus</Label>
@@ -1180,12 +1180,12 @@ export default function ProfessionalDashboard() {
                     <Switch
                       checked={formData.diabetes}
                       onCheckedChange={(checked) => updateField('diabetes', checked)}
-                      className="scale-125 data-[state=checked]:bg-purple-600"
+                      className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
                   >
                     <div>
                       <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Smoking History</Label>
@@ -1194,12 +1194,12 @@ export default function ProfessionalDashboard() {
                     <Switch
                       checked={formData.smoking}
                       onCheckedChange={(checked) => updateField('smoking', checked)}
-                      className="scale-125 data-[state=checked]:bg-pink-600"
+                      className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
                   >
                     <div>
                       <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Exercise-Induced Angina</Label>
@@ -1208,12 +1208,12 @@ export default function ProfessionalDashboard() {
                     <Switch
                       checked={formData.exerciseAngina}
                       onCheckedChange={(checked) => updateField('exerciseAngina', checked)}
-                      className="scale-125 data-[state=checked]:bg-purple-600"
+                      className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
-                    className="flex items-center justify-between p-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800/50 shadow-sm"
+                    className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
                   >
                     <div>
                       <Label className="text-base font-semibold text-gray-800 dark:text-gray-100">Previous MI</Label>
@@ -1222,7 +1222,7 @@ export default function ProfessionalDashboard() {
                     <Switch
                       checked={formData.previousHeartAttack}
                       onCheckedChange={(checked) => updateField('previousHeartAttack', checked)}
-                      className="scale-125 data-[state=checked]:bg-pink-600"
+                      className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
                 </div>
@@ -1233,7 +1233,7 @@ export default function ProfessionalDashboard() {
 
             {/* Health Metrics Section */}
             <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-blue-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-teal-700 dark:text-teal-400 mb-6">
                 <Activity className="h-7 w-7" />
                 Health Metrics
               </div>
@@ -1408,7 +1408,7 @@ export default function ProfessionalDashboard() {
 
             {/* Lifestyle Assessment Section */}
             <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-green-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-6">
                 <TrendingUp className="h-7 w-7" />
                 Lifestyle Assessment
               </div>
@@ -1547,14 +1547,14 @@ export default function ProfessionalDashboard() {
 
             {/* Clinical Data & Biomarkers Section */}
             <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-yellow-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 dark:text-amber-400 mb-6">
                 <Microscope className="h-7 w-7" />
                 Clinical Data & Laboratory Biomarkers
               </div>
               
               {/* Vital Signs */}
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Vital Signs</h3>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Vital Signs</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold">Systolic BP (mmHg)</Label>
@@ -1588,7 +1588,7 @@ export default function ProfessionalDashboard() {
 
               {/* Cardiac Biomarkers */}
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Cardiac Biomarkers</h3>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Cardiac Biomarkers</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold">Troponin I (ng/mL)</Label>
@@ -1627,7 +1627,7 @@ export default function ProfessionalDashboard() {
 
               {/* Lipid Panel */}
               <div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Lipid Panel</h3>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Lipid Panel</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="space-y-3">
                     <Label className="text-lg font-semibold">Total Cholesterol</Label>
@@ -1677,7 +1677,7 @@ export default function ProfessionalDashboard() {
 
             {/* Family History Section */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-cyan-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-blue-700 dark:text-blue-400 mb-6">
                 <Users className="h-7 w-7" />
                 Family History Assessment
               </div>
@@ -1724,7 +1724,7 @@ export default function ProfessionalDashboard() {
 
             {/* Lifestyle Assessment */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-green-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-6">
                 <TrendingUp className="h-7 w-7" />
                 Lifestyle Risk Factors
                 <Badge variant="secondary" className="ml-3">Professional</Badge>
@@ -1787,15 +1787,15 @@ export default function ProfessionalDashboard() {
 
             {/* Document Upload Section */}
             <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 mb-6">
+              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 dark:text-amber-400 mb-6">
                 <Upload className="h-7 w-7" />
                 Clinical Document Upload
                 <Badge variant="secondary" className="ml-3">Unlimited</Badge>
               </div>
-              <div className="relative border-2 border-dashed border-amber-300 rounded-2xl p-12 text-center bg-amber-50 hover:bg-amber-100 transition-colors">
-                <Upload className="mx-auto h-20 w-20 text-amber-400 mb-6" />
+              <div className="relative border-2 border-dashed border-amber-300 dark:border-amber-700 rounded-2xl p-12 text-center bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-900/20 dark:hover:to-yellow-900/20 transition-all duration-300">
+                <Upload className="mx-auto h-20 w-20 text-amber-400 dark:text-amber-500 mb-6" />
                 <div className="space-y-3">
-                  <p className="text-xl font-semibold text-gray-700">
+                  <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">
                     Upload Clinical Documents & Reports
                   </p>
                   <p className="text-lg text-gray-600">
@@ -1819,10 +1819,10 @@ export default function ProfessionalDashboard() {
                   <h4 className="font-semibold mb-4 text-xl">Uploaded Clinical Documents ({uploadedFiles.length}):</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center gap-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                        <FileText className="h-6 w-6 text-indigo-600" />
-                        <span className="text-sm font-medium flex-1">{file.name}</span>
-                        <Badge variant="outline" className="text-green-600 border-green-600">Ready for Analysis</Badge>
+                      <div key={index} className="flex items-center gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800/50">
+                        <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-sm font-medium flex-1 text-gray-800 dark:text-gray-200">{file.name}</span>
+                        <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-500">Ready for Analysis</Badge>
                       </div>
                     ))}
                   </div>
@@ -1835,7 +1835,7 @@ export default function ProfessionalDashboard() {
               <Button
                 onClick={generateProfessionalReport}
                 disabled={processingLoading || !patientName.trim()}
-                className="w-full h-20 text-2xl bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 text-white shadow-2xl rounded-xl"
+                className="w-full h-20 text-2xl bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 dark:from-yellow-700 dark:via-amber-700 dark:to-orange-700 dark:hover:from-yellow-800 dark:hover:via-amber-800 dark:hover:to-orange-800 text-white shadow-2xl hover:shadow-3xl rounded-xl transition-all duration-300"
                 size="lg"
               >
                 {processingLoading ? (
@@ -1851,45 +1851,48 @@ export default function ProfessionalDashboard() {
                 )}
               </Button>
               {!patientName.trim() && (
-                <p className="text-sm text-red-500 mt-3 text-center">Please enter patient name to generate professional report</p>
+                <p className="text-sm text-amber-600 dark:text-amber-400 mt-3 text-center">Please enter patient name to generate professional report</p>
               )}
             </div>
             </form>
 
             {/* Professional Features Highlight */}
-            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 p-8 rounded-2xl border border-yellow-200 dark:border-yellow-800/50">
-              <h4 className="font-bold text-yellow-800 dark:text-yellow-200 mb-6 text-xl">Professional Clinical Features:</h4>
+            <div className="bg-gradient-to-r from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/20 dark:via-amber-900/20 dark:to-orange-900/20 p-8 rounded-2xl border border-yellow-200 dark:border-yellow-800/50 shadow-lg">
+              <h4 className="font-bold text-amber-800 dark:text-amber-200 mb-6 text-xl flex items-center gap-2">
+                <Crown className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                Professional Clinical Features:
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Clinical-Grade Risk Stratification</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Advanced Biomarker Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Professional PDF Reports</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Unlimited Document Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Family History Assessment</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Clinical Decision Support</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">Multi-Parameter Risk Analysis</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="font-medium text-gray-800 dark:text-gray-200">AI-Powered Clinical Insights</span>
                 </div>
               </div>
