@@ -6,7 +6,7 @@ A professional cardiovascular disease (CVD) risk assessment application with Ind
 
 
 
-## 🚀 Quick Start**URL**: https://lovable.dev/projects/ce6c9c1a-4008-4e2e-b906-16be20fa5f72
+## 🚀 Quick Start**URL**: https://cardiac-insight-ai.vercel.app/
 
 
 
