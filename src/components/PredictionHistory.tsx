@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { PredictionWithFeedback } from '@/hooks/use-prediction-history';
 import { History, Calendar, TrendingUp, Eye, Heart, BarChart3, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { continuousLearning } from '@/services/continuousLearning';
 
 interface PredictionHistoryProps {
   predictions: PredictionWithFeedback[];
@@ -60,9 +61,26 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
     
     setFeedbackSubmitting(predictionId);
     try {
+      // Update local state
       onAddFeedback(predictionId, feedback);
+      
+      // Find the prediction
+      const prediction = predictions.find(p => p.id === predictionId);
+      if (prediction) {
+        // Send feedback to continuous learning system
+        await continuousLearning.addPredictionFeedback(
+          predictionId,
+          prediction.patientData,
+          prediction.riskScore,
+          feedback
+        );
+        console.log(`✅ Feedback sent to continuous learning system`);
+      }
+      
       // Simulate API call delay for visual feedback
       await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
     } finally {
       setFeedbackSubmitting(null);
     }

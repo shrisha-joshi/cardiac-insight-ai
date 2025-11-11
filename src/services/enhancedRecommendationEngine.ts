@@ -6,16 +6,21 @@
  * 2. Risk-specific guidance (not just one recommendation)
  * 3. Actionable, detailed medical advice
  * 4. Indian population-specific recommendations
- * 5. Evidence-based recommendations from WHO, ICC, PubMed, Gemini, DeepSeek
+ * 5. Evidence-based recommendations from 11+ FREE APIs
  * 6. Maximum accuracy using FREE resources (NO COST)
  * 
- * FREE Resources Used:
+ * FREE Resources Used (11+ APIs):
+ * ✅ MedlinePlus Connect (Consumer health education)
  * ✅ PubMed API (Latest research - unlimited)
- * ✅ WHO Guidelines (Global standards)
- * ✅ ICC Guidelines (Indian population specific)
+ * ✅ RxNorm API (Drug normalization)
+ * ✅ openFDA (Adverse events, drug safety)
+ * ✅ USDA FoodData Central (Complete nutrition data)
+ * ✅ wger Workout Manager (Exercise database)
+ * ✅ Yoga API (Yoga poses & sequences)
+ * ✅ ClinicalTrials.gov (Ongoing studies)
+ * ✅ WHO ICD-11 (Disease classification)
  * ✅ Google Gemini (Personalization - 60 req/min free)
  * ✅ DeepSeek API (Alternative AI - no cost)
- * ✅ FDA Database (Drug information)
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -23,6 +28,7 @@ import { PatientData } from '@/lib/mockData';
 import { config } from '@/lib/config';
 import { freeResourcesIntegration } from './freeResourcesIntegration';
 import { deepseekIntegration } from './deepseekIntegration';
+import { comprehensiveFreeAPIs } from './comprehensiveFreeAPIs';
 
 interface RecommendationSet {
   urgentActions: string[];
@@ -48,7 +54,7 @@ class EnhancedRecommendationEngine {
 
   /**
    * Generate comprehensive recommendations using FREE resources
-   * Combines: WHO + ICC + PubMed + Gemini + DeepSeek + Rule-based
+   * Combines: 11+ FREE APIs + Gemini + DeepSeek + Rule-based
    */
   async generateComprehensiveRecommendations(
     riskScore: number,
@@ -56,7 +62,7 @@ class EnhancedRecommendationEngine {
     data: PatientData
   ): Promise<string[]> {
     try {
-      console.log('🔍 Generating recommendations from FREE resources (including DeepSeek)...');
+      console.log('🌐 Generating recommendations from 11+ FREE APIs...');
       
       // Use free resources integration for maximum accuracy
       const conditions = [];
@@ -71,7 +77,16 @@ class EnhancedRecommendationEngine {
       if (data.age > 60) riskFactors.push('advanced age');
       if (data.familyHistory) riskFactors.push('family history');
 
-      // Get recommendations from all FREE resources (including DeepSeek)
+      // Get recommendations from comprehensive FREE APIs
+      const comprehensiveAPIRecs = await comprehensiveFreeAPIs.generateComprehensiveRecommendations(
+        riskScore,
+        riskLevel,
+        data.age,
+        conditions,
+        riskFactors
+      );
+
+      // Get recommendations from existing free resources (WHO, ICC, PubMed legacy)
       const freeResourceRecs = await freeResourcesIntegration.generateMaxAccuracyRecommendations(
         riskScore,
         riskLevel,
@@ -94,8 +109,13 @@ class EnhancedRecommendationEngine {
         `${rec.recommendation} [Source: ${rec.evidenceSource}]`
       );
 
-      // Merge DeepSeek recommendations
-      let allResourceRecs: string[] = [...freeResourceStrings];
+      // Merge all recommendations from different sources
+      let allResourceRecs: string[] = [
+        ...comprehensiveAPIRecs,  // From 11+ FREE APIs
+        ...freeResourceStrings     // From WHO, ICC, PubMed legacy
+      ];
+
+      // Add DeepSeek recommendations for additional AI perspective
       if (deepseekRecs && deepseekRecs.length > 0) {
         const deepseekFormatted = deepseekRecs.map(rec => 
           `${rec.recommendation} [DEEPSEEK: ${rec.confidence}]`
@@ -121,9 +141,9 @@ class EnhancedRecommendationEngine {
       // Deduplicate
       const finalRecs = this.deduplicateRecommendations(allRecs);
 
-      console.log(`✅ Generated ${finalRecs.length} recommendations from FREE resources (WHO, ICC, PubMed, Gemini, DeepSeek)`);
+      console.log(`✅ Generated ${finalRecs.length} recommendations from 11+ FREE APIs + Gemini + DeepSeek`);
       
-      return finalRecs.slice(0, 15); // Return max 15 recommendations
+      return finalRecs.slice(0, 20); // Return max 20 comprehensive recommendations
     } catch (error) {
       console.warn('Error in recommendation generation:', error);
       return this.getRuleBasedRecommendations(riskScore, riskLevel, data);
