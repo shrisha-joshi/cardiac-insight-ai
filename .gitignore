@@ -54,3 +54,8 @@ dist-ssr
 *.backup
 *.tmp
 
+# ML Models (too large for GitHub)
+ml-backend/models/*.pkl
+ml-backend/models/*.h5
+ml-backend/models/*.npz
+ml-backend/models/*.joblib
