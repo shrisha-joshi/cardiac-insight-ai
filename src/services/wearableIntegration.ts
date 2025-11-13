@@ -91,13 +91,13 @@ export interface AnomalyDetection {
 }
 
 class WearableIntegrationService {
-  private connectedDevices: Map<string, WearableDevice> = new Map();
+  private readonly connectedDevices: Map<string, WearableDevice> = new Map();
   private heartRateHistory: HeartRateData[] = [];
   private stepHistory: StepData[] = [];
   private sleepHistory: SleepData[] = [];
   private oxygenHistory: BloodOxygenData[] = [];
   private anomalyLog: AnomalyDetection[] = [];
-  private lastProcessedTimestamp: Map<string, Date> = new Map();
+  private readonly lastProcessedTimestamp: Map<string, Date> = new Map();
 
   /**
    * Register wearable device
@@ -433,7 +433,7 @@ class WearableIntegrationService {
     );
 
     // Determine trend
-    let trend: 'improving' | 'stable' | 'declining' = 'stable';
+    const trend: 'improving' | 'stable' | 'declining' = 'stable';
 
     const insights: string[] = [];
     if (cardiacHealth > 85) insights.push('✓ Excellent cardiac health metrics');
@@ -495,23 +495,23 @@ class WearableIntegrationService {
 
     if (anomalies.length > 0) {
       report += '## Recent Anomalies Detected\n';
-      anomalies.slice(0, 5).forEach(a => {
+      for (const a of anomalies.slice(0, 5)) {
         report += `- **${a.type}** (${a.severity}): ${a.details}\n`;
         report += `  Action: ${a.recommendedAction}\n`;
-      });
+      }
     } else {
       report += '## Anomalies\n- No significant anomalies detected\n\n';
     }
 
     report += '## Insights & Recommendations\n';
-    score.insights.forEach((insight, i) => {
-      report += `${i + 1}. ${insight}\n`;
-    });
+    for (let i = 0; i < score.insights.length; i++) {
+      report += `${i + 1}. ${score.insights[i]}\n`;
+    }
 
     report += '\n## Recommended Actions\n';
-    score.recommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < score.recommendations.length; i++) {
+      report += `${i + 1}. ${score.recommendations[i]}\n`;
+    }
 
     return report;
   }

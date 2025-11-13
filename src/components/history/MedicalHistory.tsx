@@ -33,7 +33,7 @@ export default function MedicalHistory() {
     try {
       // Check if Supabase is properly configured
       if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL === 'https://placeholder.supabase.co') {
-        console.warn('Supabase not configured - using mock data');
+        if (import.meta.env.DEV) console.warn('Supabase not configured - using mock data');
         setRecords([]);
         setLoading(false);
         return;
@@ -42,7 +42,7 @@ export default function MedicalHistory() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError) {
-        console.error('Authentication error:', authError);
+        if (import.meta.env.DEV) console.error('Authentication error:', authError);
         toast({
           title: "Database Connection Error",
           description: "Unable to connect to database. Please check your internet connection.",
@@ -57,10 +57,10 @@ export default function MedicalHistory() {
       if (user) {
         try {
           const history = await mlService.getMedicalHistory(user.id);
-          console.log('Fetched medical history:', history);
+          if (import.meta.env.DEV) console.log('Fetched medical history:', history);
           setRecords(history || []);
         } catch (historyError: unknown) {
-          console.error('Error fetching medical history:', historyError);
+          if (import.meta.env.DEV) console.error('Error fetching medical history:', historyError);
           
           // Check if it's a network/connection error
           const errorMessage = historyError instanceof Error ? historyError.message : String(historyError);
@@ -80,7 +80,7 @@ export default function MedicalHistory() {
                 .order('assessment_date', { ascending: false });
 
               if (error) {
-                console.error('Direct query error:', error);
+                if (import.meta.env.DEV) console.error('Direct query error:', error);
                 if (error.code === 'PGRST116') {
                   toast({
                     title: "Database Setup Required",
@@ -104,11 +104,11 @@ export default function MedicalHistory() {
                   });
                 }
               } else {
-                console.log('Direct query result:', data);
+                if (import.meta.env.DEV) console.log('Direct query result:', data);
                 setRecords(data || []);
               }
             } catch (fallbackError) {
-              console.error('Fallback query failed:', fallbackError);
+              if (import.meta.env.DEV) console.error('Fallback query failed:', fallbackError);
               toast({
                 title: "Service Unavailable",
                 description: "Medical history service is temporarily unavailable. Please try again later.",
@@ -119,11 +119,11 @@ export default function MedicalHistory() {
         }
       } else {
         // No user authenticated - this is normal for the demo
-        console.log('No authenticated user - showing empty history');
+        if (import.meta.env.DEV) console.log('No authenticated user - showing empty history');
         setRecords([]);
       }
     } catch (error: unknown) {
-      console.error('Error in fetchUserAndHistory:', error);
+      if (import.meta.env.DEV) console.error('Error in fetchUserAndHistory:', error);
       toast({
         title: "Unexpected Error",
         description: "An unexpected error occurred while loading medical history.",

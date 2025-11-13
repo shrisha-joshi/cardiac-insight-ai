@@ -82,7 +82,7 @@ export default function SettingsPage() {
           setNotifications(JSON.parse(savedNotifications));
         }
       } catch (error) {
-        console.error('Error fetching user:', error);
+        if (import.meta.env.DEV) console.error('Error fetching user:', error);
       } finally {
         setLoading(false);
       }

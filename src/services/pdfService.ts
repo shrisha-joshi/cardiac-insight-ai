@@ -118,13 +118,14 @@ export class PDFService {
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
       
-      data.riskAssessment.factors.forEach((factor) => {
+      for (const factor of data.riskAssessment.factors) {
         if (yPosition > pageHeight - 30) {
           pdf.addPage();
           yPosition = margin;
         }
         const lines = pdf.splitTextToSize(factor, pageWidth - 2 * margin - 10);
-        lines.forEach((line: string, idx: number) => {
+        for (let idx = 0; idx < lines.length; idx++) {
+          const line = lines[idx];
           if (yPosition > pageHeight - 30) {
             pdf.addPage();
             yPosition = margin;
@@ -132,8 +133,8 @@ export class PDFService {
           const bullet = idx === 0 ? '•' : ' ';
           pdf.text(`${bullet} ${line}`, margin + 5, yPosition);
           yPosition += 6;
-        });
-      });
+        }
+      }
       yPosition += 10;
     }
 
@@ -154,7 +155,7 @@ export class PDFService {
         .sort((a, b) => b.contribution - a.contribution)
         .slice(0, 8); // Top 8 features
       
-      sortedFeatures.forEach((feature) => {
+      for (const feature of sortedFeatures) {
         if (yPosition > pageHeight - 20) {
           pdf.addPage();
           yPosition = margin;
@@ -174,7 +175,7 @@ export class PDFService {
         pdf.setTextColor(0, 0, 0);
         
         yPosition += 7;
-      });
+      }
       yPosition += 10;
     }
 
@@ -189,7 +190,7 @@ export class PDFService {
       const columnX = [margin + 3, margin + 70];
       let colYPosition = yPosition;
       
-      metrics.forEach((metric, index) => {
+      for (const metric of metrics) {
         if (colYPosition > pageHeight - 20) {
           pdf.addPage();
           colYPosition = margin;
@@ -204,7 +205,7 @@ export class PDFService {
         if (col === 0) {
           colYPosition += 2;
         }
-      });
+      }
       yPosition = colYPosition + 10;
     }
 
@@ -373,14 +374,15 @@ export class PDFService {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
 
-    items.forEach((item) => {
+    for (const item of items) {
       if (yPosition > pageHeight - 15) {
         pdf.addPage();
         yPosition = margin;
       }
 
       const lines = pdf.splitTextToSize(item, pageWidth - 2 * margin - 15);
-      lines.forEach((line: string, idx: number) => {
+      for (let idx = 0; idx < lines.length; idx++) {
+        const line = lines[idx];
         if (yPosition > pageHeight - 15) {
           pdf.addPage();
           yPosition = margin;
@@ -389,9 +391,9 @@ export class PDFService {
         const bullet = idx === 0 ? '◆' : ' ';
         pdf.text(`${bullet} ${line}`, margin + 10, yPosition);
         yPosition += 5;
-      });
+      }
       yPosition += 2;
-    });
+    }
 
     return yPosition + 5;
   }
@@ -473,7 +475,7 @@ export class PDFService {
 
       pdf.save(filename);
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      if (import.meta.env.DEV) console.error('Error generating PDF:', error);
       throw new Error('Failed to generate PDF report');
     }
   }

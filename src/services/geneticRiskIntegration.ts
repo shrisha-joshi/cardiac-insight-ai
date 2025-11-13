@@ -90,15 +90,19 @@ class GeneticRiskService {
       riskScore += 40;
       primaryRisks.push({ factor: 'Homozygous LDLR mutation (severe FH)', contribution: 40 });
       counselingRecommended = true;
-      interventions.push('Immediate statin + ezetimibe therapy');
-      interventions.push('Consider PCSK9 inhibitors or bempedoic acid');
-      interventions.push('Screen all family members');
+      interventions.push(
+        'Immediate statin + ezetimibe therapy',
+        'Consider PCSK9 inhibitors or bempedoic acid',
+        'Screen all family members'
+      );
     } else if (geneticData.ldlrGenotype === 'heterozygous') {
       riskScore += 20;
       primaryRisks.push({ factor: 'Heterozygous LDLR mutation (FH)', contribution: 20 });
       counselingRecommended = true;
-      interventions.push('High-intensity statin therapy');
-      interventions.push('Target LDL < 70 mg/dL');
+      interventions.push(
+        'High-intensity statin therapy',
+        'Target LDL < 70 mg/dL'
+      );
     }
 
     // APOB gene analysis
@@ -223,17 +227,23 @@ class GeneticRiskService {
     const recommendations: string[] = [];
 
     if (fh.hasCondition) {
-      recommendations.push('Genetic testing to confirm mutation');
-      recommendations.push('Start high-intensity statin therapy');
-      recommendations.push('Add ezetimibe (if not already taking)');
+      recommendations.push(
+        'Genetic testing to confirm mutation',
+        'Start high-intensity statin therapy',
+        'Add ezetimibe (if not already taking)'
+      );
 
       if (fh.ldlAtDiagnosis && fh.ldlAtDiagnosis > 500) {
-        recommendations.push('Consider PCSK9 inhibitors or bempedoic acid');
-        recommendations.push('Target LDL < 55 mg/dL');
+        recommendations.push(
+          'Consider PCSK9 inhibitors or bempedoic acid',
+          'Target LDL < 55 mg/dL'
+        );
       }
 
-      recommendations.push('Screen parents, siblings, and children');
-      recommendations.push('Annual cardiovascular assessment');
+      recommendations.push(
+        'Screen parents, siblings, and children',
+        'Annual cardiovascular assessment'
+      );
     }
 
     recommendations.push('Genetic counseling for family members');
@@ -335,15 +345,15 @@ class GeneticRiskService {
     report += `- **Category**: ${geneticRisk.category.toUpperCase()}\n\n`;
 
     report += '## Primary Genetic Risk Factors\n';
-    geneticRisk.primaryRisks.forEach(risk => {
+    for (const risk of geneticRisk.primaryRisks) {
       report += `- ${risk.factor} (Contribution: +${risk.contribution})\n`;
-    });
+    }
 
     if (geneticRisk.riskModifiers.length > 0) {
       report += '\n## Protective Factors\n';
-      geneticRisk.riskModifiers.forEach(modifier => {
+      for (const modifier of geneticRisk.riskModifiers) {
         report += `- ${modifier}\n`;
-      });
+      }
     }
 
     if (fhAnalysis) {
@@ -353,9 +363,9 @@ class GeneticRiskService {
     }
 
     report += '\n## Recommended Interventions\n';
-    geneticRisk.recommendedInterventions.forEach((intervention, i) => {
-      report += `${i + 1}. ${intervention}\n`;
-    });
+    for (let i = 0; i < geneticRisk.recommendedInterventions.length; i++) {
+      report += `${i + 1}. ${geneticRisk.recommendedInterventions[i]}\n`;
+    }
 
     if (geneticRisk.geneticCounselingRecommended) {
       report += '\n⚠️ **Genetic counseling is strongly recommended**\n';

@@ -26,7 +26,7 @@ async function fetchMedlinePlusInfo(query: string): Promise<MedlinePlusResult | 
     const response = await fetch(medlinePlusUrl);
     
     if (!response.ok) {
-      console.log('MedlinePlus API not available - will use Gemini only');
+      if (import.meta.env.DEV) console.log('MedlinePlus API not available - will use Gemini only');
       return null;
     }
 
@@ -44,7 +44,7 @@ async function fetchMedlinePlusInfo(query: string): Promise<MedlinePlusResult | 
       snippet: `Search MedlinePlus for: ${query}`
     };
   } catch (error) {
-    console.log('MedlinePlus fetch failed - using Gemini only:', error);
+    if (import.meta.env.DEV) console.log('MedlinePlus fetch failed - using Gemini only:', error);
     return null;
   }
 }
@@ -117,7 +117,7 @@ You provide evidence-based, medically accurate information about heart health to
 
 export class CardiacChatService {
   private genAI: GoogleGenerativeAI | null = null;
-  private model: any = null;
+  private model: { generateContent: (prompt: string) => Promise<{ response: { text: () => string } }> } | null = null;
 
   constructor() {
     const apiKey = import.meta.env.VITE_GOOGLE_GENERATIVE_AI_KEY;
@@ -128,9 +128,9 @@ export class CardiacChatService {
         this.model = this.genAI.getGenerativeModel({ 
           model: 'gemini-pro',
           systemInstruction: CARDIAC_SYSTEM_PROMPT
-        });
+        }) as { generateContent: (prompt: string) => Promise<{ response: { text: () => string } }> };
       } catch (error) {
-        console.warn('Gemini AI initialization failed:', error);
+        if (import.meta.env.DEV) console.warn('Gemini AI initialization failed:', error);
       }
     }
   }
@@ -178,7 +178,7 @@ export class CardiacChatService {
 
       return content;
     } catch (error) {
-      console.error('Gemini API error:', error);
+      if (import.meta.env.DEV) console.error('Gemini API error:', error);
       return this.getFallbackResponse(userMessage);
     }
   }

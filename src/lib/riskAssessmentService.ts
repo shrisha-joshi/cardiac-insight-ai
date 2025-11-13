@@ -258,7 +258,7 @@ class RiskAssessmentService {
         modelMetadata: MODEL_METADATA
       };
     } catch (error) {
-      console.error('Risk assessment error:', error);
+      if (import.meta.env.DEV) console.error('Risk assessment error:', error);
       throw new Error(`Risk assessment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -345,7 +345,7 @@ class RiskAssessmentService {
    * Calculate linear combination (z-value)
    * z = intercept + Σ(coefficient × normalized_feature)
    */
-  private calculateLinearCombination(normalizedFeatures: any): number {
+  private calculateLinearCombination(normalizedFeatures: Record<string, number>): number {
     let z = MODEL_COEFFICIENTS.intercept;
 
     z += MODEL_COEFFICIENTS.age * normalizedFeatures.age;
@@ -405,7 +405,7 @@ class RiskAssessmentService {
    */
   private calculateModelConfidence(probability: number, riskLevel: 'low' | 'medium' | 'high'): number {
     // Base confidence from model metrics
-    let baseConfidence = MODEL_METADATA.aucroc * 100; // 91.8%
+    const baseConfidence = MODEL_METADATA.aucroc * 100; // 91.8%
 
     // Adjust based on probability distance from 0.5 (uncertainty point)
     const distanceFrom50 = Math.abs(probability - 0.5);
@@ -422,7 +422,7 @@ class RiskAssessmentService {
    * Calculate individual feature contributions to the risk score
    */
   private calculateFeatureContributions(
-    normalizedFeatures: any,
+    normalizedFeatures: unknown,
     totalZValue: number
   ): FeatureContribution[] {
     const contributions: FeatureContribution[] = [];
@@ -446,7 +446,7 @@ class RiskAssessmentService {
     for (const [featureName, coefficient] of Object.entries(MODEL_COEFFICIENTS)) {
       if (featureName.startsWith('SE_')) continue;
 
-      const normalizedValue = (normalizedFeatures as any)[featureName] || 0;
+      const normalizedValue = (normalizedFeatures as unknown)[featureName] || 0;
       const contribution = coefficient * normalizedValue;
       const percentage = totalZValue !== 0 ? (contribution / totalZValue) * 100 : 0;
 

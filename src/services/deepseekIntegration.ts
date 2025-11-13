@@ -45,12 +45,12 @@ interface ChatbotResponse {
 }
 
 class DeepSeekIntegration {
-  private apiKey: string = '';
-  private apiUrl: string = 'https://api.deepseek.com/v1/chat/completions';
-  private model: string = 'deepseek-chat';
-  private enabled: boolean = false;
-  private conversationHistory: Map<string, DeepSeekMessage[]> = new Map();
-  private responseCache: Map<string, string> = new Map();
+  private readonly apiKey: string = '';
+  private readonly apiUrl: string = 'https://api.deepseek.com/v1/chat/completions';
+  private readonly model: string = 'deepseek-chat';
+  private readonly enabled: boolean = false;
+  private readonly conversationHistory: Map<string, DeepSeekMessage[]> = new Map();
+  private readonly responseCache: Map<string, string> = new Map();
 
   constructor() {
     // Check for DeepSeek API key from environment
@@ -58,8 +58,8 @@ class DeepSeekIntegration {
     this.enabled = !!this.apiKey;
 
     if (this.enabled) {
-      console.log('✅ DeepSeek API enabled');
-    } else {
+      if (import.meta.env.DEV) console.log('✅ DeepSeek API enabled');
+    } else if (import.meta.env.DEV) {
       console.log('ℹ️ DeepSeek API not configured (will use fallback)');
     }
   }
@@ -119,20 +119,21 @@ Format as JSON array with fields: recommendation, reasoning, source, confidence`
 
       try {
         // Parse JSON response
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        const jsonRegex = /\[[\s\S]*\]/;
+        const jsonMatch = jsonRegex.exec(response);
         if (jsonMatch) {
           const recommendations = JSON.parse(jsonMatch[0]);
           this.responseCache.set(cacheKey, JSON.stringify(recommendations));
           return recommendations;
         }
       } catch (parseError) {
-        console.log('Error parsing DeepSeek JSON:', parseError);
+        if (import.meta.env.DEV) console.log('Error parsing DeepSeek JSON:', parseError);
         return this.parseRecommendationsFromText(response, riskLevel);
       }
 
       return this.getFallbackRecommendations(riskLevel, age);
     } catch (error) {
-      console.error('DeepSeek medical recommendations error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek medical recommendations error:', error);
       return this.getFallbackRecommendations(riskLevel, age);
     }
   }
@@ -159,6 +160,7 @@ Format as JSON array with fields: recommendation, reasoning, source, confidence`
           return JSON.parse(cachedResponse);
         } catch (e) {
           // Continue with API call if cache parse fails
+          if (import.meta.env.DEV) console.warn('Failed to parse cached response:', e);
         }
       }
 
@@ -177,10 +179,14 @@ Your goals:
 Be conversational, supportive, and evidence-based.
 For emergencies (chest pain, breathlessness), always respond with immediate action steps.`;
 
+      const ageInfo = age ? `- Age: ${age}` : '';
+      const genderInfo = gender ? `- Gender: ${gender}` : '';
+      const riskInfo = riskScore ? `- Risk Score: ${riskScore}%` : '';
+      
       const patientContext = `Patient Context (if available):
-${age ? `- Age: ${age}` : ''}
-${gender ? `- Gender: ${gender}` : ''}
-${riskScore ? `- Risk Score: ${riskScore}%` : ''}`;
+${ageInfo}
+${genderInfo}
+${riskInfo}`;
 
       const fullSystemPrompt = `${systemPrompt}\n${patientContext}`;
 
@@ -212,7 +218,7 @@ ${riskScore ? `- Risk Score: ${riskScore}%` : ''}`;
 
       return chatResponse;
     } catch (error) {
-      console.error('DeepSeek chatbot error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek chatbot error:', error);
       return this.getFallbackChatResponse(userMessage);
     }
   }
@@ -247,7 +253,7 @@ Include key findings, implications, and recommendations.`;
 
       return response || `Information about ${topic} is being researched.`;
     } catch (error) {
-      console.error('DeepSeek research summary error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek research summary error:', error);
       return `Research on ${topic}: Please consult PubMed for latest studies.`;
     }
   }
@@ -274,11 +280,14 @@ Create clear, accurate health education content appropriate for patients.
 Use analogies and simple language.
 Include practical tips and when to seek help.`;
 
-      const complexityLevel = complexity === 'simple'
-        ? 'simple language, like explaining to a friend'
-        : complexity === 'moderate'
-        ? 'clear medical terms with explanations'
-        : 'detailed medical terminology for healthcare professionals';
+      let complexityLevel: string;
+      if (complexity === 'simple') {
+        complexityLevel = 'simple language, like explaining to a friend';
+      } else if (complexity === 'moderate') {
+        complexityLevel = 'clear medical terms with explanations';
+      } else {
+        complexityLevel = 'detailed medical terminology for healthcare professionals';
+      }
 
       const userPrompt = `Create patient education content about "${topic}".
 Style: ${complexityLevel}
@@ -292,7 +301,7 @@ Include: What it is, why it matters, what to do, when to seek help`;
 
       return response || this.getDefaultEducationContent(topic);
     } catch (error) {
-      console.error('DeepSeek education content error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek education content error:', error);
       return this.getDefaultEducationContent(topic);
     }
   }
@@ -321,14 +330,14 @@ Include: What it is, why it matters, what to do, when to seek help`;
       });
 
       if (!response.ok) {
-        console.error(`DeepSeek API error: ${response.status}`);
+        if (import.meta.env.DEV) console.error(`DeepSeek API error: ${response.status}`);
         return '';
       }
 
       const data: DeepSeekResponse = await response.json();
       return data.choices[0]?.message?.content || '';
     } catch (error) {
-      console.error('DeepSeek API call error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek API call error:', error);
       return '';
     }
   }
@@ -362,14 +371,14 @@ Include: What it is, why it matters, what to do, when to seek help`;
       });
 
       if (!response.ok) {
-        console.error(`DeepSeek API error: ${response.status}`);
+        if (import.meta.env.DEV) console.error(`DeepSeek API error: ${response.status}`);
         return '';
       }
 
       const data: DeepSeekResponse = await response.json();
       return data.choices[0]?.message?.content || '';
     } catch (error) {
-      console.error('DeepSeek API call error:', error);
+      if (import.meta.env.DEV) console.error('DeepSeek API call error:', error);
       return '';
     }
   }
@@ -420,17 +429,23 @@ Include: What it is, why it matters, what to do, when to seek help`;
     const questions: string[] = [];
 
     if (messageType === 'medical') {
-      questions.push('What are the side effects of this medication?');
-      questions.push('How long will treatment take?');
-      questions.push('Are there any alternatives?');
+      questions.push(
+        'What are the side effects of this medication?',
+        'How long will treatment take?',
+        'Are there any alternatives?'
+      );
     } else if (messageType === 'educational') {
-      questions.push('Can lifestyle changes help?');
-      questions.push('What are warning signs I should watch for?');
-      questions.push('When should I see a doctor?');
+      questions.push(
+        'Can lifestyle changes help?',
+        'What are warning signs I should watch for?',
+        'When should I see a doctor?'
+      );
     } else if (messageType === 'personalized') {
-      questions.push('What specific changes should I make?');
-      questions.push('How can I track my progress?');
-      questions.push('What is my treatment timeline?');
+      questions.push(
+        'What specific changes should I make?',
+        'How can I track my progress?',
+        'What is my treatment timeline?'
+      );
     }
 
     return questions.slice(0, 3);
@@ -575,7 +590,7 @@ Include: What it is, why it matters, what to do, when to seek help`;
    */
   clearCache(): void {
     this.responseCache.clear();
-    console.log('DeepSeek cache cleared');
+    if (import.meta.env.DEV) console.log('DeepSeek cache cleared');
   }
 
   /**

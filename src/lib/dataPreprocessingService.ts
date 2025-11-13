@@ -3,8 +3,6 @@
 // Data Sources: Framingham, INTERHEART, SCORE, CURES, PURE-India, Tamil Health Study
 // Date: November 4, 2025
 
-import { z } from 'zod';
-
 // ============================================================================
 // 1. DATA QUALITY ASSESSMENT
 // ============================================================================
@@ -20,21 +18,22 @@ export interface DataQualityMetrics {
   dataQualityScore: number;  // 0-100
 }
 
-export function assessDataQuality(data: Record<string, any>[]): DataQualityMetrics {
-  let totalRecords = data.length;
+export function assessDataQuality(data: Record<string, unknown>[]): DataQualityMetrics {
+  const totalRecords = data.length;
   let recordsWithMissingData = 0;
   const fieldsWithMissingData: Record<string, number> = {};
   
-  data.forEach(record => {
+  for (const record of data) {
     let hasMissing = false;
-    Object.entries(record).forEach(([key, value]) => {
-      if (value === null || value === undefined || value === '' || isNaN(value)) {
+    for (const [key, value] of Object.entries(record)) {
+      const isNumber = typeof value === 'number';
+      if (value === null || value === undefined || value === '' || (isNumber && Number.isNaN(value))) {
         fieldsWithMissingData[key] = (fieldsWithMissingData[key] || 0) + 1;
         hasMissing = true;
       }
-    });
+    }
     if (hasMissing) recordsWithMissingData++;
-  });
+  }
 
   const missingDataPercentage = (recordsWithMissingData / totalRecords) * 100;
 
@@ -75,14 +74,14 @@ const DEFAULT_MICE_CONFIG: MICEConfig = {
 };
 
 export function performMICEImputation(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   config: MICEConfig = DEFAULT_MICE_CONFIG
-): Record<string, any>[] {
-  const imputedDatasets: Record<string, any>[][] = [];
+): Record<string, unknown>[] {
+  const imputedDatasets: Record<string, unknown>[][] = [];
 
   // Create multiple imputed datasets
   for (let imp = 0; imp < config.numImputations; imp++) {
-    let currentData = JSON.parse(JSON.stringify(data));
+    let currentData = structuredClone(data);
 
     // Iterative imputation
     for (let iteration = 0; iteration < config.numIterations; iteration++) {
@@ -97,9 +96,9 @@ export function performMICEImputation(
 }
 
 function imputeMissingValues(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   method: string
-): Record<string, any>[] {
+): Record<string, unknown>[] {
   const numericFields = identifyNumericFields(data);
   
   // For each field with missing values
@@ -120,7 +119,7 @@ function imputeMissingValues(
           // Fallback: use field median
           const values = data
             .map(r => r[field])
-            .filter(v => v !== null && v !== undefined && !isNaN(v))
+            .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v))
             .sort((a, b) => a - b);
           data[missingIdx][field] = values[Math.floor(values.length / 2)];
         }
@@ -134,21 +133,23 @@ function imputeMissingValues(
       if (values.length > 0) {
         if (numericFields.includes(field)) {
           // Median for numeric
-          const sorted = values.sort((a, b) => a - b);
+          const numericValues = values.filter((v): v is number => typeof v === 'number');
+          const sorted = [...numericValues].sort((a, b) => a - b);
           const imputeValue = sorted[Math.floor(sorted.length / 2)];
-          missingIndices.forEach(idx => {
+          for (const idx of missingIndices) {
             data[idx][field] = imputeValue;
-          });
+          }
         } else {
           // Mode for categorical
           const frequency: Record<string, number> = {};
-          values.forEach(v => {
-            frequency[v] = (frequency[v] || 0) + 1;
-          });
+          for (const v of values) {
+            const key = String(v);
+            frequency[key] = (frequency[key] || 0) + 1;
+          }
           const mode = Object.keys(frequency).sort((a, b) => frequency[b] - frequency[a])[0];
-          missingIndices.forEach(idx => {
+          for (const idx of missingIndices) {
             data[idx][field] = mode;
-          });
+          }
         }
       }
     }
@@ -157,7 +158,7 @@ function imputeMissingValues(
   return data;
 }
 
-function findSimilarRecords(data: Record<string, any>[], targetIdx: number, excludeField: string, k: number = 5): Record<string, any>[] {
+function findSimilarRecords(data: Record<string, unknown>[], targetIdx: number, excludeField: string, k: number = 5): Record<string, unknown>[] {
   const target = data[targetIdx];
   const distances: Array<{ idx: number; distance: number }> = [];
 
@@ -169,8 +170,10 @@ function findSimilarRecords(data: Record<string, any>[], targetIdx: number, excl
     let count = 0;
 
     for (const [key, value] of Object.entries(target)) {
-      if (key === excludeField || typeof value !== 'number' || typeof data[i][key] !== 'number') continue;
-      distance += Math.pow(value - data[i][key], 2);
+      if (key === excludeField || typeof value !== 'number') continue;
+      const otherValue = data[i][key];
+      if (typeof otherValue !== 'number') continue;
+      distance += Math.pow(value - otherValue, 2);
       count++;
     }
 
@@ -188,14 +191,14 @@ function findSimilarRecords(data: Record<string, any>[], targetIdx: number, excl
     .map(d => data[d.idx]);
 }
 
-function poolMICEResults(datasets: Record<string, any>[][]): Record<string, any>[] {
+function poolMICEResults(datasets: Record<string, unknown>[][]): Record<string, unknown>[] {
   if (datasets.length === 0) return [];
 
   const numericFields = identifyNumericFields(datasets[0]);
-  const pooled: Record<string, any>[] = [];
+  const pooled: Record<string, unknown>[] = [];
 
   for (let i = 0; i < datasets[0].length; i++) {
-    const pooledRecord: Record<string, any> = {};
+    const pooledRecord: Record<string, unknown> = {};
 
     for (const field of Object.keys(datasets[0][i])) {
       const values = datasets.map(ds => ds[i][field]);
@@ -228,7 +231,7 @@ export interface OutlierDetectionConfig {
   treatmentMethod: 'remove' | 'winsorize' | 'flag';
 }
 
-function detectOutliersIQR(data: Record<string, any>[]): {
+function detectOutliersIQR(data: Record<string, unknown>[]): {
   count: number;
   byField: Record<string, number>;
 } {
@@ -268,13 +271,13 @@ function detectOutliersIQR(data: Record<string, any>[]): {
 }
 
 export function treatOutliers(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   config: OutlierDetectionConfig = {
     method: 'Winsorization',
     threshold: 0.95,
     treatmentMethod: 'winsorize'
   }
-): Record<string, any>[] {
+): Record<string, unknown>[] {
   const numericFields = identifyNumericFields(data);
 
   if (config.method === 'Winsorization') {
@@ -288,7 +291,7 @@ export function treatOutliers(
   return data;
 }
 
-function winsorizeData(data: Record<string, any>[], fields: string[], percentile: number): Record<string, any>[] {
+function winsorizeData(data: Record<string, unknown>[], fields: string[], percentile: number): Record<string, unknown>[] {
   for (const field of fields) {
     const values = data
       .map(r => r[field])
@@ -313,7 +316,7 @@ function winsorizeData(data: Record<string, any>[], fields: string[], percentile
   return data;
 }
 
-function removeIQROutliers(data: Record<string, any>[], fields: string[]): Record<string, any>[] {
+function removeIQROutliers(data: Record<string, unknown>[], fields: string[]): Record<string, unknown>[] {
   return data.filter(record => {
     for (const field of fields) {
       const values = data
@@ -340,7 +343,7 @@ function removeIQROutliers(data: Record<string, any>[], fields: string[]): Recor
   });
 }
 
-function removeIsolationForestOutliers(data: Record<string, any>[], fields: string[]): Record<string, any>[] {
+function removeIsolationForestOutliers(data: Record<string, unknown>[], fields: string[]): Record<string, unknown>[] {
   // Simplified Isolation Forest implementation
   const threshold = -0.5;
   
@@ -381,11 +384,11 @@ export interface NormalizationConfig {
 }
 
 export function normalizeFeatures(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   config: NormalizationConfig
-): { normalized: Record<string, any>[]; params: Record<string, any> } {
+): { normalized: Record<string, unknown>[]; params: Record<string, unknown> } {
   const numericFields = config.fields || identifyNumericFields(data);
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
 
   if (config.method === 'standardization') {
     return standardizeFeatures(data, numericFields);
@@ -400,11 +403,11 @@ export function normalizeFeatures(
   return { normalized: data, params };
 }
 
-function standardizeFeatures(data: Record<string, any>[], fields: string[]): {
-  normalized: Record<string, any>[];
-  params: Record<string, any>;
+function standardizeFeatures(data: Record<string, unknown>[], fields: string[]): {
+  normalized: Record<string, unknown>[];
+  params: Record<string, unknown>;
 } {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   const normalized = JSON.parse(JSON.stringify(data));
 
   for (const field of fields) {
@@ -430,11 +433,11 @@ function standardizeFeatures(data: Record<string, any>[], fields: string[]): {
   return { normalized, params };
 }
 
-function minMaxNormalize(data: Record<string, any>[], fields: string[]): {
-  normalized: Record<string, any>[];
-  params: Record<string, any>;
+function minMaxNormalize(data: Record<string, unknown>[], fields: string[]): {
+  normalized: Record<string, unknown>[];
+  params: Record<string, unknown>;
 } {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   const normalized = JSON.parse(JSON.stringify(data));
 
   for (const field of fields) {
@@ -459,11 +462,11 @@ function minMaxNormalize(data: Record<string, any>[], fields: string[]): {
   return { normalized, params };
 }
 
-function logTransform(data: Record<string, any>[], fields: string[]): {
-  normalized: Record<string, any>[];
-  params: Record<string, any>;
+function logTransform(data: Record<string, unknown>[], fields: string[]): {
+  normalized: Record<string, unknown>[];
+  params: Record<string, unknown>;
 } {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   const normalized = JSON.parse(JSON.stringify(data));
 
   for (const field of fields) {
@@ -479,11 +482,11 @@ function logTransform(data: Record<string, any>[], fields: string[]): {
   return { normalized, params };
 }
 
-function robustScale(data: Record<string, any>[], fields: string[]): {
-  normalized: Record<string, any>[];
-  params: Record<string, any>;
+function robustScale(data: Record<string, unknown>[], fields: string[]): {
+  normalized: Record<string, unknown>[];
+  params: Record<string, unknown>;
 } {
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   const normalized = JSON.parse(JSON.stringify(data));
 
   for (const field of fields) {
@@ -523,7 +526,7 @@ export interface MulticollinearityReport {
 }
 
 export function assessMulticollinearity(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   vifThreshold: number = 5,
   correlationThreshold: number = 0.7
 ): MulticollinearityReport {
@@ -572,7 +575,7 @@ export function assessMulticollinearity(
 }
 
 function calculateCorrelationMatrix(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   fields: string[]
 ): Record<string, Record<string, number>> {
   const matrix: Record<string, Record<string, number>> = {};
@@ -608,7 +611,7 @@ function calculateCorrelationMatrix(
   return matrix;
 }
 
-function calculateVIF(data: Record<string, any>[], fields: string[]): Record<string, number> {
+function calculateVIF(data: Record<string, unknown>[], fields: string[]): Record<string, number> {
   const vifScores: Record<string, number> = {};
 
   for (const field of fields) {
@@ -673,11 +676,11 @@ export const SELECTED_25_FEATURES = [
   'diabetesStatus'
 ];
 
-export function selectFeatures(data: Record<string, any>[], features?: string[]): Record<string, any>[] {
+export function selectFeatures(data: Record<string, unknown>[], features?: string[]): Record<string, unknown>[] {
   const selectedFeatures = features || SELECTED_25_FEATURES;
   
   return data.map(record => {
-    const selected: Record<string, any> = {};
+    const selected: Record<string, unknown> = {};
     for (const feature of selectedFeatures) {
       if (feature in record) {
         selected[feature] = record[feature];
@@ -715,14 +718,14 @@ export interface PreprocessingResult {
   qualityMetrics?: DataQualityMetrics;
   imputationReport: { recordsImputed: number; fieldsImputed: string[] };
   outlierReport: { outliersTreated: number; treatmentMethod: string };
-  normalizationParams?: Record<string, any>;
+  normalizationParams?: Record<string, unknown>;
   multicollinearityReport?: MulticollinearityReport;
-  processedData: Record<string, any>[];
+  processedData: Record<string, unknown>[];
   summary: string;
 }
 
 export function preprocessCVDData(
-  rawData: Record<string, any>[],
+  rawData: Record<string, unknown>[],
   config: PreprocessingConfig = DEFAULT_PREPROCESSING_CONFIG
 ): PreprocessingResult {
   let data = JSON.parse(JSON.stringify(rawData));
@@ -787,7 +790,7 @@ export function preprocessCVDData(
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function identifyNumericFields(data: Record<string, any>[]): string[] {
+function identifyNumericFields(data: Record<string, unknown>[]): string[] {
   if (data.length === 0) return [];
 
   const firstRecord = data[0];

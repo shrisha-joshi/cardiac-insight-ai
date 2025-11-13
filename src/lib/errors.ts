@@ -19,14 +19,14 @@ export class AppError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
   public readonly timestamp: Date;
-  public context: Record<string, any>;
+  public context: Record<string, unknown>;
 
   constructor(
     message: string,
     code: string,
     statusCode: number = 500,
     isOperational: boolean = true,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -43,7 +43,7 @@ export class AppError extends Error {
   /**
    * Convert error to JSON for logging
    */
-  toJSON(): Record<string, any> {
+  toJSON(): Record<string, unknown> {
     return {
       name: this.name,
       message: this.message,
@@ -69,7 +69,7 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
   constructor(
     message: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -92,7 +92,7 @@ export class ValidationError extends AppError {
 export class AuthenticationError extends AppError {
   constructor(
     message: string = 'Authentication required',
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -115,7 +115,7 @@ export class AuthenticationError extends AppError {
 export class AuthorizationError extends AppError {
   constructor(
     message: string = 'You do not have permission',
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -138,7 +138,7 @@ export class AuthorizationError extends AppError {
 export class NotFoundError extends AppError {
   constructor(
     resource: string = 'Resource',
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       `${resource} not found`,
@@ -162,7 +162,7 @@ export class AIServiceError extends AppError {
   constructor(
     message: string,
     provider: 'gemini' | 'openai' | 'fallback',
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -186,7 +186,7 @@ export class AIServiceError extends AppError {
 export class MLError extends AppError {
   constructor(
     message: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -210,7 +210,7 @@ export class DatabaseError extends AppError {
   constructor(
     message: string,
     operation: string = 'database operation',
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -234,7 +234,7 @@ export class APIError extends AppError {
   constructor(
     message: string,
     statusCode: number = 500,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -267,7 +267,7 @@ export class TimeoutError extends AppError {
   constructor(
     operation: string = 'Operation',
     timeout: number = 0,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       `${operation} timed out after ${timeout}ms`,
@@ -290,7 +290,7 @@ export class TimeoutError extends AppError {
 export class FileError extends AppError {
   constructor(
     message: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -313,7 +313,7 @@ export class FileError extends AppError {
 export class ConfigError extends AppError {
   constructor(
     message: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) {
     super(
       message,
@@ -341,7 +341,7 @@ export interface ErrorHandlerOptions {
   logError?: boolean;
   notifyUser?: boolean;
   sendToMonitoring?: boolean;
-  fallback?: (error: any) => void;
+  fallback?: (error: unknown) => void;
 }
 
 /**
@@ -373,7 +373,7 @@ export async function withRetry<T>(
     initialDelayMs?: number;
     maxDelayMs?: number;
     backoffMultiplier?: number;
-    onRetry?: (attempt: number, error: any) => void;
+    onRetry?: (attempt: number, error: unknown) => void;
   } = {}
 ): Promise<T> {
   const {
@@ -384,7 +384,7 @@ export async function withRetry<T>(
     onRetry,
   } = options;
 
-  let lastError: any;
+  let lastError: unknown;
   let delayMs = initialDelayMs;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -407,14 +407,14 @@ export async function withRetry<T>(
 /**
  * Type guard to check if error is an AppError
  */
-export function isAppError(error: any): error is AppError {
+export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
 
 /**
  * Type guard to check if error is operational
  */
-export function isOperationalError(error: any): error is AppError {
+export function isOperationalError(error: unknown): error is AppError {
   return isAppError(error) && error.isOperational;
 }
 
@@ -422,22 +422,25 @@ export function isOperationalError(error: any): error is AppError {
  * Log error with context
  */
 export interface ErrorLogger {
-  error(message: string, context?: Record<string, any>): void;
-  warn(message: string, context?: Record<string, any>): void;
-  info(message: string, context?: Record<string, any>): void;
-  debug(message: string, context?: Record<string, any>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: Record<string, unknown>): void;
 }
 
 export const defaultLogger: ErrorLogger = {
-  error: (message, context) =>
-    console.error(`[ERROR] ${message}`, context ? JSON.stringify(context, null, 2) : ''),
-  warn: (message, context) =>
-    console.warn(`[WARN] ${message}`, context ? JSON.stringify(context, null, 2) : ''),
-  info: (message, context) =>
-    console.info(`[INFO] ${message}`, context ? JSON.stringify(context, null, 2) : ''),
+  error: (message, context) => {
+    if (import.meta.env.DEV) console.error(`[ERROR] ${message}`, context ? JSON.stringify(context, null, 2) : '');
+  },
+  warn: (message, context) => {
+    if (import.meta.env.DEV) console.warn(`[WARN] ${message}`, context ? JSON.stringify(context, null, 2) : '');
+  },
+  info: (message, context) => {
+    if (import.meta.env.DEV) console.info(`[INFO] ${message}`, context ? JSON.stringify(context, null, 2) : '');
+  },
   debug: (message, context) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context, null, 2) : '');
+      if (import.meta.env.DEV) console.debug(`[DEBUG] ${message}`, context ? JSON.stringify(context, null, 2) : '');
     }
   },
 };
@@ -467,12 +470,12 @@ export class ErrorHandler {
    * Handle error with logging and callbacks
    */
   static handle(
-    error: any,
+    error: unknown,
     context: string = 'Unknown context',
     options: ErrorHandlerOptions = {}
   ): AppError {
     // Convert unknown errors to AppError
-    let appError = isAppError(error) ? error : this.normalizeError(error, context);
+    const appError = isAppError(error) ? error : this.normalizeError(error, context);
 
     // Add context
     appError.context = { ...appError.context, sourceContext: context };
@@ -506,7 +509,7 @@ export class ErrorHandler {
   /**
    * Normalize unknown errors to AppError
    */
-  private static normalizeError(error: any, context: string): AppError {
+  private static normalizeError(error: unknown, context: string): AppError {
     if (error instanceof Error) {
       return new AppError(
         error.message,
@@ -527,11 +530,11 @@ export class ErrorHandler {
         'UNKNOWN_ERROR',
         500,
         true,
-        error
+        error as Record<string, unknown>
       );
     }
 
-    return new AppError('Unknown error occurred', 'UNKNOWN_ERROR', 500, true, {});
+    return new AppError('Unknown error occurred', 'UNKNOWN_ERROR', 500, true, {} as Record<string, unknown>);
   }
 }
 

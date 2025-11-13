@@ -82,7 +82,7 @@ class RiskProjectionService {
     const projections: YearlyProjection[] = [];
 
     // Determine annual risk change rate based on trend
-    let annualChangeRate = this.calculateAnnualChangeRate(
+    const annualChangeRate = this.calculateAnnualChangeRate(
       trendStatus,
       currentRisk,
       gender,
@@ -142,7 +142,7 @@ class RiskProjectionService {
     trendStatus: string,
     currentRisk: number,
     gender: 'Male' | 'Female',
-    riskFactors?: any
+    riskFactors?: unknown
   ): number {
     let baseRate = 1.5; // base 1.5% annual increase
 
@@ -156,12 +156,13 @@ class RiskProjectionService {
 
     // Risk factor adjustment
     if (riskFactors) {
+      const factors = riskFactors as Record<string, unknown>;
       let factorCount = 0;
-      if (riskFactors.smoking) factorCount += 2;
-      if (riskFactors.diabetes) factorCount += 2;
-      if (riskFactors.hypertension) factorCount += 1;
-      if (riskFactors.sedentary) factorCount += 1;
-      if (riskFactors.obesity) factorCount += 1;
+      if (factors.smoking) factorCount += 2;
+      if (factors.diabetes) factorCount += 2;
+      if (factors.hypertension) factorCount += 1;
+      if (factors.sedentary) factorCount += 1;
+      if (factors.obesity) factorCount += 1;
 
       baseRate = baseRate + (factorCount * 0.3);
     }
@@ -226,16 +227,17 @@ class RiskProjectionService {
    */
   private calculateInterventionPotential(
     riskScore: number,
-    riskFactors?: any
+    riskFactors?: unknown
   ): number {
     let potential = 0;
 
     // Modifiable risk factors offer potential for reduction
     if (riskFactors) {
-      if (riskFactors.smoking) potential += 0.20; // 20% reduction possible
-      if (riskFactors.sedentary) potential += 0.15; // 15% reduction
-      if (riskFactors.obesity) potential += 0.12; // 12% reduction
-      if (riskFactors.hypertension) potential += 0.18; // 18% reduction
+      const factors = riskFactors as Record<string, unknown>;
+      if (factors.smoking) potential += 0.20; // 20% reduction possible
+      if (factors.sedentary) potential += 0.15; // 15% reduction
+      if (factors.obesity) potential += 0.12; // 12% reduction
+      if (factors.hypertension) potential += 0.18; // 18% reduction
     }
 
     // Higher risk scores offer more room for improvement
@@ -384,9 +386,9 @@ class RiskProjectionService {
     let miRisk = adjustedFactor * 0.35; // MI is 35% of composite risk
     let strokeRisk = adjustedFactor * 0.25; // Stroke is 25%
     let cardiacDeathRisk = adjustedFactor * 0.15; // Cardiac death is 15%
-    let anginaRisk = adjustedFactor * 0.15; // Angina is 15%
+    const anginaRisk = adjustedFactor * 0.15; // Angina is 15%
     let hfRisk = adjustedFactor * 0.08; // Heart failure is 8%
-    let arrythmiaRisk = adjustedFactor * 0.02; // Arrhythmia is 2%
+    const arrythmiaRisk = adjustedFactor * 0.02; // Arrhythmia is 2%
 
     // Adjust for specific risk factors
     if (riskFactors?.smoking) {
@@ -436,18 +438,18 @@ class RiskProjectionService {
     report += '## Yearly Projections\n';
     report += '| Year | Age | Risk | Category | Event Probability |\n';
     report += '|------|-----|------|----------|-------------------|\n';
-    trajectory.projections.forEach(proj => {
+    for (const proj of trajectory.projections) {
       report += `| ${proj.year} | ${proj.age} | ${proj.projectedRisk.toFixed(1)}% | ${proj.riskCategory} | ${(proj.majorEventProbability * 100).toFixed(2)}% |\n`;
-    });
+    }
 
     if (scenarios) {
       report += '\n## Scenario Comparison\n';
-      scenarios.scenarios.forEach(s => {
+      for (const s of scenarios.scenarios) {
         report += `\n### ${s.scenario.name}\n`;
         report += `- **Description**: ${s.scenario.description}\n`;
         report += `- **5-Year Risk**: ${s.projectedRiskAt5Years.toFixed(1)}%\n`;
         report += `- **Risk Reduction**: ${s.riskReduction.toFixed(1)}% (${s.percentageReduction.toFixed(1)}%)\n`;
-      });
+      }
 
       report += '\n## Recommendation\n';
       report += scenarios.recommendation;

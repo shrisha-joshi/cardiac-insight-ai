@@ -124,7 +124,7 @@ How can I help you learn about heart health today?`,
       await new Promise(resolve => setTimeout(resolve, 300));
       addBotMessage(response.content, response.data);
     } catch (error) {
-      console.error('Chat error:', error);
+      if (import.meta.env.DEV) console.error('Chat error:', error);
       setIsTyping(false);
       addBotMessage("I apologize, but I'm having trouble processing your request right now. Please try again later.");
     } finally {
@@ -170,7 +170,7 @@ How can I help you learn about heart health today?`,
             fullContent += `\n\n**📊 Your Assessment History:**\nTotal Assessments: ${history.length}`;
           }
         } catch (error) {
-          console.error('Error fetching history:', error);
+          if (import.meta.env.DEV) console.error('Error fetching history:', error);
         }
       }
 
@@ -182,7 +182,7 @@ How can I help you learn about heart health today?`,
         }
       };
     } catch (error) {
-      console.error('Cardiac chat service error:', error);
+      if (import.meta.env.DEV) console.error('Cardiac chat service error:', error);
       return {
         content: `I apologize, but I'm experiencing technical difficulties. 
 

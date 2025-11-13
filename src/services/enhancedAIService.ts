@@ -3,11 +3,14 @@ import OpenAI from 'openai';
 import { config } from '@/lib/config';
 import { PatientData, PredictionResult } from '@/lib/mockData';
 
-// Import available services
-// TODO: Fix import issue with lifestyleAnalytics - module resolution needed
-// import lifestyleAnalyticsService from './lifestyleAnalytics';
+// Import ULTIMATE accuracy services
+import { ultimateAccuracyMLService } from './ultimateAccuracyMLService';
+import { dynamicRecommendationEngine } from './dynamicRecommendationEngine';
+import { comprehensiveInputUtilization } from './comprehensiveInputUtilization';
 
-// Note: The following services are planned for Phase 5 implementation:
+// Phase 5: Additional services pending implementation
+// - lifestyleAnalytics (module resolution issue)
+
 // - lifestyleAnalytics (partially implemented)
 // - medicationInteractions
 // - familyRiskClustering
@@ -79,10 +82,10 @@ interface ComprehensiveRiskAssessment {
 }
 
 class EnhancedAIService {
-  private conversationHistory: Map<string, ConversationContext> = new Map();
+  private readonly conversationHistory: Map<string, ConversationContext> = new Map();
   private gemini: GoogleGenerativeAI | null = null;
   private openai: OpenAI | null = null;
-  private comprehensiveAssessments: Map<string, ComprehensiveRiskAssessment[]> = new Map();
+  private readonly comprehensiveAssessments: Map<string, ComprehensiveRiskAssessment[]> = new Map();
 
   constructor() {
     // Initialize Google Gemini
@@ -102,7 +105,7 @@ class EnhancedAIService {
   /**
    * Comprehensive Risk Assessment using all Phase 5 services
    */
-  async generateComprehensiveAssessment(patientId: string, patientData: any): Promise<ComprehensiveRiskAssessment> {
+  async generateComprehensiveAssessment(patientId: string, patientData: unknown): Promise<ComprehensiveRiskAssessment> {
     const assessment: ComprehensiveRiskAssessment = {
       patientId,
       timestamp: new Date(),
@@ -122,59 +125,47 @@ class EnhancedAIService {
       clinicalReport: ''
     };
 
-    // Get predictions from ML models
+    // ML model predictions (Phase 5: awaiting predictiveAnalyticsService implementation)
     try {
-      // TODO: Integrate with predictiveAnalyticsService when available
-      // const mlPrediction = predictiveAnalyticsService.generateEnsemblePrediction(patientId, patientData);
       assessment.riskScores.predictiveAnalytics = 0;
       assessment.keyFindings.push(`ML Ensemble Risk Score: Ready for integration`);
     } catch (e) {
-      console.log('ML prediction unavailable');
+      if (import.meta.env.DEV) console.log('ML prediction unavailable');
     }
 
-    // Get biomarker analysis
+    // Biomarker analysis (Phase 5: awaiting biomarkerIntegrationService implementation)
     try {
-      // TODO: Integrate with biomarkerIntegrationService when available
-      // const biomarkerProfile = biomarkerIntegrationService.getPatientProfile(patientId);
       assessment.riskScores.biomarkers = 0;
     } catch (e) {
-      console.log('Biomarker profile unavailable');
+      if (import.meta.env.DEV) console.log('Biomarker profile unavailable');
     }
 
-    // Get imaging findings
+    // Imaging findings (Phase 5: awaiting imagingAnalysisService implementation)
     try {
-      // TODO: Integrate with imagingAnalysisService when available
-      // const imagingProfile = imagingAnalysisService.getImagingProfile(patientId);
       assessment.riskScores.imaging = 0;
     } catch (e) {
-      console.log('Imaging profile unavailable');
+      if (import.meta.env.DEV) console.log('Imaging profile unavailable');
     }
 
-    // Get ECG analysis
+    // ECG analysis (Phase 5: awaiting ecgAnalysisService implementation)
     try {
-      // TODO: Integrate with ecgAnalysisService when available
-      // const ecgProfile = ecgAnalysisService.getECGProfile(patientId);
       assessment.riskScores.ecg = 0;
     } catch (e) {
-      console.log('ECG profile unavailable');
+      if (import.meta.env.DEV) console.log('ECG profile unavailable');
     }
 
-    // Get family history risk
+    // Family history risk clustering (Phase 5: awaiting familyRiskClusteringService implementation)
     try {
-      // TODO: Integrate with familyRiskClusteringService when available
-      // const familyCluster = familyRiskClusteringService.getHighRiskFamilies();
       assessment.riskScores.familyHistory = 0;
     } catch (e) {
-      console.log('Family risk clustering unavailable');
+      if (import.meta.env.DEV) console.log('Family risk clustering unavailable');
     }
 
-    // Get lifestyle analysis
+    // Lifestyle factor analysis (Phase 5: awaiting lifestyleAnalyticsService implementation)
     try {
-      // TODO: Integrate with lifestyleAnalyticsService when module resolution is fixed
-      // const lifestyleProfile = lifestyleAnalyticsService.analyzeLifestyleFactors({...});
       assessment.riskScores.lifestyle = 0;
     } catch (e) {
-      console.log('Lifestyle analysis unavailable');
+      if (import.meta.env.DEV) console.log('Lifestyle analysis unavailable');
     }
 
     // Calculate overall risk score (weighted average)
@@ -209,7 +200,7 @@ class EnhancedAIService {
     assessment.clinicalReport = this.generateIntegratedReport(assessment);
 
     // Store assessment
-    let assessments = this.comprehensiveAssessments.get(patientId) || [];
+    const assessments = this.comprehensiveAssessments.get(patientId) || [];
     assessments.push(assessment);
     this.comprehensiveAssessments.set(patientId, assessments);
 
@@ -1192,7 +1183,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
       // Fallback to rule-based suggestions
       return this.getFallbackSuggestions(request);
     } catch (error) {
-      console.error('AI service error:', error);
+      if (import.meta.env.DEV) console.error('AI service error:', error);
       return this.getFallbackSuggestions(request);
     }
   }
@@ -1276,7 +1267,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
 
       return null;
     } catch (error) {
-      console.error('Gemini API error:', error);
+      if (import.meta.env.DEV) console.error('Gemini API error:', error);
       return null;
     }
   }
@@ -1316,7 +1307,7 @@ I'm here to provide comprehensive heart health education with a focus on **India
 
       return null;
     } catch (error) {
-      console.error('OpenAI API error:', error);
+      if (import.meta.env.DEV) console.error('OpenAI API error:', error);
       return null;
     }
   }

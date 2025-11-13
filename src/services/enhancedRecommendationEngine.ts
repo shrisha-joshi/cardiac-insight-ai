@@ -42,8 +42,8 @@ interface RecommendationSet {
 }
 
 class EnhancedRecommendationEngine {
-  private gemini: GoogleGenerativeAI | null = null;
-  private model: any = null;
+  private readonly gemini: GoogleGenerativeAI | null = null;
+  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
 
   constructor() {
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
@@ -62,68 +62,12 @@ class EnhancedRecommendationEngine {
     data: PatientData
   ): Promise<string[]> {
     try {
-      console.log('🌐 Generating recommendations from 11+ FREE APIs...');
+      if (import.meta.env.DEV) console.log('🌐 Generating recommendations from 11+ FREE APIs...');
       
-      // Use free resources integration for maximum accuracy
-      const conditions = [];
-      if (data.smoking) conditions.push('smoking');
-      if (data.diabetes) conditions.push('diabetes');
-      if (data.systolicBP > 140) conditions.push('hypertension');
-      if (data.cholesterol > 240) conditions.push('dyslipidemia');
+      // Collect all recommendations from different sources
+      const allResourceRecs = await this.collectAllRecommendations(riskScore, riskLevel, data);
 
-      const riskFactors = [];
-      if (data.smoking) riskFactors.push('smoking');
-      if (data.diabetes) riskFactors.push('diabetes');
-      if (data.age > 60) riskFactors.push('advanced age');
-      if (data.familyHistory) riskFactors.push('family history');
-
-      // Get recommendations from comprehensive FREE APIs
-      const comprehensiveAPIRecs = await comprehensiveFreeAPIs.generateComprehensiveRecommendations(
-        riskScore,
-        riskLevel,
-        data.age,
-        conditions,
-        riskFactors
-      );
-
-      // Get recommendations from existing free resources (WHO, ICC, PubMed legacy)
-      const freeResourceRecs = await freeResourcesIntegration.generateMaxAccuracyRecommendations(
-        riskScore,
-        riskLevel,
-        data.age,
-        conditions,
-        riskFactors
-      );
-
-      // Add DeepSeek recommendations for additional perspective
-      const deepseekRecs = await deepseekIntegration.generateMedicalRecommendations(
-        riskScore,
-        riskLevel,
-        data.age,
-        conditions,
-        riskFactors
-      );
-
-      // Convert all recommendations to string format
-      const freeResourceStrings = freeResourceRecs.map(rec => 
-        `${rec.recommendation} [Source: ${rec.evidenceSource}]`
-      );
-
-      // Merge all recommendations from different sources
-      let allResourceRecs: string[] = [
-        ...comprehensiveAPIRecs,  // From 11+ FREE APIs
-        ...freeResourceStrings     // From WHO, ICC, PubMed legacy
-      ];
-
-      // Add DeepSeek recommendations for additional AI perspective
-      if (deepseekRecs && deepseekRecs.length > 0) {
-        const deepseekFormatted = deepseekRecs.map(rec => 
-          `${rec.recommendation} [DEEPSEEK: ${rec.confidence}]`
-        );
-        allResourceRecs = [...allResourceRecs, ...deepseekFormatted];
-      }
-
-      // Deduplicate all resource recommendations
+      // Deduplicate
       const formattedRecs = this.deduplicateRecommendations(allResourceRecs);
 
       // Add personalized recommendations from Gemini
@@ -141,13 +85,112 @@ class EnhancedRecommendationEngine {
       // Deduplicate
       const finalRecs = this.deduplicateRecommendations(allRecs);
 
-      console.log(`✅ Generated ${finalRecs.length} recommendations from 11+ FREE APIs + Gemini + DeepSeek`);
+      if (import.meta.env.DEV) console.log(`✅ Generated ${finalRecs.length} recommendations from 11+ FREE APIs + Gemini + DeepSeek`);
       
       return finalRecs.slice(0, 20); // Return max 20 comprehensive recommendations
     } catch (error) {
-      console.warn('Error in recommendation generation:', error);
+      if (import.meta.env.DEV) console.warn('Error in recommendation generation:', error);
       return this.getRuleBasedRecommendations(riskScore, riskLevel, data);
     }
+  }
+
+  /**
+   * Collect recommendations from all free resource APIs
+   */
+  private async collectAllRecommendations(
+    riskScore: number,
+    riskLevel: string,
+    data: PatientData
+  ): Promise<string[]> {
+    const conditions = this.extractConditions(data);
+    const riskFactors = this.extractRiskFactors(data);
+
+    // Get recommendations from comprehensive FREE APIs
+    const comprehensiveAPIRecs = await comprehensiveFreeAPIs.generateComprehensiveRecommendations(
+      riskScore,
+      riskLevel,
+      data.age,
+      conditions,
+      riskFactors
+    );
+
+    // Get recommendations from existing free resources (WHO, ICC, PubMed legacy)
+    const freeResourceRecs = await freeResourcesIntegration.generateMaxAccuracyRecommendations(
+      riskScore,
+      riskLevel,
+      data.age,
+      conditions,
+      riskFactors
+    );
+
+    // Add DeepSeek recommendations for additional perspective
+    const deepseekRecs = await deepseekIntegration.generateMedicalRecommendations(
+      riskScore,
+      riskLevel,
+      data.age,
+      conditions,
+      riskFactors
+    );
+
+    // Convert and merge all recommendations
+    return this.mergeRecommendationSources(
+      comprehensiveAPIRecs,
+      freeResourceRecs,
+      deepseekRecs
+    );
+  }
+
+  /**
+   * Extract conditions from patient data
+   */
+  private extractConditions(data: PatientData): string[] {
+    const conditions: string[] = [];
+    if (data.smoking) conditions.push('smoking');
+    if (data.diabetes) conditions.push('diabetes');
+    if (data.systolicBP && data.systolicBP > 140) conditions.push('hypertension');
+    if (data.cholesterol && data.cholesterol > 240) conditions.push('dyslipidemia');
+    return conditions;
+  }
+
+  /**
+   * Extract risk factors from patient data
+   */
+  private extractRiskFactors(data: PatientData): string[] {
+    const riskFactors: string[] = [];
+    if (data.smoking) riskFactors.push('smoking');
+    if (data.diabetes) riskFactors.push('diabetes');
+    if (data.age > 60) riskFactors.push('advanced age');
+    if (data.familyHistory) riskFactors.push('family history');
+    return riskFactors;
+  }
+
+  /**
+   * Merge recommendations from different sources
+   */
+  private mergeRecommendationSources(
+    comprehensiveAPIRecs: string[],
+    freeResourceRecs: unknown[],
+    deepseekRecs: unknown[]
+  ): string[] {
+    // Convert free resource recommendations to strings
+    const freeResourceStrings = (freeResourceRecs as { recommendation: string; evidenceSource: string }[]).map(
+      rec => `${rec.recommendation} [Source: ${rec.evidenceSource}]`
+    );
+
+    let allResourceRecs: string[] = [
+      ...comprehensiveAPIRecs,  // From 11+ FREE APIs
+      ...freeResourceStrings     // From WHO, ICC, PubMed legacy
+    ];
+
+    // Add DeepSeek recommendations if available
+    if (deepseekRecs && Array.isArray(deepseekRecs) && deepseekRecs.length > 0) {
+      const deepseekFormatted = (deepseekRecs as { recommendation: string; confidence: string }[]).map(
+        rec => `${rec.recommendation} [DEEPSEEK: ${rec.confidence}]`
+      );
+      allResourceRecs = [...allResourceRecs, ...deepseekFormatted];
+    }
+
+    return allResourceRecs;
   }
 
   /**
@@ -173,103 +216,204 @@ class EnhancedRecommendationEngine {
   ): string[] {
     const recommendations: string[] = [];
 
-    // ===== URGENT ACTIONS (based on risk level) =====
-    if (riskLevel === 'high') {
-      recommendations.push('🔴 URGENT: Schedule comprehensive cardiac evaluation with cardiologist within 1 week');
-      recommendations.push('🚑 Emergency action: Call 108 (India) if you experience chest pain, shortness of breath, or severe fatigue');
-    } else if (riskLevel === 'medium') {
-      recommendations.push('🟡 Schedule cardiac check-up with your doctor within 2-4 weeks');
-      recommendations.push('📋 Request: ECG, stress test, and lipid panel from your healthcare provider');
-    } else {
-      recommendations.push('🟢 Continue annual heart health screening and preventive care');
-    }
-
-    // ===== SMOKING INTERVENTIONS =====
-    if (data.smoking) {
-      recommendations.push('🚭 PRIORITY: Quit smoking immediately - reduces risk by 20% in 1 year, 50% in 5 years');
-      recommendations.push('💊 Smoking Cessation: Ask doctor about Varenicline (Chantix) or Nicotine Replacement Therapy (NRT)');
-      recommendations.push('📱 Download: Free smoking quit apps (QuitGuide, Smokefree, or regional Indian apps)');
-    }
-
-    // ===== CHOLESTEROL MANAGEMENT =====
-    if (data.cholesterol && data.cholesterol > 240) {
-      recommendations.push('💊 Cholesterol: Discuss high-intensity statin therapy (Atorvastatin 40-80mg or Rosuvastatin 20-40mg daily)');
-      recommendations.push('🎯 Target LDL: <70 mg/dL if high-risk, <100 mg/dL if medium-risk');
-      recommendations.push('🍎 Diet: Mediterranean or DASH diet - reduce saturated fats, increase oily fish (salmon, mackerel) 2x/week');
-    } else if (data.cholesterol && data.cholesterol > 200) {
-      recommendations.push('💊 Cholesterol: Consider moderate-intensity statin (Atorvastatin 20-40mg daily)');
-      recommendations.push('🥗 Dietary approach: Increase fiber (oats, beans), reduce trans fats');
-    }
-
-    // ===== BLOOD PRESSURE MANAGEMENT =====
-    if (data.systolicBP && data.systolicBP > 160) {
-      recommendations.push('🩸 URGENT BP: Blood pressure is dangerously high - seek immediate medical attention');
-      recommendations.push('💊 Medication: May need ACE inhibitor (Lisinopril, Enalapril) + ARB (Losartan) + Diuretic combination');
-    } else if (data.systolicBP && data.systolicBP > 140) {
-      recommendations.push('🩸 Blood Pressure: Discuss dual-therapy (ACE-I + Diuretic or ARB + Diuretic)');
-      recommendations.push('🧂 Sodium Reduction: Limit salt intake to <2300mg/day (1 teaspoon), use potassium salt alternatives');
-      recommendations.push('🏃 DASH Diet: Fruits, vegetables, whole grains, lean protein - proven to lower BP by 11 mmHg');
-    } else if (data.systolicBP && data.systolicBP > 130) {
-      recommendations.push('🩸 Pre-hypertension: Lifestyle modifications can prevent progression - daily exercise is crucial');
-    }
-
-    // ===== DIABETES MANAGEMENT =====
-    if (data.diabetes) {
-      if (!data.diabetesMedication || data.diabetesMedication === 'none') {
-        recommendations.push('🔬 Diabetes: Discuss Metformin 500mg 2x daily as first-line therapy');
-        recommendations.push('📊 Add SGLT2 inhibitor if eGFR >20 (renal protective: Dapagliflozin, Empagliflozin)');
-      }
-      recommendations.push('🩸 Target HbA1c: <7% (if tolerated), monitor fasting blood sugar weekly');
-      recommendations.push('👣 Diabetes care: Annual foot checks, eye exams, kidney function tests');
-      if (data.age < 50) {
-        recommendations.push('⚠️ Early-onset diabetes: Higher CVD risk in Indians - very aggressive risk factor modification needed');
-      }
-    }
-
-    // ===== EXERCISE PROGRAMMING =====
-    if (data.physicalActivity === 'low' || !data.physicalActivity) {
-      recommendations.push('🏃 START EXERCISE: Minimum 150 min moderate-intensity aerobic activity per week (brisk walking)');
-      recommendations.push('💪 Strength training: 2 sessions/week targeting major muscle groups (resistance training)');
-      recommendations.push('📅 Exercise plan: Start slow (10-15 min daily), gradually increase to 30 min daily');
-      recommendations.push('🚴 Options: Brisk walking, swimming, cycling, jogging, or yoga - choose what you enjoy');
-    } else if (data.physicalActivity === 'moderate') {
-      recommendations.push('🏃 Increase intensity: Aim for 150+ minutes of vigorous-intensity activity OR 300+ minutes moderate');
-      recommendations.push('🏋️ Add strength training: 2 sessions/week for better metabolic health');
-    }
-
-    // ===== STRESS MANAGEMENT =====
-    if (data.stressLevel && data.stressLevel > 7) {
-      recommendations.push('🧘 Stress Management: 20-30 min daily meditation/yoga (proven to lower BP and inflammation)');
-      recommendations.push('🫁 Breathing exercises: Box breathing (4-4-4-4) for immediate stress relief');
-      recommendations.push('💬 Mental health: Consider counseling or cardiac rehabilitation psychology program');
-    } else if (data.stressLevel && data.stressLevel > 5) {
-      recommendations.push('🧘 Stress reduction: Regular meditation (Headspace, Calm, or local yoga classes)');
-    }
-
-    // ===== SLEEP OPTIMIZATION =====
-    if (data.sleepHours && (data.sleepHours < 6 || data.sleepHours > 9)) {
-      recommendations.push('😴 Sleep: Aim for 7-8 hours nightly - poor sleep increases inflammation and BP');
-      recommendations.push('🛌 Sleep hygiene: Consistent bedtime, dark room, no screens 1 hour before sleep');
-    }
-
-    // ===== FAMILY HISTORY =====
-    if (data.hasPositiveFamilyHistory && data.age < 50) {
-      recommendations.push('👨‍👩‍👧 Family history: Genetic screening recommended - discuss with cardiologist');
-      recommendations.push('🧬 Genetic factors: May benefit from advanced risk assessment (CAC scoring)');
-    }
-
-    // ===== MONITORING & FOLLOW-UP =====
-    recommendations.push('📊 Home monitoring: Check BP daily, weight weekly, note any symptoms');
-    recommendations.push('🔄 Follow-up: Reassess in 3 months after implementing changes');
-
-    // ===== INDIAN POPULATION SPECIFIC =====
-    recommendations.push('🥘 Indian diet: Increase turmeric (anti-inflammatory), add garlic, reduce ghee/coconut oil');
-    recommendations.push('🌶️ Spices: Use cumin, coriander, ginger - beneficial for cardiac health');
-    recommendations.push('🏥 Regular testing: Annual lipid panel, fasting glucose, and kidney function tests');
+    // Add recommendations by category
+    this.addUrgentActions(recommendations, riskLevel);
+    this.addSmokingInterventions(recommendations, data.smoking);
+    this.addCholesterolManagement(recommendations, data.cholesterol);
+    this.addBloodPressureManagement(recommendations, data.systolicBP);
+    this.addDiabetesManagement(recommendations, data.diabetes, data.diabetesMedication, data.age);
+    this.addExerciseProgramming(recommendations, data.physicalActivity);
+    this.addStressManagement(recommendations, data.stressLevel);
+    this.addSleepOptimization(recommendations, data.sleepHours);
+    this.addFamilyHistoryRecommendations(recommendations, data.hasPositiveFamilyHistory, data.age);
+    this.addMonitoringAndIndianSpecific(recommendations);
 
     // Remove duplicates and limit to 15
     const unique = Array.from(new Set(recommendations));
     return unique.slice(0, 15);
+  }
+
+  /**
+   * Add urgent actions based on risk level
+   */
+  private addUrgentActions(recommendations: string[], riskLevel: string): void {
+    if (riskLevel === 'high') {
+      recommendations.push(
+        '🔴 URGENT: Schedule comprehensive cardiac evaluation with cardiologist within 1 week',
+        '🚑 Emergency action: Call 108 (India) if you experience chest pain, shortness of breath, or severe fatigue'
+      );
+    } else if (riskLevel === 'medium') {
+      recommendations.push(
+        '🟡 Schedule cardiac check-up with your doctor within 2-4 weeks',
+        '📋 Request: ECG, stress test, and lipid panel from your healthcare provider'
+      );
+    } else {
+      recommendations.push('🟢 Continue annual heart health screening and preventive care');
+    }
+  }
+
+  /**
+   * Add smoking intervention recommendations
+   */
+  private addSmokingInterventions(recommendations: string[], smoking: boolean): void {
+    if (smoking) {
+      recommendations.push(
+        '🚭 PRIORITY: Quit smoking immediately - reduces risk by 20% in 1 year, 50% in 5 years',
+        '💊 Smoking Cessation: Ask doctor about Varenicline (Chantix) or Nicotine Replacement Therapy (NRT)',
+        '📱 Download: Free smoking quit apps (QuitGuide, Smokefree, or regional Indian apps)'
+      );
+    }
+  }
+
+  /**
+   * Add cholesterol management recommendations
+   */
+  private addCholesterolManagement(recommendations: string[], cholesterol?: number): void {
+    if (!cholesterol) return;
+
+    if (cholesterol > 240) {
+      recommendations.push(
+        '💊 Cholesterol: Discuss high-intensity statin therapy (Atorvastatin 40-80mg or Rosuvastatin 20-40mg daily)',
+        '🎯 Target LDL: <70 mg/dL if high-risk, <100 mg/dL if medium-risk',
+        '🍎 Diet: Mediterranean or DASH diet - reduce saturated fats, increase oily fish (salmon, mackerel) 2x/week'
+      );
+    } else if (cholesterol > 200) {
+      recommendations.push(
+        '💊 Cholesterol: Consider moderate-intensity statin (Atorvastatin 20-40mg daily)',
+        '🥗 Dietary approach: Increase fiber (oats, beans), reduce trans fats'
+      );
+    }
+  }
+
+  /**
+   * Add blood pressure management recommendations
+   */
+  private addBloodPressureManagement(recommendations: string[], systolicBP?: number): void {
+    if (!systolicBP) return;
+
+    if (systolicBP > 160) {
+      recommendations.push(
+        '🩸 URGENT BP: Blood pressure is dangerously high - seek immediate medical attention',
+        '💊 Medication: May need ACE inhibitor (Lisinopril, Enalapril) + ARB (Losartan) + Diuretic combination'
+      );
+    } else if (systolicBP > 140) {
+      recommendations.push(
+        '🩸 Blood Pressure: Discuss dual-therapy (ACE-I + Diuretic or ARB + Diuretic)',
+        '🧂 Sodium Reduction: Limit salt intake to <2300mg/day (1 teaspoon), use potassium salt alternatives',
+        '🏃 DASH Diet: Fruits, vegetables, whole grains, lean protein - proven to lower BP by 11 mmHg'
+      );
+    } else if (systolicBP > 130) {
+      recommendations.push('🩸 Pre-hypertension: Lifestyle modifications can prevent progression - daily exercise is crucial');
+    }
+  }
+
+  /**
+   * Add diabetes management recommendations
+   */
+  private addDiabetesManagement(
+    recommendations: string[],
+    diabetes: boolean,
+    diabetesMedication?: string,
+    age?: number
+  ): void {
+    if (!diabetes) return;
+
+    const diabetesRecs: string[] = [];
+
+    if (!diabetesMedication || diabetesMedication === 'none') {
+      diabetesRecs.push(
+        '🔬 Diabetes: Discuss Metformin 500mg 2x daily as first-line therapy',
+        '📊 Add SGLT2 inhibitor if eGFR >20 (renal protective: Dapagliflozin, Empagliflozin)'
+      );
+    }
+
+    diabetesRecs.push(
+      '🩸 Target HbA1c: <7% (if tolerated), monitor fasting blood sugar weekly',
+      '👣 Diabetes care: Annual foot checks, eye exams, kidney function tests'
+    );
+
+    if (age && age < 50) {
+      diabetesRecs.push('⚠️ Early-onset diabetes: Higher CVD risk in Indians - very aggressive risk factor modification needed');
+    }
+
+    recommendations.push(...diabetesRecs);
+  }
+
+  /**
+   * Add exercise programming recommendations
+   */
+  private addExerciseProgramming(recommendations: string[], physicalActivity?: string): void {
+    if (physicalActivity === 'low' || !physicalActivity) {
+      recommendations.push(
+        '🏃 START EXERCISE: Minimum 150 min moderate-intensity aerobic activity per week (brisk walking)',
+        '💪 Strength training: 2 sessions/week targeting major muscle groups (resistance training)',
+        '📅 Exercise plan: Start slow (10-15 min daily), gradually increase to 30 min daily',
+        '🚴 Options: Brisk walking, swimming, cycling, jogging, or yoga - choose what you enjoy'
+      );
+    } else if (physicalActivity === 'moderate') {
+      recommendations.push(
+        '🏃 Increase intensity: Aim for 150+ minutes of vigorous-intensity activity OR 300+ minutes moderate',
+        '🏋️ Add strength training: 2 sessions/week for better metabolic health'
+      );
+    }
+  }
+
+  /**
+   * Add stress management recommendations
+   */
+  private addStressManagement(recommendations: string[], stressLevel?: number): void {
+    if (!stressLevel) return;
+
+    if (stressLevel > 7) {
+      recommendations.push(
+        '🧘 Stress Management: 20-30 min daily meditation/yoga (proven to lower BP and inflammation)',
+        '🫁 Breathing exercises: Box breathing (4-4-4-4) for immediate stress relief',
+        '💬 Mental health: Consider counseling or cardiac rehabilitation psychology program'
+      );
+    } else if (stressLevel > 5) {
+      recommendations.push('🧘 Stress reduction: Regular meditation (Headspace, Calm, or local yoga classes)');
+    }
+  }
+
+  /**
+   * Add sleep optimization recommendations
+   */
+  private addSleepOptimization(recommendations: string[], sleepHours?: number): void {
+    if (sleepHours && (sleepHours < 6 || sleepHours > 9)) {
+      recommendations.push(
+        '😴 Sleep: Aim for 7-8 hours nightly - poor sleep increases inflammation and BP',
+        '🛌 Sleep hygiene: Consistent bedtime, dark room, no screens 1 hour before sleep'
+      );
+    }
+  }
+
+  /**
+   * Add family history recommendations
+   */
+  private addFamilyHistoryRecommendations(
+    recommendations: string[],
+    hasPositiveFamilyHistory?: boolean,
+    age?: number
+  ): void {
+    if (hasPositiveFamilyHistory && age && age < 50) {
+      recommendations.push(
+        '👨‍👩‍👧 Family history: Genetic screening recommended - discuss with cardiologist',
+        '🧬 Genetic factors: May benefit from advanced risk assessment (CAC scoring)'
+      );
+    }
+  }
+
+  /**
+   * Add monitoring and Indian-specific recommendations
+   */
+  private addMonitoringAndIndianSpecific(recommendations: string[]): void {
+    recommendations.push(
+      '📊 Home monitoring: Check BP daily, weight weekly, note any symptoms',
+      '🔄 Follow-up: Reassess in 3 months after implementing changes',
+      '🥘 Indian diet: Increase turmeric (anti-inflammatory), add garlic, reduce ghee/coconut oil',
+      '🌶️ Spices: Use cumin, coriander, ginger - beneficial for cardiac health',
+      '🏥 Regular testing: Annual lipid panel, fasting glucose, and kidney function tests'
+    );
   }
 
   /**
@@ -304,7 +448,7 @@ class EnhancedRecommendationEngine {
 
       return recs;
     } catch (error) {
-      console.log('Gemini personalized recommendations failed:', error);
+      if (import.meta.env.DEV) console.log('Gemini personalized recommendations failed:', error);
       return [];
     }
   }

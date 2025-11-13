@@ -18,7 +18,7 @@ export interface EdgeCaseCheck {
   severity: 'error' | 'warning' | 'info'; // error = block, warning = alert, info = note
   message: string;
   suggestion?: string;
-  autoFix?: any; // Suggestion for auto-fixing
+  autoFix?: unknown; // Suggestion for auto-fixing
 }
 
 export interface EdgeCaseValidationResult {
@@ -52,8 +52,8 @@ const BOUNDARIES = {
  */
 function checkBoundary(
   field: string,
-  value: any,
-  bounds: { min: number; max: number; [key: string]: any }
+  value: unknown,
+  bounds: { min: number; max: number; [key: string]: unknown }
 ): EdgeCaseCheck | null {
   // Skip undefined/null values - they might be optional
   if (value === undefined || value === null) {

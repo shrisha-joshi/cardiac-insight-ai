@@ -74,13 +74,13 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
           prediction.riskScore,
           feedback
         );
-        console.log(`✅ Feedback sent to continuous learning system`);
+        if (import.meta.env.DEV) console.log(`✅ Feedback sent to continuous learning system`);
       }
       
       // Simulate API call delay for visual feedback
       await new Promise(resolve => setTimeout(resolve, 300));
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      if (import.meta.env.DEV) console.error('Error submitting feedback:', error);
     } finally {
       setFeedbackSubmitting(null);
     }

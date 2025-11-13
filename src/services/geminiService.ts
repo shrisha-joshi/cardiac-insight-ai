@@ -259,7 +259,7 @@ class GeminiService {
     if (this.isInitialized && this.client) return true;
 
     if (!config.ai.gemini.enabled || !config.ai.gemini.apiKey) {
-      console.warn('Gemini not configured - will use fallback');
+      if (import.meta.env.DEV) console.warn('Gemini not configured - will use fallback');
       return false;
     }
 
@@ -268,7 +268,7 @@ class GeminiService {
       this.isInitialized = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize Gemini:', error);
+      if (import.meta.env.DEV) console.error('Failed to initialize Gemini:', error);
       return false;
     }
   }
@@ -292,13 +292,13 @@ class GeminiService {
 
       const parsed = this.parseGeminiResponse(response);
       if (!parsed.success) {
-        console.warn('Failed to parse Gemini response, using fallback');
+        if (import.meta.env.DEV) console.warn('Failed to parse Gemini response, using fallback');
         return this.getFallbackRecommendation(request);
       }
 
       return this.formatRecommendation(parsed, request, 'gemini');
     } catch (error) {
-      console.error('Gemini recommendation error:', error);
+      if (import.meta.env.DEV) console.error('Gemini recommendation error:', error);
       return this.getFallbackRecommendation(request);
     }
   }
@@ -329,7 +329,7 @@ class GeminiService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       if (attempt < MAX_RETRIES && errorMessage.includes('timeout')) {
-        console.warn(`Gemini timeout, retry ${attempt}/${MAX_RETRIES}`);
+        if (import.meta.env.DEV) console.warn(`Gemini timeout, retry ${attempt}/${MAX_RETRIES}`);
         await this.delay(RETRY_DELAY_MS * attempt);
         return this.callGeminiWithRetry(prompt, attempt + 1);
       }
@@ -373,7 +373,7 @@ class GeminiService {
 
       return result;
     } catch (error) {
-      console.error('Failed to parse Gemini response:', error);
+      if (import.meta.env.DEV) console.error('Failed to parse Gemini response:', error);
       return { success: false };
     }
   }

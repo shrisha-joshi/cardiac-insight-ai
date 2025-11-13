@@ -117,13 +117,13 @@ export const isMLAPIAvailable = (): boolean => {
  * Log configuration status (for debugging)
  */
 export const logConfigStatus = (): void => {
-  if (config.app.debug) {
-    console.log('=== Cardiac Insight AI Configuration ===');
-    console.log(`Environment: ${config.app.environment}`);
-    console.log(`AI Providers: ${getAvailableAIProviders().join(', ')}`);
-    console.log(`ML API Available: ${isMLAPIAvailable()}`);
-    console.log(`Features Enabled:`, config.features);
-    console.log('========================================');
+  if (config.app.debug && import.meta.env.DEV) {
+    if (import.meta.env.DEV) console.log('=== Cardiac Insight AI Configuration ===');
+    if (import.meta.env.DEV) console.log(`Environment: ${config.app.environment}`);
+    if (import.meta.env.DEV) console.log(`AI Providers: ${getAvailableAIProviders().join(', ')}`);
+    if (import.meta.env.DEV) console.log(`ML API Available: ${isMLAPIAvailable()}`);
+    if (import.meta.env.DEV) console.log(`Features Enabled:`, config.features);
+    if (import.meta.env.DEV) console.log('========================================');
   }
 };
 

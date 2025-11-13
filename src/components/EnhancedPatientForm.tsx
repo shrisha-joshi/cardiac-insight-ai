@@ -13,6 +13,39 @@ interface FormErrors {
   [key: string]: string;
 }
 
+interface RiskFactor {
+  factor: string;
+  percentage: number;
+  severity: 'Low' | 'Moderate' | 'High';
+}
+
+interface PopulationInsights {
+  ageEquivalent: number;
+  triglycerideConcern: boolean;
+  centralObesityConcern: boolean;
+  metabolicSyndromeLikelihood: string;
+}
+
+interface RiskAssessmentResult {
+  framinghamRisk: number;
+  framinghamCategory: string;
+  ascvdRisk: number;
+  ascvdCategory: string;
+  interheart: {
+    percentage: number;
+    category: string;
+  };
+  indianAdjustedRisk: number;
+  indianCategory: string;
+  combinedRisk: number;
+  finalRiskCategory: string;
+  topRiskFactors: RiskFactor[];
+  indianSpecificRecommendations: string[];
+  indianPopulationInsights: PopulationInsights;
+  confidence: number;
+  modelVersions: string[];
+}
+
 export const EnhancedPatientForm: React.FC = () => {
   const [formData, setFormData] = useState<Partial<EnhancedCVDPatientData>>({
     populationGroup: 'Indian',
@@ -24,7 +57,7 @@ export const EnhancedPatientForm: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [riskResult, setRiskResult] = useState<any>(null);
+  const [riskResult, setRiskResult] = useState<RiskAssessmentResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const validateForm = (): boolean => {
@@ -121,14 +154,14 @@ export const EnhancedPatientForm: React.FC = () => {
       const result = assessEnhancedCVDRisk(completeData);
       setRiskResult(result);
     } catch (error) {
-      console.error('Risk assessment error:', error);
+      if (import.meta.env.DEV) console.error('Risk assessment error:', error);
       setErrors({ form: 'Error calculating risk. Please try again.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error for this field
     if (errors[field]) {
@@ -589,7 +622,7 @@ export const EnhancedPatientForm: React.FC = () => {
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-2">Top Risk Factors</h4>
                     <div className="space-y-2">
-                      {riskResult.topRiskFactors.slice(0, 5).map((factor: any, idx: number) => (
+                      {riskResult.topRiskFactors.slice(0, 5).map((factor: RiskFactor, idx: number) => (
                         <div key={idx} className="flex justify-between items-center p-2 bg-gray-100 rounded">
                           <span className="text-sm text-gray-700">{factor.factor}</span>
                           <span className={`font-semibold ${factor.severity === 'High' ? 'text-red-600' : factor.severity === 'Moderate' ? 'text-orange-600' : 'text-green-600'}`}>

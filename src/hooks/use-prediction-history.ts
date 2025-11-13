@@ -28,28 +28,29 @@ interface UsePredictionHistoryReturn {
 /**
  * Transform database prediction record to PredictionWithFeedback format
  */
-function transformDatabasePrediction(dbPred: any): PredictionWithFeedback {
+function transformDatabasePrediction(dbPred: unknown): PredictionWithFeedback {
+  const pred = dbPred as Record<string, unknown>;
   return {
-    id: dbPred.id,
-    timestamp: new Date(dbPred.created_at),
-    riskLevel: (dbPred.risk_level || 'low').toLowerCase() as 'low' | 'medium' | 'high',
-    riskScore: dbPred.risk_score || 0,
-    confidence: dbPred.confidence || 0,
-    prediction: dbPred.prediction || 'No Risk',
-    explanation: dbPred.explanation || '',
-    recommendations: dbPred.recommendations || [],
+    id: pred.id as string,
+    timestamp: new Date(pred.created_at as string),
+    riskLevel: ((pred.risk_level as string) || 'low').toLowerCase() as 'low' | 'medium' | 'high',
+    riskScore: (pred.risk_score as number) || 0,
+    confidence: (pred.confidence as number) || 0,
+    prediction: ((pred.prediction as string) || 'No Risk') as 'No Risk' | 'Risk',
+    explanation: (pred.explanation as string) || '',
+    recommendations: (pred.recommendations as string[]) || [],
     patientData: {
-      age: dbPred.patient_age,
-      gender: (dbPred.patient_gender as 'male' | 'female') || 'male',
+      age: pred.patient_age as number,
+      gender: ((pred.patient_gender as 'male' | 'female') || 'male'),
       chestPainType: 'typical',
-      restingBP: dbPred.resting_bp || 120,
-      cholesterol: dbPred.cholesterol || 200,
-      fastingBS: dbPred.blood_sugar_fasting || false,
+      restingBP: (pred.resting_bp as number) || 120,
+      cholesterol: (pred.cholesterol as number) || 200,
+      fastingBS: (pred.blood_sugar_fasting as boolean) || false,
       restingECG: 'normal',
-      maxHR: dbPred.max_heart_rate || 150,
-      exerciseAngina: dbPred.exercise_induced_angina || false,
-      oldpeak: dbPred.oldpeak || 0,
-      stSlope: (dbPred.st_slope as 'up' | 'flat' | 'down') || 'flat',
+      maxHR: (pred.max_heart_rate as number) || 150,
+      exerciseAngina: (pred.exercise_induced_angina as boolean) || false,
+      oldpeak: (pred.oldpeak as number) || 0,
+      stSlope: ((pred.st_slope as 'up' | 'flat' | 'down') || 'flat'),
       smoking: false,
       diabetes: false,
       previousHeartAttack: false,
@@ -78,16 +79,16 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
     if (!currentUserId || !isSupabaseConfigured) return;
     
     try {
-      console.log('🔄 Refreshing predictions from database...');
+      if (import.meta.env.DEV) console.log('🔄 Refreshing predictions from database...');
       const dbPredictions = await loadPredictionsFromDatabase(currentUserId);
       
       if (dbPredictions && dbPredictions.length > 0) {
         const transformed = dbPredictions.map(transformDatabasePrediction);
-        console.log(`✅ Refreshed ${transformed.length} predictions from database`);
+        if (import.meta.env.DEV) console.log(`✅ Refreshed ${transformed.length} predictions from database`);
         setPredictions(transformed);
       }
     } catch (error) {
-      console.warn('⚠️ Error refreshing from database:', error);
+      if (import.meta.env.DEV) console.warn('⚠️ Error refreshing from database:', error);
     }
   }, []);
 
@@ -104,38 +105,41 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
           // 🔥 Try to load from Supabase database first
           if (isSupabaseConfigured) {
             try {
-              console.log('📥 Loading predictions from Supabase database...');
+              if (import.meta.env.DEV) console.log('📥 Loading predictions from Supabase database...');
               const dbPredictions = await loadPredictionsFromDatabase(user.id);
               
               if (dbPredictions && dbPredictions.length > 0) {
                 // Transform database records to our format
                 const transformed = dbPredictions.map(transformDatabasePrediction);
-                console.log(`✅ Loaded ${transformed.length} predictions from database`);
+                if (import.meta.env.DEV) console.log(`✅ Loaded ${transformed.length} predictions from database`);
                 setPredictions(transformed);
                 return; // Exit - we have data from database
               }
             } catch (error) {
-              console.warn('⚠️ Error loading from database, falling back to localStorage:', error);
+              if (import.meta.env.DEV) console.warn('⚠️ Error loading from database, falling back to localStorage:', error);
             }
           }
           
           // Fallback: Load from localStorage if database is unavailable
-          console.log('📦 Loading predictions from localStorage...');
+          if (import.meta.env.DEV) console.log('📦 Loading predictions from localStorage...');
           const storageKey = STORAGE_KEY_PREFIX + user.id;
           const stored = localStorage.getItem(storageKey);
           
           if (stored) {
             const parsed = JSON.parse(stored);
             // Convert timestamp strings back to Date objects
-            const converted = parsed.map((p: any) => ({
-              ...p,
-              timestamp: new Date(p.timestamp)
-            }));
-            console.log(`✅ Loaded ${converted.length} predictions from localStorage`);
+            const converted = parsed.map((p: unknown) => {
+              const pred = p as Record<string, unknown>;
+              return {
+                ...pred,
+                timestamp: new Date(pred.timestamp as string)
+              };
+            });
+            if (import.meta.env.DEV) console.log(`✅ Loaded ${converted.length} predictions from localStorage`);
             setPredictions(converted);
           } else {
             // No history for this user yet
-            console.log('ℹ️ No prediction history found');
+            if (import.meta.env.DEV) console.log('ℹ️ No prediction history found');
             setPredictions([]);
           }
         } else {
@@ -144,7 +148,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
           setPredictions([]);
         }
       } catch (error) {
-        console.error('Error initializing user:', error);
+        if (import.meta.env.DEV) console.error('Error initializing user:', error);
         setPredictions([]);
       } finally {
         setIsLoading(false);
@@ -164,10 +168,10 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
       const storageKey = STORAGE_KEY_PREFIX + userId;
       localStorage.setItem(storageKey, JSON.stringify(preds));
     } catch (error) {
-      console.error('Error saving predictions to storage:', error);
+      if (import.meta.env.DEV) console.error('Error saving predictions to storage:', error);
       // Handle quota exceeded error
       if (error instanceof DOMException && error.code === 22) {
-        console.warn('LocalStorage quota exceeded. Keeping only last 50 predictions.');
+        if (import.meta.env.DEV) console.warn('LocalStorage quota exceeded. Keeping only last 50 predictions.');
         const limited = preds.slice(0, 50);
         const storageKey = STORAGE_KEY_PREFIX + userId;
         localStorage.setItem(storageKey, JSON.stringify(limited));
@@ -224,7 +228,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
         localStorage.removeItem(storageKey);
       }
     } catch (error) {
-      console.error('Error clearing history:', error);
+      if (import.meta.env.DEV) console.error('Error clearing history:', error);
     }
   }, [userId]);
 
@@ -259,7 +263,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
     try {
       return JSON.stringify(predictions, null, 2);
     } catch (error) {
-      console.error('Error exporting history:', error);
+      if (import.meta.env.DEV) console.error('Error exporting history:', error);
       return '';
     }
   }, [predictions]);
@@ -275,10 +279,13 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
       }
       
       // Convert timestamps back to Date objects
-      const converted = parsed.map((p: any) => ({
-        ...p,
-        timestamp: new Date(p.timestamp)
-      }));
+      const converted = parsed.map((p: unknown) => {
+        const pred = p as Record<string, unknown>;
+        return {
+          ...pred,
+          timestamp: new Date(pred.timestamp as string)
+        } as PredictionWithFeedback;
+      });
       
       // Keep only the last MAX_HISTORY_ITEMS predictions
       const limited = converted.slice(0, MAX_HISTORY_ITEMS);
@@ -288,7 +295,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
       
       return true;
     } catch (error) {
-      console.error('Error importing history:', error);
+      if (import.meta.env.DEV) console.error('Error importing history:', error);
       return false;
     }
   }, [savePredictionsToStorage]);

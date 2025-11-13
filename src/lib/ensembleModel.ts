@@ -17,6 +17,28 @@
 
 import { PatientData } from './mockData';
 
+// ==========================================
+// MODEL ENSEMBLE CONSTANTS
+// ==========================================
+const ENSEMBLE_WEIGHTS = {
+  LOGISTIC_REGRESSION: 0.35,
+  RANDOM_FOREST: 0.35,
+  GRADIENT_BOOSTING: 0.3
+} as const;
+
+const CONFIDENCE_PARAMS = {
+  LR_BASE: 0.85,
+  LR_BOOST: 0.1,
+  RF_BASE: 0.78,
+  RF_BOOST: 0.15,
+  GB_BASE: 0.88,
+  GB_BOOST: 0.08,
+  AGREEMENT_MULTIPLIER: 0.15,
+  AGE_RISK_FACTOR: 0.5,
+  MAX_AGE_RISK: 25,
+  REFERENCE_SCORE: 50
+} as const;
+
 /**
  * Individual model predictions
  */
@@ -312,7 +334,7 @@ function gradientBoostingModel(patient: PatientData): ModelPrediction {
     const hasACE = medLower.includes('ace') || medLower.includes('lisinopril') || medLower.includes('enalapril');
     
     if (hasStatin || hasBeta || hasACE) {
-      adjustedScore *= 0.90; // Medications reduce risk by ~10%
+      adjustedScore *= 0.9; // Medications reduce risk by ~10%
       const meds = [hasStatin ? 'statin' : '', hasBeta ? 'beta-blocker' : '', hasACE ? 'ACE inhibitor' : ''].filter(Boolean).join(', ');
       reasons.push(`On cardiac medications (${meds}) - reduces baseline risk`);
     }
@@ -364,7 +386,7 @@ function gradientBoostingModel(patient: PatientData): ModelPrediction {
 
 /**
  * Generate ensemble prediction using weighted voting
- * Weights: LR=0.35 (consistent), RF=0.35 (captures interactions), GB=0.30 (calibrated)
+ * Weights: LR=0.35 (consistent), RF=0.35 (captures interactions), GB=0.3 (calibrated)
  */
 export function generateEnsemblePrediction(patient: PatientData): EnsemblePrediction {
   // Get individual model predictions
@@ -373,7 +395,7 @@ export function generateEnsemblePrediction(patient: PatientData): EnsemblePredic
   const gb = gradientBoostingModel(patient);
 
   // Calculate weighted average
-  const weights = { lr: 0.35, rf: 0.35, gb: 0.30 };
+  const weights = { lr: 0.35, rf: 0.35, gb: 0.3 };
   const finalRiskScore = 
     (lr.riskScore * weights.lr) + 
     (rf.riskScore * weights.rf) + 

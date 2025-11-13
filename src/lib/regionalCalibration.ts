@@ -265,7 +265,7 @@ export function generateRegionalExplanation(assessment: RegionalRiskAssessment):
 export function detectRegionFromPincode(pincode?: string): Region {
   if (!pincode || pincode.length < 5) return 'unknown';
   
-  const pin = parseInt(pincode.substring(0, 2));
+  const pin = Number.parseInt(pincode.substring(0, 2));
   
   // Simplified pincode region mapping (first 2 digits)
   if (pin >= 10 && pin <= 19) return 'north';      // Delhi, UP, Himachal Pradesh

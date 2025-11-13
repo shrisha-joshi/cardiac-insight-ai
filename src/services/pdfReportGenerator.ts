@@ -12,7 +12,7 @@ import 'jspdf-autotable';
 // Type declaration for jsPDF with autoTable support
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: (options: any) => void;
+    autoTable: (options: unknown) => void;
     lastAutoTable: { finalY: number };
   }
 }
@@ -152,11 +152,12 @@ class PDFReportGenerator {
   /**
    * Add PDF header with patient info
    */
-  private addHeader(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addHeader(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
     const pageWidth = doc.internal.pageSize.getWidth();
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
 
     // Background
-    doc.setFillColor(...this.hexToRgb(colors.primary));
+    doc.setFillColor(...this.hexToRgb(colorObj.primary));
     doc.rect(0, yPos - 12, pageWidth, 25, 'F');
 
     // Title
@@ -185,8 +186,9 @@ class PDFReportGenerator {
   /**
    * Add risk summary section
    */
-  private addRiskSummary(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addRiskSummary(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
     const pageWidth = doc.internal.pageSize.getWidth();
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
 
     // Section title
     this.addSectionTitle(doc, '1. CARDIAC RISK SUMMARY', yPos, colors);
@@ -198,7 +200,7 @@ class PDFReportGenerator {
     const boxHeight = 30;
 
     // Risk score
-    doc.setFillColor(...this.hexToRgb(colors.secondary));
+    doc.setFillColor(...this.hexToRgb(colorObj.secondary));
     doc.rect(boxX, yPos, boxWidth, boxHeight, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
@@ -243,18 +245,19 @@ class PDFReportGenerator {
       head: [['Metric', 'Value']],
       body: metrics.map(m => [m.label, m.value]),
       theme: 'grid',
-      headStyles: { fillColor: this.hexToRgb(colors.primary), textColor: [255, 255, 255] },
+      headStyles: { fillColor: this.hexToRgb(colorObj.primary), textColor: [255, 255, 255] },
       margin: { left: 15, right: 15 },
       columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 50 } }
     });
 
-    return (doc as any).lastAutoTable.finalY + 8;
+    return (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   }
 
   /**
    * Add clinical parameters section
    */
-  private addClinicalParameters(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addClinicalParameters(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     // Check if we need a new page
     if (yPos > 250) {
       doc.addPage();
@@ -282,7 +285,7 @@ class PDFReportGenerator {
       head: [tableData[0]],
       body: tableData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: this.hexToRgb(colors.primary), textColor: [255, 255, 255] },
+      headStyles: { fillColor: this.hexToRgb(colorObj.primary), textColor: [255, 255, 255] },
       columnStyles: {
         0: { cellWidth: 50 },
         1: { cellWidth: 35 },
@@ -291,13 +294,14 @@ class PDFReportGenerator {
       }
     });
 
-    return (doc as any).lastAutoTable.finalY + 8;
+    return (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   }
 
   /**
    * Add risk factors breakdown
    */
-  private addRiskFactorsBreakdown(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addRiskFactorsBreakdown(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
@@ -314,7 +318,7 @@ class PDFReportGenerator {
       head: [['Risk Factor', 'Status/Value', 'Impact']],
       body: factorData,
       theme: 'grid',
-      headStyles: { fillColor: this.hexToRgb(colors.primary), textColor: [255, 255, 255] },
+      headStyles: { fillColor: this.hexToRgb(colorObj.primary), textColor: [255, 255, 255] },
       columnStyles: {
         0: { cellWidth: 70 },
         1: { cellWidth: 45 },
@@ -322,13 +326,14 @@ class PDFReportGenerator {
       }
     });
 
-    return (doc as any).lastAutoTable.finalY + 8;
+    return (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   }
 
   /**
    * Add biomarkers section
    */
-  private addBiomarkers(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addBiomarkers(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
@@ -349,12 +354,13 @@ class PDFReportGenerator {
     }
 
     if (biomarkerData.length > 0) {
+      const colorObj = colors as { primary: string; secondary: string; danger: string };
       doc.autoTable({
         startY: yPos,
         head: [['Biomarker', 'Value', 'Status']],
         body: biomarkerData,
         theme: 'grid',
-        headStyles: { fillColor: this.hexToRgb(colors.primary), textColor: [255, 255, 255] },
+        headStyles: { fillColor: this.hexToRgb(colorObj.primary), textColor: [255, 255, 255] },
         columnStyles: {
           0: { cellWidth: 80 },
           1: { cellWidth: 40 },
@@ -362,7 +368,7 @@ class PDFReportGenerator {
         }
       });
 
-      return (doc as any).lastAutoTable.finalY + 8;
+      return (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
     }
 
     return yPos;
@@ -371,12 +377,13 @@ class PDFReportGenerator {
   /**
    * Add medication analysis
    */
-  private addMedicationAnalysis(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addMedicationAnalysis(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
     }
 
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     this.addSectionTitle(doc, '5. CURRENT MEDICATIONS & EFFICACY', yPos, colors);
     yPos += 8;
 
@@ -391,7 +398,7 @@ class PDFReportGenerator {
       head: [['Medication', 'Class', 'Efficacy']],
       body: medData,
       theme: 'grid',
-      headStyles: { fillColor: this.hexToRgb(colors.secondary), textColor: [255, 255, 255] },
+      headStyles: { fillColor: this.hexToRgb(colorObj.secondary), textColor: [255, 255, 255] },
       columnStyles: {
         0: { cellWidth: 60 },
         1: { cellWidth: 60 },
@@ -399,7 +406,7 @@ class PDFReportGenerator {
       }
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 8;
+    yPos = (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
 
     // Medication recommendations
     const totalEfficacy = data.medications.reduce((sum, m) => sum + m.efficacy, 0) / data.medications.length;
@@ -420,7 +427,8 @@ class PDFReportGenerator {
   /**
    * Add trend analysis
    */
-  private addTrendAnalysis(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addTrendAnalysis(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
@@ -442,7 +450,7 @@ class PDFReportGenerator {
       head: [projectionData[0]],
       body: projectionData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: this.hexToRgb(colors.primary), textColor: [255, 255, 255] },
+      headStyles: { fillColor: this.hexToRgb(colorObj.primary), textColor: [255, 255, 255] },
       columnStyles: {
         0: { cellWidth: 50 },
         1: { cellWidth: 50 },
@@ -450,13 +458,13 @@ class PDFReportGenerator {
       }
     });
 
-    return (doc as any).lastAutoTable.finalY + 8;
+    return (doc as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
   }
 
   /**
    * Add data quality section
    */
-  private addDataQuality(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addDataQuality(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
@@ -486,7 +494,7 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
   /**
    * Add personalized recommendations
    */
-  private addRecommendations(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addRecommendations(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
     if (yPos > 250) {
       doc.addPage();
       yPos = 15;
@@ -522,14 +530,15 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
   /**
    * Add emergency resources for high-risk patients
    */
-  private addEmergencyResources(doc: jsPDF, data: PredictionData, colors: any, yPos: number): number {
+  private addEmergencyResources(doc: jsPDF, data: PredictionData, colors: unknown, yPos: number): number {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     if (yPos > 245) {
       doc.addPage();
       yPos = 15;
     }
 
     // Warning box
-    doc.setFillColor(...this.hexToRgb(colors.danger));
+    doc.setFillColor(...this.hexToRgb(colorObj.danger));
     doc.rect(10, yPos, doc.internal.pageSize.getWidth() - 20, 35, 'F');
 
     doc.setTextColor(255, 255, 255);
@@ -570,7 +579,8 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
    * Add footer
    */
   private addFooter(doc: jsPDF, timestamp: Date): void {
-    const pageCount = (doc as any).internal.pages.length - 1;
+    const docWithPages = doc as { internal: { pages: unknown[] } };
+    const pageCount = docWithPages.internal.pages.length - 1;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -587,8 +597,9 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
   /**
    * Helper: Add section title
    */
-  private addSectionTitle(doc: jsPDF, title: string, yPos: number, colors: any): void {
-    doc.setFillColor(...this.hexToRgb(colors.primary));
+  private addSectionTitle(doc: jsPDF, title: string, yPos: number, colors: unknown): void {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
+    doc.setFillColor(...this.hexToRgb(colorObj.primary));
     doc.rect(15, yPos - 4, doc.internal.pageSize.getWidth() - 30, 7, 'F');
 
     doc.setTextColor(255, 255, 255);
@@ -612,7 +623,8 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
   /**
    * Helper: Get category color
    */
-  private getCategoryColor(category: string, colors: any): string {
+  private getCategoryColor(category: string, colors: unknown): string {
+    const colorObj = colors as { primary: string; secondary: string; danger: string };
     switch (category) {
       case 'Very Low':
         return '#10b981';
@@ -621,11 +633,11 @@ ${data.dataQuality > 80 ? '✓ Data quality is excellent - High confidence in pr
       case 'Moderate':
         return '#f59e0b';
       case 'High':
-        return '#ef5350';
+        return '#ef4444';
       case 'Very High':
-        return '#d32f2f';
+        return '#dc2626';
       default:
-        return colors.primary;
+        return colorObj.primary;
     }
   }
 

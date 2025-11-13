@@ -5,7 +5,7 @@
  * model performance, and continuous learning progress.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +16,12 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function DatasetStatistics() {
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
-  const [modelPerformance, setModelPerformance] = useState<any>(null);
+  const [stats, setStats] = useState<unknown>(null);
+  const [modelPerformance, setModelPerformance] = useState<unknown>(null);
   const [isRetraining, setIsRetraining] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadStatistics();
-  }, []);
-
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     setIsLoading(true);
     try {
       // Load datasets
@@ -38,7 +34,7 @@ export default function DatasetStatistics() {
       setModelPerformance(performance);
 
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      if (import.meta.env.DEV) console.error('Error loading statistics:', error);
       toast({
         title: 'Error Loading Statistics',
         description: 'Failed to load dataset statistics',
@@ -47,7 +43,11 @@ export default function DatasetStatistics() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadStatistics();
+  }, [loadStatistics]);
 
   const handleExportDataset = () => {
     try {
@@ -67,7 +67,7 @@ export default function DatasetStatistics() {
         description: 'Indian cardiac patient dataset exported successfully',
       });
     } catch (error) {
-      console.error('Error exporting dataset:', error);
+      if (import.meta.env.DEV) console.error('Error exporting dataset:', error);
       toast({
         title: 'Export Failed',
         description: 'Failed to export dataset',
@@ -94,7 +94,7 @@ export default function DatasetStatistics() {
         description: 'User feedback data exported successfully',
       });
     } catch (error) {
-      console.error('Error exporting feedback:', error);
+      if (import.meta.env.DEV) console.error('Error exporting feedback:', error);
       toast({
         title: 'Export Failed',
         description: 'Failed to export feedback',
@@ -121,7 +121,7 @@ export default function DatasetStatistics() {
         description: 'Models have been retrained with latest data',
       });
     } catch (error) {
-      console.error('Error retraining:', error);
+      if (import.meta.env.DEV) console.error('Error retraining:', error);
       toast({
         title: 'Retraining Failed',
         description: 'Failed to retrain models',
@@ -168,7 +168,7 @@ export default function DatasetStatistics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Database className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-3xl font-bold text-blue-600">{stats?.totalRecords || 0}</div>
+              <div className="text-3xl font-bold text-blue-600">{(stats as { totalRecords?: number })?.totalRecords || 0}</div>
               <p className="text-sm text-muted-foreground">Total Patient Records</p>
             </div>
           </CardContent>
@@ -178,7 +178,7 @@ export default function DatasetStatistics() {
           <CardContent className="pt-6">
             <div className="text-center">
               <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <div className="text-3xl font-bold text-green-600">{stats?.indianSpecific || 0}</div>
+              <div className="text-3xl font-bold text-green-600">{(stats as { indianSpecific?: number })?.indianSpecific || 0}</div>
               <p className="text-sm text-muted-foreground">Indian-Specific Records</p>
             </div>
           </CardContent>
@@ -189,7 +189,7 @@ export default function DatasetStatistics() {
             <div className="text-center">
               <TrendingUp className="h-8 w-8 mx-auto mb-2 text-orange-600" />
               <div className="text-3xl font-bold text-orange-600">
-                {modelPerformance ? Math.round(modelPerformance.accuracy) : 0}%
+                {modelPerformance ? Math.round((modelPerformance as { accuracy: number }).accuracy) : 0}%
               </div>
               <p className="text-sm text-muted-foreground">Model Accuracy</p>
             </div>
@@ -201,7 +201,7 @@ export default function DatasetStatistics() {
             <div className="text-center">
               <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
               <div className="text-3xl font-bold text-purple-600">
-                {modelPerformance?.totalPredictions || 0}
+                {(modelPerformance as { totalPredictions?: number })?.totalPredictions || 0}
               </div>
               <p className="text-sm text-muted-foreground">User Feedback Records</p>
             </div>
@@ -222,31 +222,33 @@ export default function DatasetStatistics() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {stats?.sources.map((source: any) => (
-              <div key={source.source} className="border rounded-lg p-4">
+            {(stats as { sources?: unknown[] })?.sources?.map((source: unknown) => {
+              const src = source as { source: string; count: number; ageRange: { min: number; max: number; avg: number }; positiveClass: number; negativeClass: number };
+              return (
+              <div key={src.source} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h3 className="font-semibold text-lg">{source.source}</h3>
+                    <h3 className="font-semibold text-lg">{src.source}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {source.count} patients • Age: {source.ageRange.min}-{source.ageRange.max} (avg: {source.ageRange.avg})
+                      {src.count} patients • Age: {src.ageRange.min}-{src.ageRange.max} (avg: {src.ageRange.avg})
                     </p>
                   </div>
                   <Badge variant="outline">
-                    {source.count} records
+                    {src.count} records
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-3">
                   <div className="text-sm">
                     <span className="text-muted-foreground">With Heart Disease: </span>
-                    <span className="font-semibold text-red-600">{source.positiveClass}</span>
+                    <span className="font-semibold text-red-600">{src.positiveClass}</span>
                   </div>
                   <div className="text-sm">
                     <span className="text-muted-foreground">Without Heart Disease: </span>
-                    <span className="font-semibold text-green-600">{source.negativeClass}</span>
+                    <span className="font-semibold text-green-600">{src.negativeClass}</span>
                   </div>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         </CardContent>
       </Card>
@@ -261,15 +263,15 @@ export default function DatasetStatistics() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Minimum Age:</span>
-                <span className="font-semibold">{stats?.ageDistribution.min} years</span>
+                <span className="font-semibold">{(stats as { ageDistribution?: { min: number } })?.ageDistribution?.min || 0} years</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Maximum Age:</span>
-                <span className="font-semibold">{stats?.ageDistribution.max} years</span>
+                <span className="font-semibold">{(stats as { ageDistribution?: { max: number } })?.ageDistribution?.max || 0} years</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Average Age:</span>
-                <span className="font-semibold">{stats?.ageDistribution.avg} years</span>
+                <span className="font-semibold">{(stats as { ageDistribution?: { avg: number } })?.ageDistribution?.avg || 0} years</span>
               </div>
             </div>
           </CardContent>
@@ -283,16 +285,16 @@ export default function DatasetStatistics() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Male Patients:</span>
-                <span className="font-semibold text-blue-600">{stats?.genderDistribution.male}</span>
+                <span className="font-semibold text-blue-600">{(stats as { genderDistribution?: { male: number } })?.genderDistribution?.male || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Female Patients:</span>
-                <span className="font-semibold text-pink-600">{stats?.genderDistribution.female}</span>
+                <span className="font-semibold text-pink-600">{(stats as { genderDistribution?: { female: number } })?.genderDistribution?.female || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Male %:</span>
                 <span className="font-semibold">
-                  {Math.round((stats?.genderDistribution.male / stats?.totalRecords) * 100)}%
+                  {Math.round(((stats as { genderDistribution?: { male: number }; totalRecords: number })?.genderDistribution?.male || 0) / ((stats as { totalRecords: number })?.totalRecords || 1) * 100)}%
                 </span>
               </div>
             </div>
@@ -301,7 +303,7 @@ export default function DatasetStatistics() {
       </div>
 
       {/* Model Performance */}
-      {modelPerformance && modelPerformance.totalPredictions >= 10 && (
+      {modelPerformance && (modelPerformance as { totalPredictions: number }).totalPredictions >= 10 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -309,32 +311,32 @@ export default function DatasetStatistics() {
               Model Performance (Based on User Feedback)
             </CardTitle>
             <CardDescription>
-              Real-world performance metrics from {modelPerformance.totalPredictions} user feedback records
+              Real-world performance metrics from {(modelPerformance as { totalPredictions: number }).totalPredictions} user feedback records
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {Math.round(modelPerformance.accuracy)}%
+                  {Math.round((modelPerformance as { accuracy: number }).accuracy)}%
                 </div>
                 <p className="text-sm text-muted-foreground">Accuracy</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(modelPerformance.precision)}%
+                  {Math.round((modelPerformance as { precision: number }).precision)}%
                 </div>
                 <p className="text-sm text-muted-foreground">Precision</p>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {Math.round(modelPerformance.recall)}%
+                  {Math.round((modelPerformance as { recall: number }).recall)}%
                 </div>
                 <p className="text-sm text-muted-foreground">Recall</p>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {Math.round(modelPerformance.f1Score)}%
+                  {Math.round((modelPerformance as { f1Score: number }).f1Score)}%
                 </div>
                 <p className="text-sm text-muted-foreground">F1 Score</p>
               </div>
@@ -344,14 +346,14 @@ export default function DatasetStatistics() {
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="font-semibold">{modelPerformance.correctPredictions}</p>
+                  <p className="font-semibold">{(modelPerformance as { correctPredictions: number }).correctPredictions}</p>
                   <p className="text-sm text-muted-foreground">Correct Predictions</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-red-600" />
                 <div>
-                  <p className="font-semibold">{modelPerformance.incorrectPredictions}</p>
+                  <p className="font-semibold">{(modelPerformance as { incorrectPredictions: number }).incorrectPredictions}</p>
                   <p className="text-sm text-muted-foreground">Incorrect Predictions</p>
                 </div>
               </div>
@@ -370,20 +372,20 @@ export default function DatasetStatistics() {
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-6 bg-red-50 rounded-lg">
               <div className="text-3xl font-bold text-red-600">
-                {stats?.targetDistribution.positive}
+                {(stats as { targetDistribution?: { positive: number } })?.targetDistribution?.positive || 0}
               </div>
               <p className="text-sm text-muted-foreground">With Heart Disease</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {Math.round((stats?.targetDistribution.positive / stats?.totalRecords) * 100)}%
+                {Math.round(((stats as { targetDistribution?: { positive: number }; totalRecords: number })?.targetDistribution?.positive || 0) / ((stats as { totalRecords: number })?.totalRecords || 1) * 100)}%
               </p>
             </div>
             <div className="text-center p-6 bg-green-50 rounded-lg">
               <div className="text-3xl font-bold text-green-600">
-                {stats?.targetDistribution.negative}
+                {(stats as { targetDistribution?: { negative: number } })?.targetDistribution?.negative || 0}
               </div>
               <p className="text-sm text-muted-foreground">Without Heart Disease</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {Math.round((stats?.targetDistribution.negative / stats?.totalRecords) * 100)}%
+                {Math.round(((stats as { targetDistribution?: { negative: number }; totalRecords: number })?.targetDistribution?.negative || 0) / ((stats as { totalRecords: number })?.totalRecords || 1) * 100)}%
               </p>
             </div>
           </div>

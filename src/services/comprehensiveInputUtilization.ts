@@ -302,7 +302,7 @@ class ComprehensiveInputUtilizationService {
    * MAIN METHOD: Extract maximum value from ALL input fields
    */
   public extractComprehensiveFeatures(data: PatientData): ComprehensiveFeatures {
-    console.log('🔍 Analyzing ALL input fields for maximum utilization...');
+    if (import.meta.env.DEV) console.log('🔍 Analyzing ALL input fields for maximum utilization...');
     
     // ══════════ BASIC DEMOGRAPHICS ══════════
     const age = data.age || 50;
@@ -498,8 +498,8 @@ class ComprehensiveInputUtilizationService {
     const lifestyleRiskReductionPotential = this.calculateRiskReductionPotential(data);
     const overallInputUtilizationScore = this.calculateInputUtilization(data);
     
-    console.log(`✅ Extracted ${Object.keys(this).length} comprehensive features from ${this.countProvidedFields(data)} input fields`);
-    console.log(`📊 Input utilization: ${overallInputUtilizationScore.toFixed(1)}%`);
+    if (import.meta.env.DEV) console.log(`✅ Extracted ${Object.keys(this).length} comprehensive features from ${this.countProvidedFields(data)} input fields`);
+    if (import.meta.env.DEV) console.log(`📊 Input utilization: ${overallInputUtilizationScore.toFixed(1)}%`);
     
     return {
       age, gender, genderRiskMultiplier, ageRiskExponential,

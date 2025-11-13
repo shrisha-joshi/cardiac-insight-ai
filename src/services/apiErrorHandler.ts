@@ -15,7 +15,7 @@ export interface ApiErrorResponse {
   message: string;
   statusCode: number;
   userMessage: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
   retryable: boolean;
 }
@@ -117,21 +117,24 @@ const USER_FRIENDLY_MESSAGES: Record<ApiErrorType, string> = {
 /**
  * Check if error is retryable
  */
-export function isErrorRetryable(error: any): boolean {
+export function isErrorRetryable(error: unknown): boolean {
   if (!error) return false;
 
   // Network errors are retryable
-  if (error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+  const errorObj = error as Record<string, unknown>;
+  if (errorObj.code === 'ECONNABORTED' || errorObj.code === 'ENOTFOUND') {
     return true;
   }
 
   // Timeout errors are retryable
-  if (error.message?.includes('timeout')) {
+  const errorMsg = errorObj.message;
+  if (typeof errorMsg === 'string' && errorMsg.includes('timeout')) {
     return true;
   }
 
   // Check status code
-  const status = error.response?.status || error.statusCode;
+  const response = errorObj.response as Record<string, unknown> | undefined;
+  const status = (response?.status as number) || (errorObj.statusCode as number);
   if (status) {
     // Retryable status codes: 408, 429, 500, 502, 503, 504
     return [408, 429, 500, 502, 503, 504].includes(status);
@@ -160,21 +163,23 @@ export function calculateBackoffDelay(
 /**
  * Format API error response
  */
-export function formatApiError(error: any): ApiErrorResponse {
-  const statusCode = error.response?.status || error.statusCode || 0;
+export function formatApiError(error: unknown): ApiErrorResponse {
+  const errorObj = error as Record<string, unknown>;
+  const response = errorObj.response as Record<string, unknown> | undefined;
+  const statusCode = (response?.status as number) || (errorObj.statusCode as number) || 0;
   const errorType = getErrorType(statusCode);
 
   // Extract error details from response
-  const responseData = error.response?.data || {};
-  const errorCode = responseData.code || errorType;
-  const errorMessage = responseData.message || error.message || 'Unknown error';
+  const responseData = (response?.data as Record<string, unknown>) || {};
+  const errorCode = (responseData.code as string) || errorType;
+  const errorMessage = (responseData.message as string) || (errorObj.message as string) || 'Unknown error';
 
   return {
     code: errorCode,
     message: errorMessage,
     statusCode,
     userMessage: USER_FRIENDLY_MESSAGES[errorType],
-    details: responseData.details,
+    details: (responseData.details as Record<string, unknown>) || {},
     timestamp: new Date().toISOString(),
     retryable: isErrorRetryable(error),
   };
@@ -192,7 +197,7 @@ export async function apiErrorHandler<T>(
     backoffMultiplier: 2,
   }
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
     try {
@@ -207,7 +212,7 @@ export async function apiErrorHandler<T>(
 
       // Calculate delay and wait
       const delay = calculateBackoffDelay(attempt, retryConfig);
-      console.warn(
+      if (import.meta.env.DEV) console.warn(
         `API request failed (attempt ${attempt + 1}/${retryConfig.maxRetries + 1}). ` +
         `Retrying in ${delay}ms...`
       );
@@ -223,13 +228,13 @@ export async function apiErrorHandler<T>(
  * Validate API response
  */
 export function validateApiResponse<T>(
-  response: any,
+  response: unknown,
   expectedFields?: string[]
 ): response is T {
-  if (!response) return false;
+  if (!response || typeof response !== 'object') return false;
 
   if (expectedFields) {
-    return expectedFields.every(field => field in response);
+    return expectedFields.every(field => field in (response as object));
   }
 
   return true;
@@ -246,7 +251,7 @@ export async function safeApiCall<T>(
     return await apiErrorHandler(operation);
   } catch (error) {
     const formattedError = formatApiError(error);
-    console.error('API Error:', formattedError);
+    if (import.meta.env.DEV) console.error('API Error:', formattedError);
     onError?.(formattedError);
     return null;
   }
@@ -257,24 +262,32 @@ export async function safeApiCall<T>(
  */
 export function createApiInterceptor(baseURL?: string) {
   return {
-    onRequest: (config: any) => {
+    onRequest: (config: unknown) => {
       // Add request timestamp for timeout tracking
-      config.metadata = { startTime: Date.now() };
+      const configObj = config as Record<string, unknown>;
+      configObj.metadata = { startTime: Date.now() };
       return config;
     },
 
-    onResponse: (response: any) => {
+    onResponse: (response: unknown) => {
       // Track response time
-      const duration = Date.now() - (response.config?.metadata?.startTime || 0);
-      console.debug(`API Response: ${response.config?.method?.toUpperCase()} ${response.config?.url} (${duration}ms)`);
+      const responseObj = response as Record<string, unknown>;
+      const configObj = responseObj.config as Record<string, unknown> | undefined;
+      const metadata = configObj?.metadata as Record<string, unknown> | undefined;
+      const duration = Date.now() - ((metadata?.startTime as number) || 0);
+      if (import.meta.env.DEV) console.debug(`API Response: ${String(configObj?.method).toUpperCase()} ${configObj?.url} (${duration}ms)`);
       return response;
     },
 
-    onError: (error: any) => {
-      const duration = Date.now() - (error.config?.metadata?.startTime || 0);
-      console.error(
-        `API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} ` +
-        `(${error.response?.status || 'network error'}, ${duration}ms)`
+    onError: (error: unknown) => {
+      const errorObj = error as Record<string, unknown>;
+      const configObj = errorObj.config as Record<string, unknown> | undefined;
+      const responseObj = errorObj.response as Record<string, unknown> | undefined;
+      const metadata = configObj?.metadata as Record<string, unknown> | undefined;
+      const duration = Date.now() - ((metadata?.startTime as number) || 0);
+      if (import.meta.env.DEV) console.error(
+        `API Error: ${String(configObj?.method).toUpperCase()} ${configObj?.url} ` +
+        `(${responseObj?.status || 'network error'}, ${duration}ms)`
       );
       return Promise.reject(formatApiError(error));
     },
@@ -289,7 +302,7 @@ export async function batchApiCalls<T>(
   concurrency: number = 3
 ): Promise<Array<T | ApiErrorResponse>> {
   const results: Array<T | ApiErrorResponse> = [];
-  const executing: Promise<any>[] = [];
+  const executing: Promise<unknown>[] = [];
 
   for (const operation of operations) {
     const promise = Promise.resolve()

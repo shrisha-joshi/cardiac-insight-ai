@@ -65,7 +65,7 @@ class MLService {
         datasetId: datasetData.id
       };
     } catch (error) {
-      console.error('Dataset upload error:', error);
+      if (import.meta.env.DEV) console.error('Dataset upload error:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Upload failed'
@@ -109,7 +109,7 @@ class MLService {
         .eq('id', datasetId);
 
     } catch (error) {
-      console.error('Dataset processing error:', error);
+      if (import.meta.env.DEV) console.error('Dataset processing error:', error);
       
       // Update status to failed
       await supabase
@@ -182,7 +182,7 @@ class MLService {
       return enhancedResult;
 
     } catch (error) {
-      console.error('ML prediction error:', error);
+      if (import.meta.env.DEV) console.error('ML prediction error:', error);
       
       // Fallback to rule-based prediction
       return this.fallbackPrediction(request.patientData);
@@ -269,7 +269,7 @@ class MLService {
         prediction_result: prediction
       });
     } catch (error) {
-      console.error('Failed to save prediction to history:', error);
+      if (import.meta.env.DEV) console.error('Failed to save prediction to history:', error);
     }
   }
 

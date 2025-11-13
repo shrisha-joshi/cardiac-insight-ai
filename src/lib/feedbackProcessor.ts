@@ -5,7 +5,39 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { PatientData, PredictionResult } from '@/lib/mockData';
+import type { PredictionResult } from '@/lib/mockData';
+
+// ============================================================================
+// CONSTANTS & HELPERS (reduce magic numbers and code duplication)
+// ============================================================================
+
+const BASELINE_MODEL_ACCURACY = 85.7; // Baseline from UCI study
+
+type FeedbackConfidence = number; // 1-10 scale
+
+function average(values: FeedbackConfidence[]): number {
+  if (values.length === 0) return 0;
+  const sum = values.reduce((a, b) => a + b, 0);
+  return sum / values.length;
+}
+
+function daysBetween(a: Date, b: Date): number {
+  const diffTime = Math.abs(a.getTime() - b.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+function toDate(value: string | Date | undefined): Date | undefined {
+  if (!value) return undefined;
+  return value instanceof Date ? value : new Date(value);
+}
+
+function hasTimeFields(
+  x: unknown
+): x is { timestamp?: string | Date; created_at?: string | Date } {
+  return (
+    typeof x === 'object' && x !== null && ('timestamp' in x || 'created_at' in x)
+  );
+}
 
 // ============================================================================
 // FEEDBACK DATA TYPES
@@ -58,7 +90,7 @@ export class FeedbackProcessor {
   static async submitFeedback(feedback: PredictionFeedback): Promise<boolean> {
     try {
       if (!supabase) {
-        console.warn('Supabase not configured - feedback not saved');
+        if (import.meta.env.DEV) console.warn('Supabase not configured - feedback not saved');
         return false;
       }
 
@@ -75,14 +107,14 @@ export class FeedbackProcessor {
         }]);
 
       if (error) {
-        console.error('Error submitting feedback:', error);
+        if (import.meta.env.DEV) console.error('Error submitting feedback:', error);
         return false;
       }
 
-      console.log('✅ Feedback submitted successfully', data);
+      if (import.meta.env.DEV) console.log('✅ Feedback submitted successfully', data);
       return true;
     } catch (error) {
-      console.error('Feedback submission error:', error);
+      if (import.meta.env.DEV) console.error('Feedback submission error:', error);
       return false;
     }
   }
@@ -102,40 +134,57 @@ export class FeedbackProcessor {
         .eq('user_id', userId);
 
       if (error || !data) {
-        console.warn('Error fetching feedback stats:', error);
+        if (import.meta.env.DEV) console.warn('Error fetching feedback stats:', error);
         return this.getDefaultStats();
       }
 
       const feedback = data as PredictionFeedback[];
 
-      const stats: FeedbackStats = {
-        totalFeedback: feedback.length,
-        correctCount: feedback.filter(f => f.feedback_type === 'correct').length,
-        incorrectCount: feedback.filter(f => f.feedback_type === 'incorrect').length,
-        partiallyCorrectCount: feedback.filter(f => f.feedback_type === 'partially_correct').length,
-        uncertainCount: feedback.filter(f => f.feedback_type === 'uncertain').length,
-        accuracyRate: 0,
-        averageConfidence: 0,
-        lastUpdated: new Date()
-      };
+      // Single-pass aggregation to reduce complexity and duplicate traversals
+      let correctCount = 0;
+      let incorrectCount = 0;
+      let partiallyCorrectCount = 0;
+      let uncertainCount = 0;
+      const confidences: FeedbackConfidence[] = [];
 
-      // Calculate accuracy rate
-      if (stats.totalFeedback > 0) {
-        stats.accuracyRate = (stats.correctCount / stats.totalFeedback) * 100;
-
-        // Calculate average confidence
-        const confidenceRatings = feedback
-          .filter(f => f.confidence_rating)
-          .map(f => f.confidence_rating!);
-        
-        if (confidenceRatings.length > 0) {
-          stats.averageConfidence = confidenceRatings.reduce((a, b) => a + b, 0) / confidenceRatings.length;
+      for (const f of feedback) {
+        switch (f.feedback_type) {
+          case 'correct':
+            correctCount++;
+            break;
+          case 'incorrect':
+            incorrectCount++;
+            break;
+          case 'partially_correct':
+            partiallyCorrectCount++;
+            break;
+          case 'uncertain':
+            uncertainCount++;
+            break;
+          default:
+            break;
+        }
+        if (typeof f.confidence_rating === 'number') {
+          confidences.push(f.confidence_rating);
         }
       }
 
-      return stats;
+      const totalFeedback = feedback.length;
+      const accuracyRate = totalFeedback > 0 ? (correctCount / totalFeedback) * 100 : 0;
+      const averageConfidence = average(confidences);
+
+      return {
+        totalFeedback,
+        correctCount,
+        incorrectCount,
+        partiallyCorrectCount,
+        uncertainCount,
+        accuracyRate,
+        averageConfidence,
+        lastUpdated: new Date()
+      };
     } catch (error) {
-      console.error('Error getting feedback stats:', error);
+      if (import.meta.env.DEV) console.error('Error getting feedback stats:', error);
       return this.getDefaultStats();
     }
   }
@@ -157,7 +206,7 @@ export class FeedbackProcessor {
         .eq('user_id', userId);
 
       if (predictionsError) {
-        console.warn('Error fetching predictions:', predictionsError);
+        if (import.meta.env.DEV) console.warn('Error fetching predictions:', predictionsError);
       }
 
       const totalPredictions = predictions?.length || 0;
@@ -170,6 +219,21 @@ export class FeedbackProcessor {
         'Medium (7-8)': 0,
         'High (9-10)': 0
       };
+
+      // Populate distribution from feedback confidence
+      const { data: feedbackData } = await supabase
+        .from('ml_prediction_feedback')
+        .select('confidence_rating')
+        .eq('user_id', userId)
+        .not('confidence_rating', 'is', null);
+
+      (feedbackData as Array<{ confidence_rating: number }> | null)?.forEach((r) => {
+        const c = r.confidence_rating;
+        if (c >= 9) confidenceDistribution['High (9-10)']++;
+        else if (c >= 7) confidenceDistribution['Medium (7-8)']++;
+        else if (c >= 4) confidenceDistribution['Low (4-6)']++;
+        else confidenceDistribution['Very Low (1-3)']++;
+      });
 
       // Analyze areas for improvement
       const improvementNeeded: string[] = [];
@@ -206,14 +270,14 @@ export class FeedbackProcessor {
         predictionsWithFeedback: stats.totalFeedback,
         feedbackRate,
         measuredAccuracy: stats.accuracyRate,
-        estimatedAccuracy: 85.7,  // Baseline from UCI study
+  estimatedAccuracy: BASELINE_MODEL_ACCURACY,
         improvementNeeded,
         confidenceDistribution,
         recommendations,
         lastCalculated: new Date()
       };
     } catch (error) {
-      console.error('Error generating performance report:', error);
+      if (import.meta.env.DEV) console.error('Error generating performance report:', error);
       throw error;
     }
   }
@@ -257,7 +321,7 @@ export class FeedbackProcessor {
         priority
       };
     } catch (error) {
-      console.error('Error analyzing for retraining:', error);
+      if (import.meta.env.DEV) console.error('Error analyzing for retraining:', error);
       return {
         shouldRetrain: false,
         reason: 'Error during analysis',
@@ -272,7 +336,7 @@ export class FeedbackProcessor {
   private static getDefaultStats(): FeedbackStats {
     return {
       totalFeedback: 0,
-      accuracyRate: 85.7,  // Baseline from UCI study
+  accuracyRate: BASELINE_MODEL_ACCURACY,  // Baseline from UCI study
       correctCount: 0,
       incorrectCount: 0,
       partiallyCorrectCount: 0,
@@ -303,7 +367,7 @@ export class FeedbackProcessor {
         .limit(limit);
 
       if (error) {
-        console.error('Error analyzing misclassifications:', error);
+        if (import.meta.env.DEV) console.error('Error analyzing misclassifications:', error);
         return [];
       }
 
@@ -314,7 +378,7 @@ export class FeedbackProcessor {
         confidenceGap: f.confidence_rating ? Math.abs(f.confidence_rating - 50) : 0
       }));
     } catch (error) {
-      console.error('Error in misclassification analysis:', error);
+      if (import.meta.env.DEV) console.error('Error in misclassification analysis:', error);
       return [];
     }
   }
@@ -347,17 +411,13 @@ export function getFeedbackPromptText(riskLevel: string): string {
 /**
  * Calculate days until feedback reminder
  */
-export function getDaysSinceLastFeedback(predictions: any[]): number {
+export function getDaysSinceLastFeedback(predictions: unknown[]): number {
   if (predictions.length === 0) return 0;
-  
-  const lastPrediction = predictions[0];
-  const lastDate = new Date(lastPrediction.timestamp || lastPrediction.created_at);
-  const today = new Date();
-  
-  const diffTime = Math.abs(today.getTime() - lastDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays;
+  const candidate = predictions[0];
+  if (!hasTimeFields(candidate)) return 0;
+  const lastDate = toDate(candidate.timestamp || candidate.created_at);
+  if (!lastDate) return 0;
+  return daysBetween(new Date(), lastDate);
 }
 
 /**
@@ -365,12 +425,9 @@ export function getDaysSinceLastFeedback(predictions: any[]): number {
  */
 export function shouldRequestFeedback(lastFeedbackDate?: Date, minDaysBetween: number = 30): boolean {
   if (!lastFeedbackDate) return true;
-  
-  const today = new Date();
-  const diffTime = Math.abs(today.getTime() - lastFeedbackDate.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays >= minDaysBetween;
+  return daysBetween(new Date(), lastFeedbackDate) >= minDaysBetween;
 }
 
 export default FeedbackProcessor;
+
+

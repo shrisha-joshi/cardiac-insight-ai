@@ -22,6 +22,8 @@ import ProfessionalDashboard from "./components/subscription/ProfessionalDashboa
 import DatabaseStatus from "./components/database/DatabaseStatus";
 import HealthSimulationPage from "./pages/HealthSimulationPage";
 import SettingsPage from "./pages/SettingsPage";
+import { DataLoadingDashboard } from "./components/DataLoadingDashboard";
+import { MonitoringDashboard } from "./components/monitoring/MonitoringDashboard";
 
 const queryClient = new QueryClient();
 
@@ -118,6 +120,22 @@ const App = () => (
             <Route 
               path="/health-simulation" 
               element={<HealthSimulationPage />} 
+            />
+            <Route 
+              path="/data-loading" 
+              element={
+                <ProtectedRoute>
+                  <DataLoadingDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/monitoring" 
+              element={
+                <ProtectedRoute>
+                  <MonitoringDashboard />
+                </ProtectedRoute>
+              } 
             />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -110,7 +110,7 @@ function calculateMedicationContributions(
   smoking: boolean,
   previousHeartAttack: boolean
 ): MedicationImpactAnalysis['medication_contributions'] {
-  const contributions: any = {};
+  const contributions: Record<string, number> = {};
 
   // Statin efficacy: 25-40% depending on baseline and LDL
   // Strongest in: high cholesterol, diabetes, prior heart attack
@@ -184,20 +184,20 @@ function calculateTotalReduction(
   // Additional effects (diminishing returns)
   // Second medication adds ~80% of its effect
   if (reductions.length > 1) {
-    total += reductions[1] * 0.80;
+    total += reductions[1] * 0.8;
   }
   // Third adds ~60% of its effect
   if (reductions.length > 2) {
-    total += reductions[2] * 0.60;
+    total += reductions[2] * 0.6;
   }
   // Fourth adds ~40% of its effect
   if (reductions.length > 3) {
-    total += reductions[3] * 0.40;
+    total += reductions[3] * 0.4;
   }
   // Fifth and beyond adds ~20% of its effect
   if (reductions.length > 4) {
     for (let i = 4; i < reductions.length; i++) {
-      total += reductions[i] * 0.20;
+      total += reductions[i] * 0.2;
     }
   }
 
@@ -420,7 +420,13 @@ export function simulateMedicationScenarios(
     previousHeartAttack
   );
 
-  const scenarios: any = {
+  const scenarios: {
+    current: number;
+    add_statin?: number;
+    add_beta_blocker?: number;
+    add_ace_inhibitor?: number;
+    stop_all?: number;
+  } = {
     current: currentRisk
   };
 

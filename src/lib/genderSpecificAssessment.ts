@@ -62,13 +62,6 @@ function assessMaleRiskFactors(patient: PatientData): {
     }
   }
 
-  // Male pattern baldness (linked to androgens, CVD risk)
-  // Note: Would need to add to PatientData interface if collecting
-  // if (patient.maleBaldness) {
-  //   factors.push('Male pattern baldness associated with higher CVD risk');
-  //   adjustment += 2;
-  // }
-
   // ED (Erectile Dysfunction) - early warning sign of CVD
   if (patient.exerciseAngina) {
     // Using exercise angina as proxy for cardiovascular stress
@@ -149,20 +142,6 @@ function assessFemaleRiskFactors(patient: PatientData): {
   // Would need to add to PatientData interface
   // if (patient.gestationalDiabetes) {
   //   reproductiveHistory.pregnancyComplications.push('Gestational diabetes');
-  //   factors.push('Gestational diabetes increases lifetime CVD risk by 60-70%');
-  //   adjustment += 5;
-  // }
-  // if (patient.preeclampsia) {
-  //   reproductiveHistory.pregnancyComplications.push('Preeclampsia/eclampsia');
-  //   factors.push('Preeclampsia increases CVD risk 3-4x');
-  //   adjustment += 4;
-  // }
-  // if (patient.gestationalHypertension) {
-  //   reproductiveHistory.pregnancyComplications.push('Gestational hypertension');
-  //   factors.push('Gestational hypertension increases future CVD risk');
-  //   adjustment += 2;
-  // }
-
   // Hormonal therapy considerations
   reproductiveHistory.hormonalTherapyStatus = 'never'; // Default
 
@@ -171,13 +150,6 @@ function assessFemaleRiskFactors(patient: PatientData): {
     factors.push('Depression in women: 1.5-3x higher CVD risk');
     adjustment += 4; // Higher for women than men
   }
-
-  // Autoimmune conditions (more common in women)
-  // Would need to add to PatientData
-  // if (patient.lupus || patient.rheumatoidArthritis) {
-  //   factors.push('Autoimmune disease (SLE/RA) significantly increases CVD risk');
-  //   adjustment += 3;
-  // }
 
   // Atypical symptom presentation in women
   if (patient.chestPainType === 'atypical' || patient.chestPainType === 'non-anginal') {
@@ -290,7 +262,7 @@ function generateGenderSpecificExplanation(
   adjustment: number,
   adjustedScore: number,
   category: string,
-  reproductiveHistory?: any
+  reproductiveHistory?: unknown
 ): string {
   let explanation = '⚕️ **Gender-Specific Risk Assessment**\n\n';
 
@@ -310,8 +282,11 @@ function generateGenderSpecificExplanation(
     explanation += `- Pregnancy complications predict future CVD (gestational diabetes, preeclampsia)\n`;
     explanation += `- Depression carries 1.5-3x higher CVD risk in women\n`;
     explanation += `- Atypical symptom presentation (fatigue, nausea) often missed\n`;
-    if (reproductiveHistory?.menopauseStatus === 'post') {
-      explanation += `- **You are postmenopausal:** Estrogen protection no longer present\n`;
+    if (reproductiveHistory) {
+      const repHistory = reproductiveHistory as Record<string, unknown>;
+      if (repHistory.menopauseStatus === 'post') {
+        explanation += `- **You are postmenopausal:** Estrogen protection no longer present\n`;
+      }
     }
     explanation += '\n';
   }
@@ -331,7 +306,7 @@ function generateGenderSpecificExplanation(
 function generateGenderSpecificRecommendations(
   patient: PatientData,
   riskCategory: string,
-  reproductiveHistory?: any
+  reproductiveHistory?: unknown
 ): string[] {
   const recommendations: string[] = [];
 
@@ -350,9 +325,12 @@ function generateGenderSpecificRecommendations(
       recommendations.push('👩 **Postmenopausal:** Without estrogen protection, CVD risk increases significantly. Enhanced monitoring needed');
     }
 
-    if (reproductiveHistory?.menopauseStatus === 'post') {
-      recommendations.push('🌡️ **Menopause-Specific:** Estrogen protection has ended. Focus on: blood pressure control, cholesterol management, regular screening');
-      recommendations.push('💊 **HRT Consideration:** Discuss hormone replacement therapy risks/benefits with cardiologist (generally not recommended for primary CVD prevention)');
+    if (reproductiveHistory) {
+      const repHistory = reproductiveHistory as Record<string, unknown>;
+      if (repHistory.menopauseStatus === 'post') {
+        recommendations.push('🌡️ **Menopause-Specific:** Estrogen protection has ended. Focus on: blood pressure control, cholesterol management, regular screening');
+        recommendations.push('💊 **HRT Consideration:** Discuss hormone replacement therapy risks/benefits with cardiologist (generally not recommended for primary CVD prevention)');
+      }
     }
 
     recommendations.push('🧠 **Mental Health Priority:** Depression increases CVD risk 1.5-3x in women. Ensure active treatment for anxiety/depression');

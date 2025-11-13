@@ -10,19 +10,18 @@
 import {
   generateMockPatient,
   generateMockPatientBatch,
-  generateMockPrediction,
   MockApiService,
   TestDataValidator,
   PerformanceTester,
 } from '../lib/testingUtils';
-import type { PatientData, PredictionResult } from '../lib/mockData';
+import type { PredictionResult } from '../lib/mockData';
 
 /**
  * Integration Test Suite
  */
 export class IntegrationTestSuite {
-  private mockApi: MockApiService;
-  private performanceTester: PerformanceTester;
+  private readonly mockApi: MockApiService;
+  private readonly performanceTester: PerformanceTester;
 
   constructor() {
     this.mockApi = new MockApiService(100);
@@ -33,7 +32,7 @@ export class IntegrationTestSuite {
    * Test: Patient data submission workflow
    */
   async testPatientDataSubmission(): Promise<boolean> {
-    console.log('Testing patient data submission workflow...');
+    if (import.meta.env.DEV) console.log('Testing patient data submission workflow...');
     this.performanceTester.start();
 
     try {
@@ -64,14 +63,14 @@ export class IntegrationTestSuite {
       }
 
       // Save prediction
-      const savedId = await this.mockApi.savePrediction(prediction);
+      await this.mockApi.savePrediction(prediction);
       this.performanceTester.mark('save_complete');
 
-      console.log('✓ Patient data submission workflow passed');
-      console.log('Performance metrics:', this.performanceTester.getMetrics());
+      if (import.meta.env.DEV) console.log('✓ Patient data submission workflow passed');
+      if (import.meta.env.DEV) console.log('Performance metrics:', this.performanceTester.getMetrics());
       return true;
     } catch (error) {
-      console.error('✗ Patient data submission workflow failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Patient data submission workflow failed:', error);
       return false;
     }
   }
@@ -80,7 +79,7 @@ export class IntegrationTestSuite {
    * Test: Batch processing workflow
    */
   async testBatchProcessing(): Promise<boolean> {
-    console.log('Testing batch processing workflow...');
+    if (import.meta.env.DEV) console.log('Testing batch processing workflow...');
     this.performanceTester.start();
 
     try {
@@ -107,11 +106,11 @@ export class IntegrationTestSuite {
 
       this.performanceTester.mark('validation_complete');
 
-      console.log(`✓ Batch processing passed (${predictions.length} predictions)`);
-      console.log('Performance metrics:', this.performanceTester.getMetrics());
+      if (import.meta.env.DEV) console.log(`✓ Batch processing passed (${predictions.length} predictions)`);
+      if (import.meta.env.DEV) console.log('Performance metrics:', this.performanceTester.getMetrics());
       return true;
     } catch (error) {
-      console.error('✗ Batch processing failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Batch processing failed:', error);
       return false;
     }
   }
@@ -120,7 +119,7 @@ export class IntegrationTestSuite {
    * Test: Error handling and recovery
    */
   async testErrorHandling(): Promise<boolean> {
-    console.log('Testing error handling and recovery...');
+    if (import.meta.env.DEV) console.log('Testing error handling and recovery...');
 
     try {
       // Simulate API failure
@@ -132,11 +131,10 @@ export class IntegrationTestSuite {
         await this.mockApi.getPrediction(patientData);
         throw new Error('Should have failed but did not');
       } catch (error) {
-        if ((error as Error).message !== 'Should have failed but did not') {
-          // Expected failure
-        } else {
+        if ((error as Error).message === 'Should have failed but did not') {
           throw error;
         }
+        // Expected failure - continue
       }
 
       // Restore API functionality
@@ -144,14 +142,14 @@ export class IntegrationTestSuite {
 
       // Retry should succeed
       const prediction = await this.mockApi.getPrediction(patientData);
-      if (!prediction || !prediction.id) {
+      if (!prediction?.id) {
         throw new Error('Retry failed');
       }
 
-      console.log('✓ Error handling and recovery passed');
+      if (import.meta.env.DEV) console.log('✓ Error handling and recovery passed');
       return true;
     } catch (error) {
-      console.error('✗ Error handling failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Error handling failed:', error);
       return false;
     }
   }
@@ -160,7 +158,7 @@ export class IntegrationTestSuite {
    * Test: Report generation workflow
    */
   async testReportGeneration(): Promise<boolean> {
-    console.log('Testing report generation workflow...');
+    if (import.meta.env.DEV) console.log('Testing report generation workflow...');
     this.performanceTester.start();
 
     try {
@@ -177,11 +175,11 @@ export class IntegrationTestSuite {
         throw new Error('Report generation failed');
       }
 
-      console.log('✓ Report generation workflow passed');
-      console.log('Performance metrics:', this.performanceTester.getMetrics());
+      if (import.meta.env.DEV) console.log('✓ Report generation workflow passed');
+      if (import.meta.env.DEV) console.log('Performance metrics:', this.performanceTester.getMetrics());
       return true;
     } catch (error) {
-      console.error('✗ Report generation failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Report generation failed:', error);
       return false;
     }
   }
@@ -190,7 +188,7 @@ export class IntegrationTestSuite {
    * Test: Data persistence workflow
    */
   async testDataPersistence(): Promise<boolean> {
-    console.log('Testing data persistence workflow...');
+    if (import.meta.env.DEV) console.log('Testing data persistence workflow...');
 
     try {
       const patientData = generateMockPatient();
@@ -214,7 +212,7 @@ export class IntegrationTestSuite {
 
       // Retrieve prediction
       const [retrieved] = await this.mockApi.getPredictions([savedId]);
-      if (!retrieved || retrieved.id !== savedId) {
+      if (!retrieved?.id || retrieved.id !== savedId) {
         throw new Error('Retrieve failed');
       }
 
@@ -224,10 +222,10 @@ export class IntegrationTestSuite {
         throw new Error('Delete failed');
       }
 
-      console.log('✓ Data persistence workflow passed');
+      if (import.meta.env.DEV) console.log('✓ Data persistence workflow passed');
       return true;
     } catch (error) {
-      console.error('✗ Data persistence failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Data persistence failed:', error);
       return false;
     }
   }
@@ -236,7 +234,7 @@ export class IntegrationTestSuite {
    * Test: Performance under load
    */
   async testPerformanceUnderLoad(): Promise<boolean> {
-    console.log('Testing performance under load...');
+    if (import.meta.env.DEV) console.log('Testing performance under load...');
     this.performanceTester.start();
 
     try {
@@ -258,10 +256,10 @@ export class IntegrationTestSuite {
       const metrics = this.performanceTester.getMetrics();
       const totalTime = metrics.all_requests_complete;
 
-      console.log(`✓ Performance test passed (${concurrentRequests} concurrent requests in ${totalTime}ms)`);
+      if (import.meta.env.DEV) console.log(`✓ Performance test passed (${concurrentRequests} concurrent requests in ${totalTime}ms)`);
       return true;
     } catch (error) {
-      console.error('✗ Performance test failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Performance test failed:', error);
       return false;
     }
   }
@@ -270,7 +268,7 @@ export class IntegrationTestSuite {
    * Test: Data validation edge cases
    */
   async testValidationEdgeCases(): Promise<boolean> {
-    console.log('Testing validation edge cases...');
+    if (import.meta.env.DEV) console.log('Testing validation edge cases...');
 
     try {
       const testCases = [
@@ -298,15 +296,15 @@ export class IntegrationTestSuite {
         const errors = TestDataValidator.validatePatientData(patient);
         if (errors.length === 0) {
           passed++;
-        } else {
+        } else if (import.meta.env.DEV) {
           console.warn(`Validation errors for patient:`, errors);
         }
       }
 
-      console.log(`✓ Validation edge cases passed (${passed}/${testCases.length})`);
+      if (import.meta.env.DEV) console.log(`✓ Validation edge cases passed (${passed}/${testCases.length})`);
       return passed === testCases.length;
     } catch (error) {
-      console.error('✗ Validation edge cases failed:', error);
+      if (import.meta.env.DEV) console.error('✗ Validation edge cases failed:', error);
       return false;
     }
   }
@@ -315,9 +313,9 @@ export class IntegrationTestSuite {
    * Run all tests
    */
   async runAllTests(): Promise<TestResults> {
-    console.log('\n========================================');
-    console.log('Running Integration Test Suite');
-    console.log('========================================\n');
+    if (import.meta.env.DEV) console.log('\n========================================');
+    if (import.meta.env.DEV) console.log('Running Integration Test Suite');
+    if (import.meta.env.DEV) console.log('========================================\n');
 
     const results: TestResults = {
       patientDataSubmission: await this.testPatientDataSubmission(),
@@ -330,19 +328,19 @@ export class IntegrationTestSuite {
     };
 
     // Print summary
-    console.log('\n========================================');
-    console.log('Test Results Summary');
-    console.log('========================================\n');
+    if (import.meta.env.DEV) console.log('\n========================================');
+    if (import.meta.env.DEV) console.log('Test Results Summary');
+    if (import.meta.env.DEV) console.log('========================================\n');
 
-    const passed = Object.values(results).filter(r => r).length;
+    const passed = Object.values(results).filter(Boolean).length;
     const total = Object.values(results).length;
 
-    Object.entries(results).forEach(([name, passed]) => {
-      console.log(`${passed ? '✓' : '✗'} ${name}`);
-    });
+    for (const [name, testPassed] of Object.entries(results)) {
+      if (import.meta.env.DEV) console.log(`${testPassed ? '✓' : '✗'} ${name}`);
+    }
 
-    console.log(`\nTotal: ${passed}/${total} tests passed`);
-    console.log('========================================\n');
+    if (import.meta.env.DEV) console.log(`\nTotal: ${passed}/${total} tests passed`);
+    if (import.meta.env.DEV) console.log('========================================\n');
 
     return results;
   }
@@ -368,13 +366,13 @@ export async function runIntegrationTests(): Promise<void> {
   const suite = new IntegrationTestSuite();
   const results = await suite.runAllTests();
 
-  const passedCount = Object.values(results).filter(r => r).length;
+  const passedCount = Object.values(results).filter(Boolean).length;
   const totalCount = Object.values(results).length;
 
   if (passedCount === totalCount) {
-    console.log('🎉 All integration tests passed!');
+    if (import.meta.env.DEV) console.log('🎉 All integration tests passed!');
   } else {
-    console.log(`⚠️  ${totalCount - passedCount} test(s) failed`);
+    if (import.meta.env.DEV) console.log(`⚠️  ${totalCount - passedCount} test(s) failed`);
     process.exit(1);
   }
 }

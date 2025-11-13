@@ -26,6 +26,16 @@ interface MedicalGuideline {
   evidence: string;
 }
 
+// Type aliases for specific guideline sources
+type WHOGuideline = MedicalGuideline;
+type ICCGuideline = MedicalGuideline;
+type EvidencedMedication = {
+  drug: string;
+  dosage: string;
+  evidence: string;
+  source: string;
+};
+
 interface AccurateRecommendation {
   recommendation: string;
   evidenceSource: 'research' | 'guideline' | 'ai' | 'rule-based';
@@ -35,10 +45,10 @@ interface AccurateRecommendation {
 }
 
 class FreeResourcesIntegration {
-  private gemini: GoogleGenerativeAI | null = null;
-  private model: any = null;
-  private pubmedCache: Map<string, ResearchPaper[]> = new Map();
-  private guidelineCache: Map<string, MedicalGuideline[]> = new Map();
+  private readonly gemini: GoogleGenerativeAI | null = null;
+  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+  private readonly pubmedCache: Map<string, ResearchPaper[]> = new Map();
+  private readonly guidelineCache: Map<string, MedicalGuideline[]> = new Map();
 
   constructor() {
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
@@ -67,7 +77,7 @@ class FreeResourcesIntegration {
       const searchData = await searchResponse.json();
 
       if (!searchData.esearchresult?.idlist?.length) {
-        console.log(`No PubMed results for: ${condition}`);
+        if (import.meta.env.DEV) console.log(`No PubMed results for: ${condition}`);
         return [];
       }
 
@@ -93,7 +103,7 @@ class FreeResourcesIntegration {
             });
           }
         } catch (err) {
-          console.log(`Error fetching PubMed paper ${id}:`, err);
+          if (import.meta.env.DEV) console.log(`Error fetching PubMed paper ${id}:`, err);
         }
       }
 
@@ -101,7 +111,7 @@ class FreeResourcesIntegration {
       this.pubmedCache.set(cacheKey, papers);
       return papers;
     } catch (error) {
-      console.log('Error getting PubMed research:', error);
+      if (import.meta.env.DEV) console.log('Error getting PubMed research:', error);
       return [];
     }
   }
@@ -110,7 +120,7 @@ class FreeResourcesIntegration {
    * Get WHO Cardiovascular Guidelines (FREE)
    * World Health Organization evidence-based recommendations
    */
-  async getWHOGuidelines(riskLevel: string): Promise<MedicalGuideline[]> {
+  async getWHOGuidelines(riskLevel: string): Promise<WHOGuideline[]> {
     try {
       const cacheKey = `who_${riskLevel}`;
       if (this.guidelineCache.has(cacheKey)) {
@@ -167,7 +177,7 @@ class FreeResourcesIntegration {
       this.guidelineCache.set(cacheKey, guidelines);
       return guidelines;
     } catch (error) {
-      console.log('Error getting WHO guidelines:', error);
+      if (import.meta.env.DEV) console.log('Error getting WHO guidelines:', error);
       return [];
     }
   }
@@ -176,7 +186,7 @@ class FreeResourcesIntegration {
    * Get ICC (Indian College of Cardiologists) Guidelines
    * India-specific cardiac risk assessment and prevention
    */
-  async getICCGuidelines(riskScore: number, age: number): Promise<MedicalGuideline[]> {
+  async getICCGuidelines(riskScore: number, age: number): Promise<ICCGuideline[]> {
     try {
       const cacheKey = `icc_${Math.floor(riskScore)}_${age}`;
       if (this.guidelineCache.has(cacheKey)) {
@@ -232,7 +242,7 @@ class FreeResourcesIntegration {
       this.guidelineCache.set(cacheKey, guidelines);
       return guidelines;
     } catch (error) {
-      console.log('Error getting ICC guidelines:', error);
+      if (import.meta.env.DEV) console.log('Error getting ICC guidelines:', error);
       return [];
     }
   }
@@ -243,9 +253,9 @@ class FreeResourcesIntegration {
   async getEvidencedBasedMedications(
     condition: string,
     riskLevel: string
-  ): Promise<{ drug: string; dosage: string; evidence: string; source: string }[]> {
+  ): Promise<EvidencedMedication[]> {
     try {
-      const medications: { drug: string; dosage: string; evidence: string; source: string }[] = [];
+      const medications: EvidencedMedication[] = [];
 
       if (condition.includes('cholesterol') || condition.includes('dyslipidemia')) {
         medications.push(
@@ -289,7 +299,7 @@ class FreeResourcesIntegration {
 
       return medications;
     } catch (error) {
-      console.log('Error getting medications:', error);
+      if (import.meta.env.DEV) console.log('Error getting medications:', error);
       return [];
     }
   }
@@ -308,101 +318,162 @@ class FreeResourcesIntegration {
     try {
       const recommendations: AccurateRecommendation[] = [];
 
-      console.log('🔍 Gathering maximum accuracy data from FREE resources...');
+      if (import.meta.env.DEV) console.log('🔍 Gathering maximum accuracy data from FREE resources...');
 
-      // Step 1: Get WHO Guidelines (FREE)
-      const whoGuidelines = await this.getWHOGuidelines(riskLevel);
-      
-      // Step 2: Get ICC Guidelines for Indian population (FREE)
-      const iccGuidelines = await this.getICCGuidelines(riskScore, age);
+      // Collect data from all sources
+      const [whoGuidelines, iccGuidelines, research, medications, geminiRecs] = 
+        await this.collectAllRecommendationSources(riskScore, riskLevel, age, conditions);
 
-      // Step 3: Get Latest PubMed Research (FREE)
-      const research = await this.getLatestResearch('cardiac risk reduction AND prevention', 5);
-
-      // Step 4: Get Evidence-Based Medications (FREE knowledge base)
-      const medications = await this.getEvidencedBasedMedications(
-        conditions.join(' '),
-        riskLevel
-      );
-
-      // Step 5: Get Gemini AI personalized recommendations (FREE tier)
-      let geminiRecs: string[] = [];
-      if (this.model) {
-        geminiRecs = await this.getGeminiPersonalizedRecs(riskScore, riskLevel, age, conditions);
-      }
-
-      // COMBINE ALL SOURCES for maximum accuracy
-      
-      // Add WHO Guidelines as high-confidence recommendations
-      for (const guideline of whoGuidelines) {
-        recommendations.push({
-          recommendation: guideline.recommendation,
-          evidenceSource: 'guideline',
-          confidenceLevel: guideline.level === 'strong' ? 'high' : 'moderate',
-          sources: ['WHO Cardiovascular Guidelines 2021'],
-          researchLinks: ['https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)']
-        });
-      }
-
-      // Add ICC Guidelines (Indian-specific)
-      for (const guideline of iccGuidelines) {
-        recommendations.push({
-          recommendation: guideline.recommendation,
-          evidenceSource: 'guideline',
-          confidenceLevel: guideline.level === 'strong' ? 'high' : 'moderate',
-          sources: ['Indian College of Cardiologists Guidelines'],
-          researchLinks: ['https://www.iccindia.org/']
-        });
-      }
-
-      // Add Evidence-Based Medications
-      for (const med of medications) {
-        recommendations.push({
-          recommendation: `💊 ${med.drug} ${med.dosage} - ${med.evidence}`,
-          evidenceSource: 'research',
-          confidenceLevel: 'high',
-          sources: [med.source],
-          researchLinks: []
-        });
-      }
-
-      // Add Gemini AI personalized recommendations
-      for (const rec of geminiRecs) {
-        recommendations.push({
-          recommendation: rec,
-          evidenceSource: 'ai',
-          confidenceLevel: 'moderate',
-          sources: ['Google Gemini AI (Free Tier)'],
-          researchLinks: []
-        });
-      }
-
-      // Add Latest Research insights
-      if (research.length > 0) {
-        recommendations.push({
-          recommendation: `📊 Latest Research: ${research[0].title}`,
-          evidenceSource: 'research',
-          confidenceLevel: 'high',
-          sources: ['PubMed Central - Latest Research'],
-          researchLinks: [research[0].url]
-        });
-      }
+      // Add recommendations from each source
+      this.addWHORecommendations(recommendations, whoGuidelines);
+      this.addICCRecommendations(recommendations, iccGuidelines);
+      this.addMedicationRecommendations(recommendations, medications);
+      this.addGeminiRecommendations(recommendations, geminiRecs);
+      this.addResearchRecommendations(recommendations, research);
 
       // Deduplicate and limit to 15 recommendations
       const uniqueRecs = this.deduplicateRecommendations(recommendations);
       const finalRecs = uniqueRecs.slice(0, 15);
 
+      this.logRecommendationStats(whoGuidelines, iccGuidelines, research, medications, geminiRecs, finalRecs);
+
+      return finalRecs;
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Error generating max accuracy recommendations:', error);
+      return this.getFallbackRecommendations(riskLevel);
+    }
+  }
+
+  /**
+   * Collect recommendations from all sources
+   */
+  private async collectAllRecommendationSources(
+    riskScore: number,
+    riskLevel: string,
+    age: number,
+    conditions: string[]
+  ): Promise<[WHOGuideline[], ICCGuideline[], ResearchPaper[], EvidencedMedication[], string[]]> {
+    const whoGuidelines = await this.getWHOGuidelines(riskLevel);
+    const iccGuidelines = await this.getICCGuidelines(riskScore, age);
+    const research = await this.getLatestResearch('cardiac risk reduction AND prevention', 5);
+    const medications = await this.getEvidencedBasedMedications(conditions.join(' '), riskLevel);
+    
+    let geminiRecs: string[] = [];
+    if (this.model) {
+      geminiRecs = await this.getGeminiPersonalizedRecs(riskScore, riskLevel, age, conditions);
+    }
+
+    return [whoGuidelines, iccGuidelines, research, medications, geminiRecs];
+  }
+
+  /**
+   * Add WHO guideline recommendations
+   */
+  private addWHORecommendations(
+    recommendations: AccurateRecommendation[],
+    guidelines: WHOGuideline[]
+  ): void {
+    for (const guideline of guidelines) {
+      recommendations.push({
+        recommendation: guideline.recommendation,
+        evidenceSource: 'guideline',
+        confidenceLevel: guideline.level === 'strong' ? 'high' : 'moderate',
+        sources: ['WHO Cardiovascular Guidelines 2021'],
+        researchLinks: ['https://www.who.int/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds)']
+      });
+    }
+  }
+
+  /**
+   * Add ICC guideline recommendations
+   */
+  private addICCRecommendations(
+    recommendations: AccurateRecommendation[],
+    guidelines: ICCGuideline[]
+  ): void {
+    for (const guideline of guidelines) {
+      recommendations.push({
+        recommendation: guideline.recommendation,
+        evidenceSource: 'guideline',
+        confidenceLevel: guideline.level === 'strong' ? 'high' : 'moderate',
+        sources: ['Indian College of Cardiologists Guidelines'],
+        researchLinks: ['https://www.iccindia.org/']
+      });
+    }
+  }
+
+  /**
+   * Add medication recommendations
+   */
+  private addMedicationRecommendations(
+    recommendations: AccurateRecommendation[],
+    medications: EvidencedMedication[]
+  ): void {
+    for (const med of medications) {
+      recommendations.push({
+        recommendation: `💊 ${med.drug} ${med.dosage} - ${med.evidence}`,
+        evidenceSource: 'research',
+        confidenceLevel: 'high',
+        sources: [med.source],
+        researchLinks: []
+      });
+    }
+  }
+
+  /**
+   * Add Gemini AI recommendations
+   */
+  private addGeminiRecommendations(
+    recommendations: AccurateRecommendation[],
+    geminiRecs: string[]
+  ): void {
+    for (const rec of geminiRecs) {
+      recommendations.push({
+        recommendation: rec,
+        evidenceSource: 'ai',
+        confidenceLevel: 'moderate',
+        sources: ['Google Gemini AI (Free Tier)'],
+        researchLinks: []
+      });
+    }
+  }
+
+  /**
+   * Add research paper recommendations
+   */
+  private addResearchRecommendations(
+    recommendations: AccurateRecommendation[],
+    research: ResearchPaper[]
+  ): void {
+    if (research.length > 0) {
+      recommendations.push({
+        recommendation: `📊 Latest Research: ${research[0].title}`,
+        evidenceSource: 'research',
+        confidenceLevel: 'high',
+        sources: ['PubMed Central - Latest Research'],
+        researchLinks: [research[0].url]
+      });
+    }
+  }
+
+  /**
+   * Log recommendation statistics
+   */
+  private logRecommendationStats(
+    whoGuidelines: WHOGuideline[],
+    iccGuidelines: ICCGuideline[],
+    research: ResearchPaper[],
+    medications: EvidencedMedication[],
+    geminiRecs: string[],
+    finalRecs: AccurateRecommendation[]
+  ): void {
+    if (import.meta.env.DEV) {
       console.log(`✅ Generated ${finalRecs.length} recommendations from FREE resources`);
       console.log(`   - WHO Guidelines: ${whoGuidelines.length}`);
       console.log(`   - ICC Guidelines: ${iccGuidelines.length}`);
       console.log(`   - Research Papers: ${research.length}`);
       console.log(`   - Medications: ${medications.length}`);
       console.log(`   - Gemini AI: ${geminiRecs.length}`);
-
-      return finalRecs;
-    } catch (error) {
-      console.error('Error generating max accuracy recommendations:', error);
-      return this.getFallbackRecommendations(riskLevel);
     }
   }
 
@@ -439,7 +510,7 @@ class FreeResourcesIntegration {
 
       return recs;
     } catch (error) {
-      console.log('Error getting Gemini recommendations:', error);
+      if (import.meta.env.DEV) console.log('Error getting Gemini recommendations:', error);
       return [];
     }
   }
@@ -505,7 +576,7 @@ class FreeResourcesIntegration {
       }
       return '';
     } catch (error) {
-      console.log('Error getting research summary:', error);
+      if (import.meta.env.DEV) console.log('Error getting research summary:', error);
       return '';
     }
   }

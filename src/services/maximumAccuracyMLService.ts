@@ -52,7 +52,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { PatientData, PredictionResult } from '@/lib/mockData';
+import { PatientData } from '@/lib/mockData';
 import { config } from '@/lib/config';
 import { deepseekIntegration } from './deepseekIntegration';
 import { enhancedRecommendationEngine } from './enhancedRecommendationEngine';
@@ -116,12 +116,17 @@ interface AdvancedFeatures {
   geneticRiskFactor: number;
 }
 
+type ModelType = 'clinical' | 'ml' | 'ai' | 'ensemble';
+type RiskLevel = 'low' | 'medium' | 'high' | 'very-high';
+type RiskTrajectory = 'improving' | 'stable' | 'worsening';
+type PredictionReliability = 'very-high' | 'high' | 'medium' | 'low';
+
 interface ModelPrediction {
   modelName: string;
-  modelType: 'clinical' | 'ml' | 'ai' | 'ensemble';
+  modelType: ModelType;
   riskScore: number; // 0-100
   confidence: number; // 0-100
-  riskLevel: 'low' | 'medium' | 'high' | 'very-high';
+  riskLevel: RiskLevel;
   features: string[];
   reasoning: string;
   weight: number; // for ensemble
@@ -132,21 +137,24 @@ interface TemporalRiskPrediction {
   fiveYearRisk: number;
   tenYearRisk: number;
   lifetimeRisk: number;
-  riskTrajectory: 'improving' | 'stable' | 'worsening';
+  riskTrajectory: RiskTrajectory;
 }
 
 interface UncertaintyQuantification {
   mean: number;
   standardDeviation: number;
   confidenceInterval95: { lower: number; upper: number };
-  predictionReliability: 'very-high' | 'high' | 'medium' | 'low';
+  predictionReliability: PredictionReliability;
 }
+
+type PredictionCategory = 'No Risk' | 'Risk Detected' | 'High Risk';
+type ConsensusLevel = 'full' | 'high' | 'moderate' | 'low';
 
 interface MaximumAccuracyPrediction {
   // Core prediction
   finalRiskScore: number; // 0-100
-  riskLevel: 'low' | 'medium' | 'high' | 'very-high';
-  prediction: 'No Risk' | 'Risk Detected' | 'High Risk';
+  riskLevel: RiskLevel;
+  prediction: PredictionCategory;
   
   // Confidence & uncertainty
   confidence: number; // 0-100
@@ -155,7 +163,7 @@ interface MaximumAccuracyPrediction {
   // All model predictions
   models: ModelPrediction[];
   modelAgreement: number; // percentage
-  consensusLevel: 'full' | 'high' | 'moderate' | 'low';
+  consensusLevel: ConsensusLevel;
   
   // Temporal analysis
   temporal: TemporalRiskPrediction;
@@ -182,18 +190,18 @@ interface MaximumAccuracyPrediction {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class MaximumAccuracyMLService {
-  private gemini: GoogleGenerativeAI | null = null;
-  private model: any = null;
+  private readonly gemini: GoogleGenerativeAI | null = null;
+  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
   
   // Model performance tracking
-  private modelAccuracyScores = {
+  private readonly modelAccuracyScores = {
     framingham: 0.85,
     accAha: 0.87,
     score: 0.84,
     qrisk3: 0.89,
     xgboost: 0.92,
     randomForest: 0.91,
-    neuralNet: 0.90,
+    neuralNet: 0.9,
     svm: 0.88,
     iccCalibrated: 0.86,
     geminiAI: 0.83,
@@ -218,15 +226,15 @@ class MaximumAccuracyMLService {
     userId?: string
   ): Promise<MaximumAccuracyPrediction> {
     try {
-      console.log('🚀 Starting Maximum Accuracy Prediction (10-Model Ensemble)...');
+      if (import.meta.env.DEV) console.log('🚀 Starting Maximum Accuracy Prediction (10-Model Ensemble)...');
       
       // Step 0: Comprehensive input utilization analysis
       const comprehensiveFeatures = comprehensiveInputUtilization.extractComprehensiveFeatures(patientData);
       const utilizationReport = comprehensiveInputUtilization.generateUtilizationReport(patientData);
       
-      console.log(`📊 Input Utilization: ${utilizationReport.utilizationPercentage.toFixed(1)}% (${utilizationReport.fieldsWithData}/${utilizationReport.totalFieldsCollected} fields)`);
-      console.log(`✨ Data Quality Score: ${utilizationReport.dataQualityScore.toFixed(1)}/100`);
-      console.log(`🎯 Confidence Boost: +${utilizationReport.predictionConfidenceBoost.toFixed(1)}% from comprehensive data`);
+      if (import.meta.env.DEV) console.log(`📊 Input Utilization: ${utilizationReport.utilizationPercentage.toFixed(1)}% (${utilizationReport.fieldsWithData}/${utilizationReport.totalFieldsCollected} fields)`);
+      if (import.meta.env.DEV) console.log(`✨ Data Quality Score: ${utilizationReport.dataQualityScore.toFixed(1)}/100`);
+      if (import.meta.env.DEV) console.log(`🎯 Confidence Boost: +${utilizationReport.predictionConfidenceBoost.toFixed(1)}% from comprehensive data`);
       
       // Step 1: Advanced feature engineering (50+ features from 15 inputs)
       // Now enhanced with 100+ features from ALL 54+ input fields
@@ -349,30 +357,32 @@ class MaximumAccuracyMLService {
         accuracyEstimate: this.modelAccuracyScores.superEnsemble * 100
       };
 
-      console.log(`✅ Maximum Accuracy Prediction Complete: ${calibratedScore.toFixed(1)}% risk (${riskLevel})`);
-      console.log(`   📊 Model Agreement: ${modelAgreement.toFixed(1)}%`);
-      console.log(`   🎯 Confidence: ${confidence.toFixed(1)}% (base: ${baseConfidence.toFixed(1)}% + data boost: ${utilizationReport.predictionConfidenceBoost.toFixed(1)}%)`);
-      console.log(`   📈 Expected Accuracy: ${this.modelAccuracyScores.superEnsemble * 100}%`);
-      console.log(`   📋 Input Fields Used: ${utilizationReport.fieldsWithData}/${utilizationReport.totalFieldsCollected} (${utilizationReport.utilizationPercentage.toFixed(1)}%)`);
+      if (import.meta.env.DEV) console.log(`✅ Maximum Accuracy Prediction Complete: ${calibratedScore.toFixed(1)}% risk (${riskLevel})`);
+      if (import.meta.env.DEV) console.log(`   📊 Model Agreement: ${modelAgreement.toFixed(1)}%`);
+      if (import.meta.env.DEV) console.log(`   🎯 Confidence: ${confidence.toFixed(1)}% (base: ${baseConfidence.toFixed(1)}% + data boost: ${utilizationReport.predictionConfidenceBoost.toFixed(1)}%)`);
+      if (import.meta.env.DEV) console.log(`   📈 Expected Accuracy: ${this.modelAccuracyScores.superEnsemble * 100}%`);
+      if (import.meta.env.DEV) console.log(`   📋 Input Fields Used: ${utilizationReport.fieldsWithData}/${utilizationReport.totalFieldsCollected} (${utilizationReport.utilizationPercentage.toFixed(1)}%)`);
       
       // Log comprehensive features being used
-      console.log(`   🔍 Comprehensive Features Extracted:`);
-      console.log(`      - Cardiovascular: ${[comprehensiveFeatures.pulsePressure, comprehensiveFeatures.meanArterialPressure, comprehensiveFeatures.heartRateVariabilityScore].length} metrics`);
-      console.log(`      - Metabolic: ${[comprehensiveFeatures.metabolicSyndromeScore, comprehensiveFeatures.insulinResistanceIndex].length} indices`);
-      console.log(`      - Lifestyle: ${[comprehensiveFeatures.dietQualityScore, comprehensiveFeatures.exerciseProtectiveEffect, comprehensiveFeatures.sleepQuality].length} factors`);
-      console.log(`      - Indian-Specific: Lp(a)=${comprehensiveFeatures.lipoproteinA}, hsCRP=${comprehensiveFeatures.hscrp}, Homocysteine=${comprehensiveFeatures.homocysteine}`);
-      console.log(`      - Regional: ${comprehensiveFeatures.region}, ${comprehensiveFeatures.areaType} (adjustment: ${comprehensiveFeatures.regionalRiskAdjustment}x)`);
+      if (import.meta.env.DEV) console.log(`   🔍 Comprehensive Features Extracted:`);
+      if (import.meta.env.DEV) console.log(`      - Cardiovascular: ${[comprehensiveFeatures.pulsePressure, comprehensiveFeatures.meanArterialPressure, comprehensiveFeatures.heartRateVariabilityScore].length} metrics`);
+      if (import.meta.env.DEV) console.log(`      - Metabolic: ${[comprehensiveFeatures.metabolicSyndromeScore, comprehensiveFeatures.insulinResistanceIndex].length} indices`);
+      if (import.meta.env.DEV) console.log(`      - Lifestyle: ${[comprehensiveFeatures.dietQualityScore, comprehensiveFeatures.exerciseProtectiveEffect, comprehensiveFeatures.sleepQuality].length} factors`);
+      if (import.meta.env.DEV) console.log(`      - Indian-Specific: Lp(a)=${comprehensiveFeatures.lipoproteinA}, hsCRP=${comprehensiveFeatures.hscrp}, Homocysteine=${comprehensiveFeatures.homocysteine}`);
+      if (import.meta.env.DEV) console.log(`      - Regional: ${comprehensiveFeatures.region}, ${comprehensiveFeatures.areaType} (adjustment: ${comprehensiveFeatures.regionalRiskAdjustment}x)`);
       
       // Log utilization report recommendations
       if (utilizationReport.recommendations.length > 0) {
-        console.log(`   💡 Data Collection Recommendations:`);
-        utilizationReport.recommendations.forEach(rec => console.log(`      ${rec}`));
+        if (import.meta.env.DEV) console.log(`   💡 Data Collection Recommendations:`);
+        for (const rec of utilizationReport.recommendations) {
+          if (import.meta.env.DEV) console.log(`      ${rec}`);
+        }
       }
       
       return result;
       
     } catch (error) {
-      console.error('Maximum Accuracy ML Error:', error);
+      if (import.meta.env.DEV) console.error('Maximum Accuracy ML Error:', error);
       throw error;
     }
   }
@@ -441,12 +451,12 @@ class MaximumAccuracyMLService {
     const geneticRiskFactor = comprehensive.familyHistoryRiskMultiplier * 
                               comprehensive.lipoproteinARiskMultiplier;
 
-    console.log('   ✅ Feature Engineering: Used ALL available input fields');
-    console.log(`      - Advanced lipid markers: Lp(a)=${comprehensive.lipoproteinA}, hsCRP=${comprehensive.hscrp}, Homocysteine=${comprehensive.homocysteine}`);
-    console.log(`      - Comprehensive lifestyle: Diet=${comprehensive.dietQualityScore}, Exercise=${comprehensive.exerciseMinutesPerWeek}min/wk, Sleep=${comprehensive.sleepHours}hrs`);
-    console.log(`      - Regional calibration: ${comprehensive.region} (${comprehensive.areaType}) - adjustment=${comprehensive.regionalRiskAdjustment}x`);
-    console.log(`      - Medication compliance: ${comprehensive.treatmentComplianceScore}/100`);
-    console.log(`      - Clinical documentation: ${comprehensive.clinicalDocumentationCompleteness}% complete`);
+    if (import.meta.env.DEV) console.log('   ✅ Feature Engineering: Used ALL available input fields');
+    if (import.meta.env.DEV) console.log(`      - Advanced lipid markers: Lp(a)=${comprehensive.lipoproteinA}, hsCRP=${comprehensive.hscrp}, Homocysteine=${comprehensive.homocysteine}`);
+    if (import.meta.env.DEV) console.log(`      - Comprehensive lifestyle: Diet=${comprehensive.dietQualityScore}, Exercise=${comprehensive.exerciseMinutesPerWeek}min/wk, Sleep=${comprehensive.sleepHours}hrs`);
+    if (import.meta.env.DEV) console.log(`      - Regional calibration: ${comprehensive.region} (${comprehensive.areaType}) - adjustment=${comprehensive.regionalRiskAdjustment}x`);
+    if (import.meta.env.DEV) console.log(`      - Medication compliance: ${comprehensive.treatmentComplianceScore}/100`);
+    if (import.meta.env.DEV) console.log(`      - Clinical documentation: ${comprehensive.clinicalDocumentationCompleteness}% complete`);
 
     return {
       age,
@@ -492,16 +502,44 @@ class MaximumAccuracyMLService {
    * ═══════════════════════════════════════════════════════════════════════════
    */
 
+  /**
+   * Calculate risk level from score
+   */
+  private getRiskLevel(score: number): RiskLevel {
+    if (score < 20) return 'low';
+    if (score < 40) return 'medium';
+    return 'high';
+  }
+
+  /**
+   * Calculate risk level from score with custom thresholds
+   */
+  private getRiskLevelFromScore(score: number, lowThreshold: number, mediumThreshold: number): RiskLevel {
+    if (score < lowThreshold) return 'low';
+    if (score < mediumThreshold) return 'medium';
+    return 'high';
+  }
+
+  /**
+   * Calculate age-based risk score
+   */
+  private getAgeScore(age: number): number {
+    if (age < 40) return 0;
+    if (age < 50) return 10;
+    if (age < 60) return 20;
+    return 30;
+  }
+
   // MODEL 1: Framingham Risk Score (Validated clinical model)
   private async framinghamModel(features: AdvancedFeatures): Promise<ModelPrediction> {
-    let score = features.framinghamScore;
+    const score = features.framinghamScore;
     
     return {
       modelName: 'Framingham Heart Study',
       modelType: 'clinical',
       riskScore: score,
       confidence: 88,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['age', 'cholesterol', 'BP', 'smoking', 'diabetes'],
       reasoning: '50+ years of clinical data from Framingham cohort',
       weight: 0.12
@@ -510,14 +548,14 @@ class MaximumAccuracyMLService {
 
   // MODEL 2: ACC/AHA Pooled Cohort Equations
   private async accAhaModel(features: AdvancedFeatures): Promise<ModelPrediction> {
-    let score = features.accAhaScore;
+    const score = features.accAhaScore;
     
     return {
       modelName: 'ACC/AHA 2013',
       modelType: 'clinical',
       riskScore: score,
       confidence: 90,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['age', 'race', 'cholesterol', 'BP', 'diabetes', 'smoking'],
       reasoning: 'American College of Cardiology guidelines',
       weight: 0.12
@@ -526,14 +564,14 @@ class MaximumAccuracyMLService {
 
   // MODEL 3: SCORE Risk Model (European)
   private async scoreModel(features: AdvancedFeatures): Promise<ModelPrediction> {
-    let score = features.scoreRiskScore;
+    const score = features.scoreRiskScore;
     
     return {
       modelName: 'SCORE Europe',
       modelType: 'clinical',
       riskScore: score,
       confidence: 85,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['age', 'gender', 'smoking', 'BP', 'cholesterol'],
       reasoning: 'European cardiovascular risk assessment',
       weight: 0.08
@@ -542,14 +580,14 @@ class MaximumAccuracyMLService {
 
   // MODEL 4: QRISK3 (UK comprehensive model)
   private async qrisk3Model(features: AdvancedFeatures): Promise<ModelPrediction> {
-    let score = features.qrisk3Score;
+    const score = features.qrisk3Score;
     
     return {
       modelName: 'QRISK3',
       modelType: 'clinical',
       riskScore: score,
       confidence: 91,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['age', 'ethnicity', 'BP', 'cholesterol', 'BMI', 'family history', 'comorbidities'],
       reasoning: 'Most comprehensive clinical algorithm (includes 20+ risk factors)',
       weight: 0.13
@@ -562,16 +600,40 @@ class MaximumAccuracyMLService {
     let score = 0;
     
     // Age contribution (non-linear)
-    score += features.age < 40 ? 5 : features.age < 50 ? 15 : features.age < 60 ? 30 : 45;
+    if (features.age < 40) {
+      score += 5;
+    } else if (features.age < 50) {
+      score += 15;
+    } else if (features.age < 60) {
+      score += 30;
+    } else {
+      score += 45;
+    }
     
     // Cholesterol with HDL interaction
-    score += features.cholesterolRatio > 5 ? 20 : features.cholesterolRatio > 4 ? 15 : 5;
+    if (features.cholesterolRatio > 5) {
+      score += 20;
+    } else if (features.cholesterolRatio > 4) {
+      score += 15;
+    } else {
+      score += 5;
+    }
     
     // BP with diabetes interaction
-    score += features.bpXDiabetes > 200 ? 25 : features.bpXDiabetes > 150 ? 15 : 5;
+    if (features.bpXDiabetes > 200) {
+      score += 25;
+    } else if (features.bpXDiabetes > 150) {
+      score += 15;
+    } else {
+      score += 5;
+    }
     
     // Smoking with age synergy
-    score += features.smokingXAge > 10 ? 20 : features.smokingXAge > 5 ? 10 : 0;
+    if (features.smokingXAge > 10) {
+      score += 20;
+    } else if (features.smokingXAge > 5) {
+      score += 10;
+    }
     
     // Metabolic syndrome boost
     if (features.metabolicSyndrome) score += 15;
@@ -581,7 +643,7 @@ class MaximumAccuracyMLService {
       modelType: 'ml',
       riskScore: Math.min(score, 95),
       confidence: 93,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['all features', 'interaction terms', 'non-linear patterns'],
       reasoning: 'Gradient boosting captures complex feature interactions',
       weight: 0.14
@@ -593,16 +655,32 @@ class MaximumAccuracyMLService {
     let score = 0;
     
     // Tree 1: Age-focused
-    score += features.age > 60 ? 35 : features.age > 50 ? 20 : 10;
+    if (features.age > 60) {
+      score += 35;
+    } else if (features.age > 50) {
+      score += 20;
+    } else {
+      score += 10;
+    }
     
     // Tree 2: Lipid-focused
     score += features.nonHdlCholesterol > 160 ? 25 : 10;
     
     // Tree 3: BP-focused
-    score += features.systolicBP > 160 ? 30 : features.systolicBP > 140 ? 20 : 5;
+    if (features.systolicBP > 160) {
+      score += 30;
+    } else if (features.systolicBP > 140) {
+      score += 20;
+    } else {
+      score += 5;
+    }
     
     // Tree 4: Lifestyle-focused
-    score += features.smokingPackYears > 10 ? 20 : features.exerciseMinutesPerWeek < 90 ? 10 : 0;
+    if (features.smokingPackYears > 10) {
+      score += 20;
+    } else if (features.exerciseMinutesPerWeek < 90) {
+      score += 10;
+    }
     
     // Tree 5: Indian population
     score += features.indianPopulationAdjustment;
@@ -615,7 +693,7 @@ class MaximumAccuracyMLService {
       modelType: 'ml',
       riskScore: Math.min(score * 2, 95), // Scale up
       confidence: 91,
-      riskLevel: score < 10 ? 'low' : score < 20 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevelFromScore(score, 10, 20),
       features: ['ensemble of decision trees', 'robustness to outliers'],
       reasoning: 'Multiple decision trees voting on risk factors',
       weight: 0.12
@@ -649,10 +727,10 @@ class MaximumAccuracyMLService {
       modelType: 'ml',
       riskScore: Math.min(score, 95),
       confidence: 89,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['deep feature learning', 'non-linear transformations'],
       reasoning: 'Deep learning network with 3 hidden layers',
-      weight: 0.10
+      weight: 0.1
     };
   }
 
@@ -676,7 +754,7 @@ class MaximumAccuracyMLService {
       modelType: 'ml',
       riskScore: Math.min(score * 1.8, 95),
       confidence: 87,
-      riskLevel: score < 15 ? 'low' : score < 30 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevelFromScore(score, 15, 30),
       features: ['kernel-based classification', 'margin maximization'],
       reasoning: 'SVM with RBF kernel for non-linear decision boundaries',
       weight: 0.09
@@ -707,10 +785,10 @@ class MaximumAccuracyMLService {
       modelType: 'clinical',
       riskScore: Math.min(score, 95),
       confidence: 86,
-      riskLevel: score < 20 ? 'low' : score < 40 ? 'medium' : 'high',
+      riskLevel: this.getRiskLevel(score),
       features: ['Indian population calibration', 'genetic factors', 'lower BMI thresholds'],
       reasoning: 'Indian Council of Cardiology guidelines for South Asian population',
-      weight: 0.10
+      weight: 0.1
     };
   }
 
@@ -727,21 +805,23 @@ class MaximumAccuracyMLService {
         const prompt = `Analyze cardiac risk for: Age ${features.age}, Cholesterol ${features.totalCholesterol}, BP ${features.systolicBP}/${features.diastolicBP}, Smoking: ${features.smokingPackYears > 0}, Diabetes Risk: ${features.diabetesRisk}%. Give risk score 0-100 only.`;
         const result = await this.model.generateContent(prompt);
         const text = result.response.text();
-        const match = text.match(/(\d+)/);
-        const geminiScore = match ? parseInt(match[1]) : features.framinghamScore;
+        const numberRegex = /(\d+)/;
+        const match = numberRegex.exec(text);
+        const geminiScore = match ? Number.parseInt(match[1], 10) : features.framinghamScore;
         
         aiModels.push({
           modelName: 'Gemini AI',
           modelType: 'ai',
           riskScore: Math.min(geminiScore, 95),
           confidence: 80,
-          riskLevel: geminiScore < 20 ? 'low' : geminiScore < 40 ? 'medium' : 'high',
+          riskLevel: this.getRiskLevel(geminiScore),
           features: ['AI analysis', 'medical knowledge', 'pattern recognition'],
           reasoning: 'Google Gemini medical AI analysis',
           weight: 0.05
         });
       } catch (error) {
-        console.log('Gemini AI unavailable');
+        // Gemini AI fallback - continue without AI prediction
+        if (import.meta.env.DEV) console.warn('Gemini AI unavailable:', error);
       }
     }
     
@@ -750,7 +830,7 @@ class MaximumAccuracyMLService {
       try {
         const deepseekRecs = await deepseekIntegration.generateMedicalRecommendations(
           features.framinghamScore,
-          features.framinghamScore < 20 ? 'low' : features.framinghamScore < 40 ? 'medium' : 'high',
+          this.getRiskLevel(features.framinghamScore),
           features.age,
           patientData.diabetes ? ['diabetes'] : [],
           features.smokingPackYears > 0 ? ['smoking'] : []
@@ -764,20 +844,19 @@ class MaximumAccuracyMLService {
           modelType: 'ai',
           riskScore: Math.min(deepseekScore, 95),
           confidence: 78,
-          riskLevel: deepseekScore < 20 ? 'low' : deepseekScore < 40 ? 'medium' : 'high',
+          riskLevel: this.getRiskLevel(deepseekScore),
           features: ['AI medical reasoning', 'alternative perspective'],
           reasoning: 'DeepSeek AI backup analysis',
           weight: 0.05
         });
       } catch (error) {
-        console.log('DeepSeek AI unavailable');
+        // DeepSeek fallback - continue without AI prediction
+        if (import.meta.env.DEV) console.log('DeepSeek AI unavailable:', error);
       }
     }
-    
-    return aiModels;
-  }
 
-  /**
+    return aiModels;
+  }  /**
    * ═══════════════════════════════════════════════════════════════════════════
    * SUPER ENSEMBLE - Adaptive Weighted Averaging
    * ═══════════════════════════════════════════════════════════════════════════
@@ -835,9 +914,14 @@ class MaximumAccuracyMLService {
   }
 
   private estimateBodyFat(bmi: number, age: number, gender: string): number {
-    let bodyFat = (1.20 * bmi) + (0.23 * age);
-    if (gender === 'male') bodyFat -= 10.8;
-    else bodyFat -= 5.4;
+    const BMI_COEFFICIENT = 1.2;
+    const AGE_COEFFICIENT = 0.23;
+    const MALE_ADJUSTMENT = 10.8;
+    const FEMALE_ADJUSTMENT = 5.4;
+    
+    let bodyFat = (BMI_COEFFICIENT * bmi) + (AGE_COEFFICIENT * age);
+    if (gender === 'male') bodyFat -= MALE_ADJUSTMENT;
+    else bodyFat -= FEMALE_ADJUSTMENT;
     return Math.max(0, Math.min(50, bodyFat));
   }
 
@@ -849,7 +933,7 @@ class MaximumAccuracyMLService {
   private calculateFraminghamScore(data: PatientData): number {
     let score = 0;
     const age = data.age || 50;
-    score += age < 40 ? 0 : age < 50 ? 10 : age < 60 ? 20 : 30;
+    score += this.getAgeScore(age);
     score += data.cholesterol ? (data.cholesterol - 150) / 10 : 5;
     score += data.systolicBP ? (data.systolicBP - 110) / 5 : 2;
     if (data.smoking) score += 8;
@@ -887,11 +971,15 @@ class MaximumAccuracyMLService {
     data: PatientData
   ): number {
     // Apply 20% risk increase for South Asian population
-    let calibrated = score * 1.20;
+    const SOUTH_ASIAN_RISK_MULTIPLIER = 1.2;
+    const METABOLIC_SYNDROME_MULTIPLIER = 1.1;
+    const PRE_OBESE_BMI_MULTIPLIER = 1.05;
+    
+    let calibrated = score * SOUTH_ASIAN_RISK_MULTIPLIER;
     
     // Additional adjustments
-    if (features.metabolicSyndrome) calibrated *= 1.1;
-    if (features.bmi > 23 && features.bmi < 25) calibrated *= 1.05;
+    if (features.metabolicSyndrome) calibrated *= METABOLIC_SYNDROME_MULTIPLIER;
+    if (features.bmi > 23 && features.bmi < 25) calibrated *= PRE_OBESE_BMI_MULTIPLIER;
     
     return Math.min(calibrated, 98);
   }
@@ -1065,9 +1153,10 @@ class MaximumAccuracyMLService {
   }
 
   private getMode(arr: string[]): string {
-    return arr.sort((a, b) =>
+    const sorted = [...arr].sort((a, b) =>
       arr.filter(v => v === a).length - arr.filter(v => v === b).length
-    ).pop() || '';
+    );
+    return sorted.pop() || '';
   }
 
   private determineConsensusLevel(agreement: number): 'full' | 'high' | 'moderate' | 'low' {
@@ -1095,7 +1184,7 @@ class MaximumAccuracyMLService {
     
     // Scenario 2: Lower cholesterol
     if (features.cholesterolRatio > 4) {
-      const newRisk = currentRisk * 0.80; // 20% reduction
+      const newRisk = currentRisk * 0.8; // 20% reduction
       scenarios.push({
         change: 'If you lower cholesterol to optimal levels',
         newRisk,
@@ -1188,10 +1277,11 @@ class MaximumAccuracyMLService {
     explanation += `**Expected System Accuracy:** 95-97%\n\n`;
     
     explanation += `### ⚠️ Your Primary Risk Factors:\n`;
-    topFactors.forEach((factor, idx) => {
+    for (let idx = 0; idx < topFactors.length; idx++) {
+      const factor = topFactors[idx];
       const modifiable = factor.modifiable ? '✅ Modifiable' : '⚫ Non-modifiable';
       explanation += `${idx + 1}. **${factor.factor}** (${factor.importance}% contribution) - ${modifiable}\n`;
-    });
+    }
     
     explanation += `\n### 🏥 What This Means:\n`;
     if (riskLevel === 'low') {
@@ -1210,3 +1300,8 @@ class MaximumAccuracyMLService {
 }
 
 export const maximumAccuracyMLService = new MaximumAccuracyMLService();
+
+
+
+
+

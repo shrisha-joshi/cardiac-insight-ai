@@ -3,7 +3,16 @@
 // Date: November 4, 2025
 // Version: 2.0 - Indian Population Focus
 
-import { z } from 'zod';
+// ============================================================================
+// TYPE ALIASES
+// ============================================================================
+
+type SeverityLevel = 'Low' | 'Moderate' | 'High';
+type Sex = 'M' | 'F';
+type Region = 'Urban' | 'Rural' | 'Mixed';
+type SocioeconomicStatus = 'Low' | 'Middle' | 'High';
+
+// ============================================================================
 
 // ============================================================================
 // 1. ENHANCED DATA MODELS WITH INDIAN POPULATION SUPPORT
@@ -12,9 +21,9 @@ import { z } from 'zod';
 export interface EnhancedCVDPatientData {
   // Demographics
   age: number;
-  sex: 'M' | 'F';
-  region?: 'Urban' | 'Rural' | 'Mixed';
-  socioeconomicStatus?: 'Low' | 'Middle' | 'High';
+  sex: Sex;
+  region?: Region;
+  socioeconomicStatus?: SocioeconomicStatus;
   populationGroup: 'Indian' | 'SouthAsian' | 'Global';
 
   // Cardiovascular History
@@ -81,7 +90,7 @@ export interface EnhancedCVDRiskResponse {
     factor: string;
     contribution: number;
     percentage: number;
-    severity: 'Low' | 'Moderate' | 'High';
+    severity: SeverityLevel;
   }>;
   
   // Indian population specific insights
@@ -126,7 +135,7 @@ const INDIAN_RISK_ADJUSTMENTS = {
   // Age adjustment: CVD develops 5-10 years earlier in Indians
   ageMultiplier: {
     M: 1.15,  // 15% increased risk
-    F: 1.20   // 20% increased risk (women more affected)
+    F: 1.2   // 20% increased risk (women more affected)
   },
 
   // Triglyceride coefficient: More predictive in Indian cohorts
@@ -152,7 +161,7 @@ const INDIAN_RISK_ADJUSTMENTS = {
 
   // Lipoprotein(a): Genetically elevated in Indians
   lipoproteinAFactor: {
-    prevalenceHighElevation: 0.30,  // 30% have elevated Lp(a)
+    prevalenceHighElevation: 0.3,  // 30% have elevated Lp(a)
     coefficientMultiplier: 1.35,
     reason: 'Indians genetically prone to elevated Lp(a)'
   },
@@ -213,7 +222,7 @@ const INDIAN_CLINICAL_THRESHOLDS = {
     triglycerides: 150,           // critical threshold
     hdl_men: 40,
     hdl_women: 50,
-    triglyceridesToHDLRatio: 3.0  // important in Indians
+    triglyceridesToHDLRatio: 3  // important in Indians
   },
 
   // Fasting blood glucose
@@ -297,9 +306,9 @@ function calculateInterhearRisk(factors: InterheartFactors): {
     diabetes: (factors.diabetes ? 1 : 0) * 0.12,
     abdominalObesity: factors.abdominalObesity * 0.18,
     psychosocialStress: factors.psychosocialStress * 0.08,
-    vegetableFruitIntake: (1 - factors.vegetableFruitIntake) * 0.10,
+    vegetableFruitIntake: (1 - factors.vegetableFruitIntake) * 0.1,
     exercise: (1 - factors.exercise) * 0.12,
-    alcohol: Math.abs(factors.alcohol - 0.5) * 0.10  // Moderate protective
+    alcohol: Math.abs(factors.alcohol - 0.5) * 0.1  // Moderate protective
   };
 
   const totalScore = Object.values(attributableRisk).reduce((a, b) => a + b, 0);
@@ -318,21 +327,8 @@ function calculateInterhearRisk(factors: InterheartFactors): {
 // 6. MAIN ENHANCED RISK ASSESSMENT FUNCTION
 // ============================================================================
 
-export function assessEnhancedCVDRisk(
-  patientData: EnhancedCVDPatientData
-): EnhancedCVDRiskResponse {
-  // ---- FRAMINGHAM SCORE ----
+function calculateFraminghamLogit(patientData: EnhancedCVDPatientData): number {
   let framinghamLogit = GLOBAL_COEFFICIENTS.intercept;
-  
-  const framinghamFeatures = {
-    age: patientData.age,
-    sex: patientData.sex === 'M' ? 1 : 0,
-    systolicBP: patientData.systolicBP,
-    totalCholesterol: patientData.totalCholesterol,
-    hdlCholesterol: patientData.hdlCholesterol,
-    smokingStatus: patientData.smokingStatus === 'Current' ? 1 : 0,
-    diabetesStatus: patientData.diabetesStatus === 'Diabetic' ? 1 : 0
-  };
 
   framinghamLogit += 0.0841 * Math.log(patientData.age);
   framinghamLogit += 0.089 * (patientData.sex === 'M' ? 1 : 0);
@@ -342,65 +338,90 @@ export function assessEnhancedCVDRisk(
   framinghamLogit += 0.35 * (patientData.smokingStatus === 'Current' ? 1 : 0);
   framinghamLogit += 0.37 * (patientData.diabetesStatus === 'Diabetic' ? 1 : 0);
 
-  const framinghamRisk = (1 / (1 + Math.exp(-framinghamLogit))) * 100;
+  return framinghamLogit;
+}
 
-  // ---- INDIAN ADJUSTED RISK ----
-  let indianLogit = framinghamLogit;
-  
-  // Apply Indian-specific adjustments
-  if (patientData.populationGroup === 'Indian' || patientData.populationGroup === 'SouthAsian') {
-    // Age adjustment
-    const ageMultiplier = INDIAN_RISK_ADJUSTMENTS.ageMultiplier[patientData.sex];
-    indianLogit *= ageMultiplier;
-
-    // Triglyceride adjustment (more predictive in Indians)
-    const triglycerideFactor = INDIAN_RISK_ADJUSTMENTS.triglycerideFactor.indianAdjustment / 
-                               INDIAN_RISK_ADJUSTMENTS.triglycerideFactor.baseCoefficient;
-    indianLogit += (triglycerideFactor - 1) * (0.289 * Math.log(patientData.triglycerides + 1));
-
-    // Waist circumference (central obesity critical)
-    const waistFactor = INDIAN_RISK_ADJUSTMENTS.waistCircumferenceCoefficient.indian / 
-                        INDIAN_RISK_ADJUSTMENTS.waistCircumferenceCoefficient.global;
-    indianLogit += (waistFactor - 1) * (0.156 * (patientData.waistCircumference - 90));
-
-    // HDL adjustment (stronger protective effect)
-    const hdlFactor = INDIAN_RISK_ADJUSTMENTS.hdlProtection.indianAdjustment / 
-                      INDIAN_RISK_ADJUSTMENTS.hdlProtection.baseCoefficient;
-    indianLogit += (hdlFactor - 1) * (-0.321 * Math.log(patientData.hdlCholesterol));
-
-    // Lipoprotein(a) if available
-    if (patientData.lipoproteinA && patientData.lipoproteinA > 50) {
-      indianLogit += Math.log(INDIAN_RISK_ADJUSTMENTS.lipoproteinAFactor.coefficientMultiplier);
-    }
-
-    // Diabetes multiplier
-    if (patientData.diabetesStatus === 'Prediabetic') {
-      indianLogit *= 1.8;
-    } else if (patientData.diabetesStatus === 'Diabetic') {
-      indianLogit *= 3.2;
-    }
-
-    // Betel quid/areca nut (common in India)
-    if (patientData.betelQuinUse === 'Current') {
-      indianLogit *= INDIAN_RISK_ADJUSTMENTS.smokingMultiplier.betelQuid;
-    }
+function applyIndianAdjustments(patientData: EnhancedCVDPatientData, framinghamLogit: number): number {
+  if (patientData.populationGroup !== 'Indian' && patientData.populationGroup !== 'SouthAsian') {
+    return framinghamLogit;
   }
 
-  const indianAdjustedRisk = (1 / (1 + Math.exp(-indianLogit))) * 100;
+  let indianLogit = framinghamLogit;
 
-  // ---- INTERHEART FACTORS ----
-  const interheartFactors: InterheartFactors = {
+  // Age adjustment
+  const ageMultiplier = INDIAN_RISK_ADJUSTMENTS.ageMultiplier[patientData.sex];
+  indianLogit *= ageMultiplier;
+
+  // Triglyceride adjustment (more predictive in Indians)
+  const triglycerideFactor = INDIAN_RISK_ADJUSTMENTS.triglycerideFactor.indianAdjustment / 
+                             INDIAN_RISK_ADJUSTMENTS.triglycerideFactor.baseCoefficient;
+  indianLogit += (triglycerideFactor - 1) * (0.289 * Math.log(patientData.triglycerides + 1));
+
+  // Waist circumference (central obesity critical)
+  const waistFactor = INDIAN_RISK_ADJUSTMENTS.waistCircumferenceCoefficient.indian / 
+                      INDIAN_RISK_ADJUSTMENTS.waistCircumferenceCoefficient.global;
+  indianLogit += (waistFactor - 1) * (0.156 * (patientData.waistCircumference - 90));
+
+  // HDL adjustment (stronger protective effect)
+  const hdlFactor = INDIAN_RISK_ADJUSTMENTS.hdlProtection.indianAdjustment / 
+                    INDIAN_RISK_ADJUSTMENTS.hdlProtection.baseCoefficient;
+  indianLogit += (hdlFactor - 1) * (-0.321 * Math.log(patientData.hdlCholesterol));
+
+  // Lipoprotein(a) if available
+  if (patientData.lipoproteinA && patientData.lipoproteinA > 50) {
+    indianLogit += Math.log(INDIAN_RISK_ADJUSTMENTS.lipoproteinAFactor.coefficientMultiplier);
+  }
+
+  // Diabetes multiplier
+  if (patientData.diabetesStatus === 'Prediabetic') {
+    indianLogit *= 1.8;
+  } else if (patientData.diabetesStatus === 'Diabetic') {
+    indianLogit *= 3.2;
+  }
+
+  // Betel quid/areca nut (common in India)
+  if (patientData.betelQuinUse === 'Current') {
+    indianLogit *= INDIAN_RISK_ADJUSTMENTS.smokingMultiplier.betelQuid;
+  }
+
+  return indianLogit;
+}
+
+function calculateInterheartFactors(patientData: EnhancedCVDPatientData): InterheartFactors {
+  let exerciseScore = 0;
+  if (patientData.physicalActivity === 'High') exerciseScore = 1;
+  else if (patientData.physicalActivity === 'Moderate') exerciseScore = 0.5;
+
+  let alcoholScore = 0;
+  if (patientData.alcoholConsumption === 'Heavy') alcoholScore = 1;
+  else if (patientData.alcoholConsumption === 'Moderate') alcoholScore = 0.5;
+
+  return {
     smoking: patientData.smokingStatus === 'Current' ? 1 : 0,
     lipidRatio: patientData.totalCholesterol / (patientData.hdlCholesterol || 40),
     hypertension: patientData.systolicBP >= 140 || patientData.diastolicBP >= 90,
     diabetes: patientData.diabetesStatus === 'Diabetic',
-    abdominalObesity: patientData.waistCircumference / (patientData.height - 20),  // Rough hip proxy
-    psychosocialStress: 0.5,  // Would be measured separately
-    vegetableFruitIntake: 0.5,  // Would be measured separately
-    exercise: patientData.physicalActivity === 'High' ? 1 : (patientData.physicalActivity === 'Moderate' ? 0.5 : 0),
-    alcohol: patientData.alcoholConsumption === 'Moderate' ? 0.5 : (patientData.alcoholConsumption === 'Heavy' ? 1 : 0)
+    abdominalObesity: patientData.waistCircumference / (patientData.height - 20),
+    psychosocialStress: 0.5,
+    vegetableFruitIntake: 0.5,
+    exercise: exerciseScore,
+    alcohol: alcoholScore
   };
+}
 
+export function assessEnhancedCVDRisk(
+  patientData: EnhancedCVDPatientData
+): EnhancedCVDRiskResponse {
+  // ---- FRAMINGHAM SCORE ----
+  const framinghamLogit = calculateFraminghamLogit(patientData);
+  const framinghamRisk = (1 / (1 + Math.exp(-framinghamLogit))) * 100;
+
+  // ---- INDIAN ADJUSTED RISK ----
+  const indianLogit = applyIndianAdjustments(patientData, framinghamLogit);
+  const indianAdjustedRisk = (1 / (1 + Math.exp(-indianLogit))) * 100;
+
+  // ---- INTERHEART FACTORS ----
+  const interheartFactors = calculateInterheartFactors(patientData);
   const interheartResult = calculateInterhearRisk(interheartFactors);
 
   // ---- CALCULATE FEATURE CONTRIBUTIONS ----
@@ -443,11 +464,18 @@ export function assessEnhancedCVDRisk(
 // 7. HELPER FUNCTIONS
 // ============================================================================
 
+type RiskFactor = { factor: string; contribution: number; percentage: number; severity: SeverityLevel };
+
 function calculateRiskFactors(
   patientData: EnhancedCVDPatientData,
   riskScore: number
-): Array<{ factor: string; contribution: number; percentage: number; severity: 'Low' | 'Moderate' | 'High' }> {
-  const factors: Array<{ factor: string; contribution: number; percentage: number; severity: 'Low' | 'Moderate' | 'High' }> = [];
+): Array<RiskFactor> {
+  const factors: Array<RiskFactor> = [];
+
+  // Calculate diabetes score separately
+  let diabetesScore = 0;
+  if (patientData.diabetesStatus === 'Diabetic') diabetesScore = 100;
+  else if (patientData.diabetesStatus === 'Prediabetic') diabetesScore = 50;
 
   // Analyze each major factor
   const factorWeights = {
@@ -458,12 +486,12 @@ function calculateRiskFactors(
     'Blood Pressure': Math.max(0, (patientData.systolicBP - 120) / 40) * 100,
     'HDL Cholesterol': Math.max(0, (50 - patientData.hdlCholesterol) / 50) * 100,
     'Smoking': (patientData.smokingStatus === 'Current' ? 100 : 0),
-    'Diabetes': (patientData.diabetesStatus === 'Diabetic' ? 100 : patientData.diabetesStatus === 'Prediabetic' ? 50 : 0)
+    'Diabetes': diabetesScore
   };
 
   for (const [factor, weight] of Object.entries(factorWeights)) {
     if (weight > 0) {
-      let severity: 'Low' | 'Moderate' | 'High' = 'Low';
+      let severity: SeverityLevel = 'Low';
       if (weight > 50) severity = 'High';
       else if (weight > 25) severity = 'Moderate';
       
@@ -476,7 +504,8 @@ function calculateRiskFactors(
     }
   }
 
-  return factors.sort((a, b) => b.contribution - a.contribution).slice(0, 5);
+  const sortedFactors = [...factors].sort((a, b) => b.contribution - a.contribution);
+  return sortedFactors.slice(0, 5);
 }
 
 function calculateIndianInsights(
@@ -499,7 +528,6 @@ function calculateIndianInsights(
   const lipoproteina_Elevated = patientData.lipoproteinA ? patientData.lipoproteinA > 50 : false;
 
   // Central obesity (most important for Indians)
-  const bmi = patientData.weight / ((patientData.height / 100) ** 2);
   const centralObesityConcern = (patientData.waistCircumference > 90 && patientData.sex === 'M') ||
                                 (patientData.waistCircumference > 80 && patientData.sex === 'F');
 
@@ -528,20 +556,28 @@ function generateRecommendations(riskScore: number, patientData: EnhancedCVDPati
   const recommendations = [];
 
   if (riskScore < 5) {
-    recommendations.push('Maintain current lifestyle');
-    recommendations.push('Continue regular exercise (150 min/week moderate intensity)');
+    recommendations.push(
+      'Maintain current lifestyle',
+      'Continue regular exercise (150 min/week moderate intensity)'
+    );
   } else if (riskScore < 10) {
-    recommendations.push('Increase physical activity to 150-300 min/week');
-    recommendations.push('Consider dietary modifications (Mediterranean diet)');
+    recommendations.push(
+      'Increase physical activity to 150-300 min/week',
+      'Consider dietary modifications (Mediterranean diet)'
+    );
   } else if (riskScore < 20) {
-    recommendations.push('Consult cardiologist for risk factor optimization');
-    recommendations.push('Consider statin therapy');
-    recommendations.push('Blood pressure management (<130/80 mmHg)');
+    recommendations.push(
+      'Consult cardiologist for risk factor optimization',
+      'Consider statin therapy',
+      'Blood pressure management (<130/80 mmHg)'
+    );
   } else {
-    recommendations.push('Urgent cardiology consultation recommended');
-    recommendations.push('Intensive lipid management');
-    recommendations.push('Blood pressure target <120/80 mmHg');
-    recommendations.push('Consider additional cardioprotective agents');
+    recommendations.push(
+      'Urgent cardiology consultation recommended',
+      'Intensive lipid management',
+      'Blood pressure target <120/80 mmHg',
+      'Consider additional cardioprotective agents'
+    );
   }
 
   if (patientData.smokingStatus === 'Current') {
@@ -549,8 +585,10 @@ function generateRecommendations(riskScore: number, patientData: EnhancedCVDPati
   }
 
   if (patientData.diabetesStatus === 'Diabetic') {
-    recommendations.push('Tight glycemic control (HbA1c <7%)');
-    recommendations.push('Endocrinologist referral');
+    recommendations.push(
+      'Tight glycemic control (HbA1c <7%)',
+      'Endocrinologist referral'
+    );
   }
 
   return recommendations;
@@ -563,15 +601,19 @@ function generateIndianRecommendations(
   const recommendations = [];
 
   if (patientData.triglycerides > 150) {
-    recommendations.push('IMPORTANT FOR INDIANS: Reduce triglycerides (critical risk factor)');
-    recommendations.push('Reduce refined carbohydrates and sugars');
-    recommendations.push('Limit alcohol consumption');
+    recommendations.push(
+      'IMPORTANT FOR INDIANS: Reduce triglycerides (critical risk factor)',
+      'Reduce refined carbohydrates and sugars',
+      'Limit alcohol consumption'
+    );
   }
 
   if (patientData.waistCircumference > 90 && patientData.sex === 'M' ||
       patientData.waistCircumference > 80 && patientData.sex === 'F') {
-    recommendations.push('Central obesity high risk in Indian population - weight reduction essential');
-    recommendations.push('Focus on abdominal fat reduction through exercise');
+    recommendations.push(
+      'Central obesity high risk in Indian population - weight reduction essential',
+      'Focus on abdominal fat reduction through exercise'
+    );
   }
 
   if (patientData.betelQuinUse === 'Current') {
@@ -579,15 +621,17 @@ function generateIndianRecommendations(
   }
 
   if (patientData.populationGroup === 'Indian') {
-    recommendations.push('Regular screening recommended every 6-12 months');
-    recommendations.push('Lower thresholds apply: Target BP <130/80, LDL <100');
+    recommendations.push(
+      'Regular screening recommended every 6-12 months',
+      'Lower thresholds apply: Target BP <130/80, LDL <100'
+    );
   }
 
   return recommendations;
 }
 
 function getRiskCategory(riskScore: number): string {
-  for (const [key, category] of Object.entries(RISK_CATEGORIES)) {
+  for (const category of Object.values(RISK_CATEGORIES)) {
     if (riskScore >= category.range[0] && riskScore < category.range[1]) {
       return category.label;
     }

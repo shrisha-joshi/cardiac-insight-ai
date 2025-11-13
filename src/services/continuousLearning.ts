@@ -47,7 +47,7 @@ class ContinuousLearningService {
     predictedRisk: number,
     userFeedback: 'correct' | 'incorrect'
   ): Promise<void> {
-    console.log(`📊 Adding feedback for prediction ${predictionId}: ${userFeedback}`);
+    if (import.meta.env.DEV) console.log(`📊 Adding feedback for prediction ${predictionId}: ${userFeedback}`);
 
     const predictedClass = predictedRisk > 50 ? 1 : 0;
 
@@ -68,9 +68,9 @@ class ContinuousLearningService {
     if (isSupabaseConfigured) {
       try {
         await this.saveFeedbackToDatabase(feedback);
-        console.log('✅ Feedback saved to database');
+        if (import.meta.env.DEV) console.log('✅ Feedback saved to database');
       } catch (error) {
-        console.warn('⚠️ Failed to save feedback to database:', error);
+        if (import.meta.env.DEV) console.warn('⚠️ Failed to save feedback to database:', error);
         // Continue anyway - we have it in buffer
       }
     }
@@ -80,10 +80,10 @@ class ContinuousLearningService {
 
     // Check if we need to retrain
     const totalFeedback = await this.getTotalFeedbackCount();
-    console.log(`📈 Total feedback collected: ${totalFeedback}`);
+    if (import.meta.env.DEV) console.log(`📈 Total feedback collected: ${totalFeedback}`);
 
     if (totalFeedback >= this.RETRAIN_THRESHOLD && !this.isRetraining) {
-      console.log(`🔄 Threshold reached (${totalFeedback}/${this.RETRAIN_THRESHOLD}). Triggering model retraining...`);
+      if (import.meta.env.DEV) console.log(`🔄 Threshold reached (${totalFeedback}/${this.RETRAIN_THRESHOLD}). Triggering model retraining...`);
       this.triggerRetraining();
     }
   }
@@ -128,7 +128,7 @@ class ContinuousLearningService {
       const limited = feedbackList.slice(-100);
       localStorage.setItem('prediction_feedback', JSON.stringify(limited));
     } catch (error) {
-      console.warn('Failed to save feedback to localStorage:', error);
+      if (import.meta.env.DEV) console.warn('Failed to save feedback to localStorage:', error);
     }
   }
 
@@ -153,24 +153,38 @@ class ContinuousLearningService {
         return this.loadFeedbackFromLocalStorage();
       }
 
-      return data.map((record: any) => ({
-        id: record.prediction_id,
+      return data.map((record: unknown) => {
+        const rec = record as {
+          prediction_id: string;
+          patient_age: number;
+          patient_gender: string;
+          resting_bp: number;
+          cholesterol: number;
+          predicted_risk: number;
+          predicted_class: string;
+          user_feedback: string;
+          actual_class?: string;
+          created_at: string;
+          model_version: string;
+        };
+        return {
+        id: rec.prediction_id,
         patientData: {
-          age: record.patient_age,
-          gender: record.patient_gender,
-          restingBP: record.resting_bp,
-          cholesterol: record.cholesterol,
+          age: rec.patient_age,
+          gender: rec.patient_gender,
+          restingBP: rec.resting_bp,
+          cholesterol: rec.cholesterol,
           // Other fields can be reconstructed or stored separately
         } as PatientData,
-        predictedRisk: record.predicted_risk,
-        predictedClass: record.predicted_class,
-        userFeedback: record.user_feedback,
-        actualClass: record.actual_class,
-        timestamp: new Date(record.created_at),
-        modelVersion: record.model_version
-      }));
+        predictedRisk: rec.predicted_risk,
+        predictedClass: (rec.predicted_class === '0' || rec.predicted_class === '1' ? parseInt(rec.predicted_class) : 0) as 0 | 1,
+        userFeedback: (rec.user_feedback === 'correct' || rec.user_feedback === 'incorrect' ? rec.user_feedback : 'correct') as 'correct' | 'incorrect',
+        actualClass: (rec.actual_class === '0' || rec.actual_class === '1' ? parseInt(rec.actual_class as string) : undefined) as 0 | 1 | undefined,
+        timestamp: new Date(rec.created_at),
+        modelVersion: rec.model_version
+      };});
     } catch (error) {
-      console.warn('Error loading feedback from database:', error);
+      if (import.meta.env.DEV) console.warn('Error loading feedback from database:', error);
       return this.loadFeedbackFromLocalStorage();
     }
   }
@@ -184,12 +198,14 @@ class ContinuousLearningService {
       if (!stored) return [];
       
       const parsed = JSON.parse(stored);
-      return parsed.map((f: any) => ({
-        ...f,
-        timestamp: new Date(f.timestamp)
-      }));
+      return parsed.map((f: unknown) => {
+        const feedback = f as Record<string, unknown>;
+        return {
+        ...feedback,
+        timestamp: new Date(feedback.timestamp as string)
+      };});
     } catch (error) {
-      console.warn('Error loading feedback from localStorage:', error);
+      if (import.meta.env.DEV) console.warn('Error loading feedback from localStorage:', error);
       return [];
     }
   }
@@ -258,27 +274,27 @@ class ContinuousLearningService {
    */
   private async triggerRetraining(): Promise<void> {
     if (this.isRetraining) {
-      console.log('⏳ Retraining already in progress, skipping...');
+      if (import.meta.env.DEV) console.log('⏳ Retraining already in progress, skipping...');
       return;
     }
 
     this.isRetraining = true;
-    console.log('🚀 Starting model retraining with user feedback...');
+    if (import.meta.env.DEV) console.log('🚀 Starting model retraining with user feedback...');
 
     try {
       // Load Indian dataset
       await indianDatasetLoader.loadAllDatasets();
       const baseData = indianDatasetLoader.getAllRecords();
-      console.log(`📊 Base dataset: ${baseData.length} records`);
+      if (import.meta.env.DEV) console.log(`📊 Base dataset: ${baseData.length} records`);
 
       // Load user feedback
       const feedback = await this.loadFeedbackFromDatabase();
       const validatedFeedback = feedback.filter(f => f.userFeedback === 'correct');
-      console.log(`✅ User feedback: ${validatedFeedback.length} validated records`);
+      if (import.meta.env.DEV) console.log(`✅ User feedback: ${validatedFeedback.length} validated records`);
 
       // Combine datasets
       const combinedData = [...baseData];
-      console.log(`📈 Total training data: ${combinedData.length} records`);
+      if (import.meta.env.DEV) console.log(`📈 Total training data: ${combinedData.length} records`);
 
       // In a real implementation, you would:
       // 1. Convert data to training format (features + labels)
@@ -295,11 +311,11 @@ class ContinuousLearningService {
       const [major, minor, patch] = this.currentModelVersion.split('.').map(Number);
       this.currentModelVersion = `${major}.${minor}.${patch + 1}`;
 
-      console.log(`✅ Model retraining complete! New version: ${this.currentModelVersion}`);
-      console.log(`📊 Training data breakdown:`);
-      console.log(`   - Base Indian dataset: ${baseData.length} records`);
-      console.log(`   - User validated feedback: ${validatedFeedback.length} records`);
-      console.log(`   - Total: ${combinedData.length} records`);
+      if (import.meta.env.DEV) console.log(`✅ Model retraining complete! New version: ${this.currentModelVersion}`);
+      if (import.meta.env.DEV) console.log(`📊 Training data breakdown:`);
+      if (import.meta.env.DEV) console.log(`   - Base Indian dataset: ${baseData.length} records`);
+      if (import.meta.env.DEV) console.log(`   - User validated feedback: ${validatedFeedback.length} records`);
+      if (import.meta.env.DEV) console.log(`   - Total: ${combinedData.length} records`);
 
       // Clear feedback buffer
       this.feedbackBuffer = [];
@@ -310,7 +326,7 @@ class ContinuousLearningService {
       }
 
     } catch (error) {
-      console.error('❌ Error during model retraining:', error);
+      if (import.meta.env.DEV) console.error('❌ Error during model retraining:', error);
     } finally {
       this.isRetraining = false;
     }
@@ -333,10 +349,10 @@ class ContinuousLearningService {
         });
 
       if (error) {
-        console.warn('Failed to log retraining event:', error);
+        if (import.meta.env.DEV) console.warn('Failed to log retraining event:', error);
       }
     } catch (error) {
-      console.warn('Error logging retraining event:', error);
+      if (import.meta.env.DEV) console.warn('Error logging retraining event:', error);
     }
   }
 
@@ -351,7 +367,7 @@ class ContinuousLearningService {
    * Force immediate retraining (for admin use)
    */
   async forceRetraining(): Promise<void> {
-    console.log('🔧 Force retraining triggered by admin');
+    if (import.meta.env.DEV) console.log('🔧 Force retraining triggered by admin');
     await this.triggerRetraining();
   }
 
@@ -394,7 +410,7 @@ class ContinuousLearningService {
       };
     });
 
-    console.log(`📊 Augmented dataset: ${baseData.length} base + ${feedbackRecords.length} feedback = ${baseData.length + feedbackRecords.length} total`);
+    if (import.meta.env.DEV) console.log(`📊 Augmented dataset: ${baseData.length} base + ${feedbackRecords.length} feedback = ${baseData.length + feedbackRecords.length} total`);
 
     return [...baseData, ...feedbackRecords];
   }

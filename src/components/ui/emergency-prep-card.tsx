@@ -93,7 +93,7 @@ export function EmergencyPrepCard() {
         });
       },
       (error) => {
-        console.error('Geolocation error:', error);
+        if (import.meta.env.DEV) console.error('Geolocation error:', error);
         
         // Fallback: Show dialog with general search
         const fallbackUrl = 'https://www.google.com/maps/search/cardiology+hospital+emergency+near+me';

@@ -75,12 +75,12 @@ class AgeSpecificThresholdsService {
    * Age-specific threshold data for different age groups (Indian population)
    * Based on Framingham, INTERHEART, and PURE India studies
    */
-  private ageThresholds: Map<string, AgeThresholds[]> = this.initializeThresholds();
+  private readonly ageThresholds: Map<string, AgeThresholds[]> = this.initializeThresholds();
 
   /**
    * Age-specific factor weights for risk calculation
    */
-  private factorWeights: Map<string, RiskFactorWeights> = this.initializeFactorWeights();
+  private readonly factorWeights: Map<string, RiskFactorWeights> = this.initializeFactorWeights();
 
   /**
    * Initialize age-specific thresholds
@@ -480,10 +480,10 @@ class AgeSpecificThresholdsService {
   /**
    * Get age group key for a given age and gender
    */
-  private getAgeGroupKey(age: number, gender: 'Male' | 'Female'): string {
+  private getAgeGroupKey(age: number, gender: 'Male' | 'Female'): string | null {
     let ageGroup: string;
 
-    if (age < 30) return null as any; // Not covered by thresholds
+    if (age < 30) return null; // Not covered by thresholds
     else if (age >= 30 && age < 40) ageGroup = '30_39';
     else if (age >= 40 && age < 50) ageGroup = '40_49';
     else if (age >= 50 && age < 60) ageGroup = '50_59';
@@ -548,8 +548,8 @@ class AgeSpecificThresholdsService {
         ageGroup: 'Unknown',
         gender,
         riskScore,
-        riskCategory: riskCategory as any,
-        ageAdjustedRiskCategory: riskCategory as any,
+        riskCategory: riskCategory as 'Low' | 'Moderate' | 'High' | 'Very Low' | 'Very High',
+        ageAdjustedRiskCategory: riskCategory as 'Low' | 'Moderate' | 'High' | 'Very Low' | 'Very High',
         riskComparison: 'Unable to compare',
         recommendedCheckups: [],
         lifespanProjection: {
@@ -571,7 +571,7 @@ class AgeSpecificThresholdsService {
       ageGroup: thresholds.ageGroup,
       gender,
       riskScore,
-      riskCategory: riskCategory as any,
+      riskCategory: riskCategory as 'Low' | 'Moderate' | 'High' | 'Very Low' | 'Very High',
       ageAdjustedRiskCategory: ageAdjustedCategory,
       riskComparison: comparison,
       recommendedCheckups: this.getRecommendedCheckups(ageAdjustedCategory, thresholds),
@@ -780,17 +780,17 @@ class AgeSpecificThresholdsService {
     }
 
     report += `## Recommended Checkups\n`;
-    assessment.recommendedCheckups.forEach(checkup => {
+    for (const checkup of assessment.recommendedCheckups) {
       report += `- ${checkup}\n`;
-    });
+    }
 
     report += `\n## Management Strategy\n`;
     report += `${management}\n\n`;
 
     report += `## Future Risk Projection\n`;
-    assessment.futureRiskProjection.forEach(proj => {
+    for (const proj of assessment.futureRiskProjection) {
       report += `- Age ${proj.age}: ${proj.projectedRisk.toFixed(1)}%\n`;
-    });
+    }
 
     return report;
   }

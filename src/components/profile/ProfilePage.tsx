@@ -78,7 +78,7 @@ export default function ProfilePage() {
           setAssessmentCount(count || 0);
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        if (import.meta.env.DEV) console.error('Error fetching profile:', error);
       } finally {
         setLoading(false);
       }

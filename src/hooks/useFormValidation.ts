@@ -33,8 +33,8 @@ export interface FormValidationState {
  * Form validation actions
  */
 export interface FormValidationActions {
-  validateField: (fieldName: string, value: any) => boolean;
-  validateForm: (formData: any) => boolean;
+  validateField: (fieldName: string, value: unknown) => boolean;
+  validateForm: (formData: unknown) => boolean;
   setFieldTouched: (fieldName: string) => void;
   clearErrors: () => void;
   setErrors: (errors: Record<string, string>) => void;
@@ -58,7 +58,7 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
    * Validate a single field
    */
   const validateField = useCallback(
-    (fieldName: string, value: any): boolean => {
+    (fieldName: string, value: unknown): boolean => {
       // Basic validation based on field name and type
       const errors: Record<string, string> = { ...state.errors };
 
@@ -70,7 +70,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Age validation
       if (fieldName === 'age') {
-        if (!Number.isInteger(value) || value < 18 || value > 120) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isInteger(numValue) || numValue < 18 || numValue > 120) {
           errors[fieldName] = 'Age must be between 18 and 120';
           isFieldValid = false;
         }
@@ -79,7 +80,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
       // Email validation
       if (fieldName.includes('email')) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (value && !emailRegex.test(value)) {
+        const strValue = typeof value === 'string' ? value : String(value);
+        if (strValue && !emailRegex.test(strValue)) {
           errors[fieldName] = 'Invalid email address';
           isFieldValid = false;
         }
@@ -87,8 +89,9 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Phone validation
       if (fieldName.includes('phone')) {
-        const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
-        if (value && !phoneRegex.test(value)) {
+        const phoneRegex = /^[\d\s\-+()]{10,}$/;
+        const strValue = typeof value === 'string' ? value : String(value);
+        if (strValue && !phoneRegex.test(strValue)) {
           errors[fieldName] = 'Invalid phone number';
           isFieldValid = false;
         }
@@ -96,7 +99,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // BP validation
       if (fieldName === 'restingBP') {
-        if (!Number.isFinite(value) || value < 60 || value > 250) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numValue) || numValue < 60 || numValue > 250) {
           errors[fieldName] = 'Blood pressure must be between 60 and 250 mmHg';
           isFieldValid = false;
         }
@@ -104,7 +108,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Cholesterol validation
       if (fieldName === 'cholesterol') {
-        if (!Number.isFinite(value) || value < 0 || value > 500) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numValue) || numValue < 0 || numValue > 500) {
           errors[fieldName] = 'Cholesterol must be between 0 and 500 mg/dL';
           isFieldValid = false;
         }
@@ -112,7 +117,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Heart rate validation
       if (fieldName === 'maxHR' || fieldName === 'heartRate') {
-        if (!Number.isInteger(value) || value < 20 || value > 250) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isInteger(numValue) || numValue < 20 || numValue > 250) {
           errors[fieldName] = 'Heart rate must be between 20 and 250 bpm';
           isFieldValid = false;
         }
@@ -120,7 +126,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Stress level validation
       if (fieldName === 'stressLevel' || fieldName === 'sleepQuality') {
-        if (!Number.isInteger(value) || value < 1 || value > 10) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isInteger(numValue) || numValue < 1 || numValue > 10) {
           errors[fieldName] = 'Value must be between 1 and 10';
           isFieldValid = false;
         }
@@ -128,7 +135,8 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
 
       // Sleep hours validation
       if (fieldName === 'sleepHours') {
-        if (!Number.isFinite(value) || value < 0 || value > 24) {
+        const numValue = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numValue) || numValue < 0 || numValue > 24) {
           errors[fieldName] = 'Sleep hours must be between 0 and 24';
           isFieldValid = false;
         }
@@ -150,9 +158,9 @@ export function useFormValidation(initialErrors: Record<string, string> = {}) {
    * Validate entire form
    */
   const validateForm = useCallback(
-    (formData: any): boolean => {
+    (formData: unknown): boolean => {
       // Use appropriate validator based on form type
-      let result = validatePatientData(formData);
+      const result = validatePatientData(formData);
 
       if (!result.success && result.errors) {
         setState(prev => ({
@@ -265,7 +273,7 @@ export function usePatientDataValidation(initialData?: Partial<PatientData>) {
       // Cross-field validation
       const consistency = validateMetricsConsistency(data);
       if (!consistency.valid) {
-        console.warn('Consistency warnings:', consistency.warnings);
+        if (import.meta.env.DEV) console.warn('Consistency warnings:', consistency.warnings);
       }
 
       actions.clearErrors();
@@ -316,12 +324,12 @@ export function formatValidationError(error: string, fieldName?: string): string
 /**
  * Field validation state helper
  */
-export function useFieldValidation(fieldName: string, validator?: (value: any) => boolean) {
+export function useFieldValidation(fieldName: string, validator?: (value: unknown) => boolean) {
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
 
   const validate = useCallback(
-    (value: any) => {
+    (value: unknown) => {
       if (!touched) return true;
 
       if (validator) {
@@ -348,8 +356,8 @@ export function useFieldValidation(fieldName: string, validator?: (value: any) =
  */
 export function useRealTimeValidation(
   fieldName: string,
-  value: any,
-  validator: (val: any) => { valid: boolean; error?: string }
+  value: unknown,
+  validator: (val: unknown) => { valid: boolean; error?: string }
 ) {
   const [error, setError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);

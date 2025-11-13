@@ -77,7 +77,7 @@ function analyzeFieldCompletion(patientData: PatientData) {
 
   // Check required fields
   requiredFields.forEach(field => {
-    const value = (patientData as any)[field];
+    const value = (patientData as unknown)[field];
     if (value === null || value === undefined || value === '') {
       missing_fields.push(field);
     } else {
@@ -87,7 +87,7 @@ function analyzeFieldCompletion(patientData: PatientData) {
 
   // Check recommended fields
   recommendedFields.forEach(field => {
-    const value = (patientData as any)[field];
+    const value = (patientData as unknown)[field];
     if (value === null || value === undefined || value === '') {
       incomplete_fields.push(field);
     } else {
@@ -106,8 +106,11 @@ function analyzeFieldCompletion(patientData: PatientData) {
 /**
  * Calculate completeness score (0-100)
  */
-function calculateCompletenessScore(fieldStatus: any): number {
-  const percentage = (fieldStatus.filled_count / fieldStatus.total_count) * 100;
+function calculateCompletenessScore(fieldStatus: unknown): number {
+  const status = fieldStatus as Record<string, unknown>;
+  const filledCount = status.filled_count as number;
+  const totalCount = status.total_count as number;
+  const percentage = (filledCount / totalCount) * 100;
   return Math.round(percentage);
 }
 
@@ -185,11 +188,11 @@ function checkDataIntegrity(patientData: PatientData): string[] {
  */
 function calculateCategoryScores(
   patientData: PatientData,
-  fieldStatus: any
+  fieldStatus: unknown
 ): DataQualityReport['quality_by_category'] {
   const calculateCategoryScore = (fields: string[]): number => {
     const filled = fields.filter(f => {
-      const value = (patientData as any)[f];
+      const value = (patientData as unknown)[f];
       return value !== null && value !== undefined && value !== '';
     }).length;
     return Math.round((filled / fields.length) * 100);
@@ -240,16 +243,19 @@ function calculateConfidenceAdjustment(
  * Generate quality improvement recommendations
  */
 function generateQualityRecommendations(
-  fieldStatus: any,
+  fieldStatus: unknown,
   integrity_issues: string[],
   patientData: PatientData
 ): string[] {
   const recommendations: string[] = [];
+  const status = fieldStatus as Record<string, unknown>;
+  const missingFields = (status.missing_fields as string[]) || [];
+  const incompleteFields = (status.incomplete_fields as string[]) || [];
 
   // Missing critical fields
   const criticalMissing = [
     'cholesterol', 'restingBP', 'maxHR', 'oldpeak'
-  ].filter(f => fieldStatus.missing_fields.includes(f));
+  ].filter(f => missingFields.includes(f));
 
   if (criticalMissing.length > 0) {
     recommendations.push(
@@ -260,7 +266,7 @@ function generateQualityRecommendations(
   // Missing lifestyle data
   const lifestyleMissing = [
     'dietType', 'stressLevel', 'sleepHours', 'physicalActivity'
-  ].filter(f => fieldStatus.incomplete_fields.includes(f));
+  ].filter(f => incompleteFields.includes(f));
 
   if (lifestyleMissing.length >= 2) {
     recommendations.push(
@@ -270,9 +276,9 @@ function generateQualityRecommendations(
 
   // Missing advanced markers
   if (
-    fieldStatus.incomplete_fields.includes('lipoproteinA') ||
-    fieldStatus.incomplete_fields.includes('hscrp') ||
-    fieldStatus.incomplete_fields.includes('homocysteine')
+    incompleteFields.includes('lipoproteinA') ||
+    incompleteFields.includes('hscrp') ||
+    incompleteFields.includes('homocysteine')
   ) {
     recommendations.push(
       `🔬 Consider advanced cardiac markers (Lp(a), CRP, Homocysteine) for more accurate assessment`
@@ -280,7 +286,7 @@ function generateQualityRecommendations(
   }
 
   // Missing regional info
-  if (fieldStatus.incomplete_fields.includes('region')) {
+  if (incompleteFields.includes('region')) {
     recommendations.push(
       `🗺️ Specify your region (South/West/North/East) for calibrated risk assessment`
     );
@@ -296,7 +302,7 @@ function generateQualityRecommendations(
   }
 
   // Age-specific recommendations
-  if (patientData.age >= 45 && fieldStatus.incomplete_fields.includes('familyHistory')) {
+  if (patientData.age >= 45 && incompleteFields.includes('familyHistory')) {
     recommendations.push(
       `👨‍👩‍👧 At age ${patientData.age}, family history is particularly important - please provide details`
     );
@@ -413,7 +419,7 @@ export function calculateWeightedCompletion(patientData: PatientData): number {
   let weighted_score = 0;
 
   Object.entries(criticalFields).forEach(([field, weight]) => {
-    const value = (patientData as any)[field];
+    const value = (patientData as unknown)[field];
     if (value !== null && value !== undefined && value !== '') {
       weighted_score += (weight as number) * 100;
     }

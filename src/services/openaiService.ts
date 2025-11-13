@@ -62,7 +62,7 @@ class OpenAIService {
     if (this.isInitialized && this.client) return true;
 
     if (!config.ai.openai.enabled || !config.ai.openai.apiKey) {
-      console.warn('OpenAI not configured - will use fallback');
+      if (import.meta.env.DEV) console.warn('OpenAI not configured - will use fallback');
       return false;
     }
 
@@ -74,7 +74,7 @@ class OpenAIService {
       this.isInitialized = true;
       return true;
     } catch (error) {
-      console.error('Failed to initialize OpenAI:', error);
+      if (import.meta.env.DEV) console.error('Failed to initialize OpenAI:', error);
       return false;
     }
   }
@@ -99,7 +99,7 @@ class OpenAIService {
 
       return this.formatRecommendation(response, request, 'openai');
     } catch (error) {
-      console.error('OpenAI recommendation error:', error);
+      if (import.meta.env.DEV) console.error('OpenAI recommendation error:', error);
       return this.getFallbackRecommendation(request);
     }
   }
@@ -251,7 +251,7 @@ Make it actionable and realistic to implement.`
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       if (attempt < MAX_RETRIES && (errorMessage.includes('timeout') || errorMessage.includes('rate'))) {
-        console.warn(`OpenAI retry ${attempt}/${MAX_RETRIES}`);
+        if (import.meta.env.DEV) console.warn(`OpenAI retry ${attempt}/${MAX_RETRIES}`);
         await this.delay(RETRY_DELAY_MS * attempt);
         return this.callOpenAIWithRetry(systemPrompt, userPrompt, attempt + 1);
       }

@@ -487,15 +487,21 @@ function generateRecommendations(
 
   // Immediate recommendations based on risk score
   if (score > 60) {
-    recommendations.push('🚨 URGENT: Consult cardiologist immediately');
-    recommendations.push('🏥 Consider coronary artery evaluation (ECG, stress test)');
-    recommendations.push('💊 May require immediate medication intervention');
+    recommendations.push(
+      '🚨 URGENT: Consult cardiologist immediately',
+      '🏥 Consider coronary artery evaluation (ECG, stress test)',
+      '💊 May require immediate medication intervention'
+    );
   } else if (score > 40) {
-    recommendations.push('⚠️ HIGH RISK: Schedule cardiology appointment soon');
-    recommendations.push('📋 Discuss medication options with physician');
+    recommendations.push(
+      '⚠️ HIGH RISK: Schedule cardiology appointment soon',
+      '📋 Discuss medication options with physician'
+    );
   } else if (score > 20) {
-    recommendations.push('📋 Moderate risk: Regular monitoring recommended');
-    recommendations.push('🔍 Annual cardiovascular assessment');
+    recommendations.push(
+      '📋 Moderate risk: Regular monitoring recommended',
+      '🔍 Annual cardiovascular assessment'
+    );
   } else {
     recommendations.push('✅ Low risk: Continue preventive lifestyle measures');
   }

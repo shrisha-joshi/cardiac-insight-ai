@@ -46,19 +46,20 @@ export interface PUREIndiaAssessment {
 /**
  * Calculate PURE-India risk assessment
  */
-export function calculatePUREIndiaRisk(patientData: any): PUREIndiaAssessment {
+export function calculatePUREIndiaRisk(patientData: unknown): PUREIndiaAssessment {
   // Extract relevant data
-  const age = patientData.age;
-  const gender = patientData.gender;
-  const smoking = patientData.smoking;
-  const diabetes = patientData.diabetes;
-  const cholesterol = patientData.cholesterol || 200;
-  const systolicBP = patientData.systolicBP || patientData.restingBP || 130;
-  const triglycerides = patientData.triglycerides || 150;
-  const hdlCholesterol = patientData.hdlCholesterol || 40;
-  const physicalActivity = patientData.physicalActivity || 'low';
-  const waistCircumference = patientData.waistCircumference;
-  const stressLevel = patientData.stressLevel || 5;
+  const data = patientData as Record<string, unknown>;
+  const age = data.age as number;
+  const gender = data.gender as string;
+  const smoking = data.smoking as boolean;
+  const diabetes = data.diabetes as boolean;
+  const cholesterol = (data.cholesterol as number) || 200;
+  const systolicBP = (data.systolicBP as number) || (data.restingBP as number) || 130;
+  const triglycerides = (data.triglycerides as number) || 150;
+  const hdlCholesterol = (data.hdlCholesterol as number) || 40;
+  const physicalActivity = (data.physicalActivity as string) || 'low';
+  const waistCircumference = data.waistCircumference as number | undefined;
+  const stressLevel = (data.stressLevel as number) || 5;
 
   // Calculate PURE-India specific multipliers
   const multipliers = calculatePUREIndiaMultipliers(
@@ -227,9 +228,9 @@ function calculatePUREIndiaRiskScore(
   const score =
     components.lipid_risk * 0.25 +
     components.obesity_risk * 0.25 +
-    components.glucose_risk * 0.20 +
+    components.glucose_risk * 0.2 +
     components.blood_pressure_risk * 0.15 +
-    components.lifestyle_risk * 0.10 +
+    components.lifestyle_risk * 0.1 +
     components.psychosocial_risk * 0.05;
 
   return Math.min(100, Math.max(0, score));
@@ -249,8 +250,9 @@ function categorizePUREIndiaRisk(score: number): PUREIndiaAssessment['indian_ris
 /**
  * Compare to Framingham risk
  */
-function compareToFramingham(patientData: any, pure_india_score: number): PUREIndiaAssessment['comparison_to_framingham'] {
-  const age = patientData.age;
+function compareToFramingham(patientData: unknown, pure_india_score: number): PUREIndiaAssessment['comparison_to_framingham'] {
+  const data = patientData as Record<string, unknown>;
+  const age = data.age as number;
   let framingham_equivalent = pure_india_score * 0.85;
   
   if (age < 45) {

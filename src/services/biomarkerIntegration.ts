@@ -93,8 +93,8 @@ export interface BiomarkerNorms {
 }
 
 class BiomarkerIntegrationService {
-  private biomarkerNorms: Map<string, BiomarkerNorms> = new Map();
-  private patientProfiles: Map<string, BiomarkerProfile> = new Map();
+  private readonly biomarkerNorms: Map<string, BiomarkerNorms> = new Map();
+  private readonly patientProfiles: Map<string, BiomarkerProfile> = new Map();
 
   constructor() {
     this.initializeBiomarkerNorms();
@@ -287,11 +287,11 @@ class BiomarkerIntegrationService {
     const abnormal: AbnormalBiomarker[] = [];
     const gender = 'male'; // Would come from patient profile
 
-    Object.entries(reading.biomarkers).forEach(([key, value]) => {
-      if (value === null || value === undefined) return;
+    for (const [key, value] of Object.entries(reading.biomarkers)) {
+      if (value === null || value === undefined) continue;
 
       const norms = this.biomarkerNorms.get(key);
-      if (!norms) return;
+      if (!norms) continue;
 
       const range = norms[gender as keyof BiomarkerNorms];
       if (typeof range === 'object' && 'min' in range && 'max' in range) {
@@ -307,7 +307,7 @@ class BiomarkerIntegrationService {
           });
         }
       }
-    });
+    }
 
     return abnormal.sort((a, b) => {
       const severityOrder = { severe: 0, moderate: 1, mild: 2 };
@@ -318,10 +318,11 @@ class BiomarkerIntegrationService {
   /**
    * Determine severity of abnormality
    */
-  private determineSeverity(biomarker: string, value: number, range: any): 'mild' | 'moderate' | 'severe' {
-    const deviation = value < range.min ?
-      (range.min - value) / range.min :
-      (value - range.max) / range.max;
+  private determineSeverity(biomarker: string, value: number, range: unknown): 'mild' | 'moderate' | 'severe' {
+    const r = range as Record<string, number>;
+    const deviation = value < r.min ?
+      (r.min - value) / r.min :
+      (value - r.max) / r.max;
 
     if (deviation > 0.5) return 'severe';
     if (deviation > 0.25) return 'moderate';
@@ -376,11 +377,11 @@ class BiomarkerIntegrationService {
     let score = 0;
 
     // Score based on severe abnormalities
-    abnormalBiomarkers.forEach(bm => {
+    for (const bm of abnormalBiomarkers) {
       if (bm.severity === 'severe') score += 25;
       else if (bm.severity === 'moderate') score += 12;
       else score += 5;
-    });
+    }
 
     // Bonus for multiple abnormalities
     if (abnormalBiomarkers.length > 5) score += 15;
@@ -413,7 +414,7 @@ class BiomarkerIntegrationService {
   private extractRiskFactors(abnormalBiomarkers: AbnormalBiomarker[]): string[] {
     const factors: Set<string> = new Set();
 
-    abnormalBiomarkers.forEach(bm => {
+    for (const bm of abnormalBiomarkers) {
       if (bm.name.includes('Troponin')) factors.add('Acute myocardial injury');
       if (bm.name.includes('BNP') || bm.name.includes('NT-pro-BNP')) factors.add('Heart failure risk');
       if (bm.name.includes('LDL')) factors.add('Dyslipidemia');
@@ -423,7 +424,7 @@ class BiomarkerIntegrationService {
       if (bm.name.includes('HbA1c') || bm.name.includes('Glucose')) factors.add('Glycemic dysregulation');
       if (bm.name.includes('Creatinine') || bm.name.includes('eGFR')) factors.add('Renal impairment');
       if (bm.name.includes('Lipoprotein')) factors.add('Genetic lipid disorder risk');
-    });
+    }
 
     return Array.from(factors);
   }
@@ -443,7 +444,7 @@ class BiomarkerIntegrationService {
 
     const keyBiomarkers = ['ldlCholesterol', 'hdlCholesterol', 'crp', 'hba1c', 'troponin'];
 
-    keyBiomarkers.forEach(marker => {
+    for (const marker of keyBiomarkers) {
       const recentVal = recent.biomarkers[marker as keyof BiomarkerValues];
       const prevVal = previous.biomarkers[marker as keyof BiomarkerValues];
 
@@ -467,7 +468,7 @@ class BiomarkerIntegrationService {
           clinicalInterpretation: this.interpretTrend(marker, trend, changePercent)
         });
       }
-    });
+    }
 
     return trends;
   }
@@ -495,9 +496,11 @@ class BiomarkerIntegrationService {
 
     // Acute findings
     if (profile.abnormalBiomarkers.some(bm => bm.name.includes('Troponin') && bm.severity === 'severe')) {
-      recommendations.push('URGENT: Cardiac biomarkers elevated - immediate cardiology evaluation required');
-      recommendations.push('Perform ECG and consider advanced cardiac imaging');
-      recommendations.push('Consider coronary intervention if indicated');
+      recommendations.push(
+        'URGENT: Cardiac biomarkers elevated - immediate cardiology evaluation required',
+        'Perform ECG and consider advanced cardiac imaging',
+        'Consider coronary intervention if indicated'
+      );
       return recommendations;
     }
 
@@ -506,8 +509,10 @@ class BiomarkerIntegrationService {
       bm.name.includes('LDL') || bm.name.includes('Triglycerides')
     );
     if (abnormalLipids.length > 0) {
-      recommendations.push('Intensify lipid-lowering therapy (statin ± ezetimibe ± PCSK9 inhibitor)');
-      recommendations.push('Consider additional LDL-lowering therapy if LDL > 100');
+      recommendations.push(
+        'Intensify lipid-lowering therapy (statin ± ezetimibe ± PCSK9 inhibitor)',
+        'Consider additional LDL-lowering therapy if LDL > 100'
+      );
     }
 
     // Inflammatory markers
@@ -522,8 +527,10 @@ class BiomarkerIntegrationService {
       bm.name.includes('HbA1c') || bm.name.includes('Glucose')
     );
     if (hasGlycemic) {
-      recommendations.push('Intensify glycemic control: medication adjustment and lifestyle modification');
-      recommendations.push('Target HbA1c < 7% for most patients');
+      recommendations.push(
+        'Intensify glycemic control: medication adjustment and lifestyle modification',
+        'Target HbA1c < 7% for most patients'
+      );
     }
 
     // Renal function
@@ -531,8 +538,10 @@ class BiomarkerIntegrationService {
       bm.name.includes('eGFR') || bm.name.includes('Creatinine')
     );
     if (hasRenalImpairment) {
-      recommendations.push('Evaluate renal function and proteinuria');
-      recommendations.push('Adjust medication dosing based on renal function');
+      recommendations.push(
+        'Evaluate renal function and proteinuria',
+        'Adjust medication dosing based on renal function'
+      );
     }
 
     // Regular monitoring
@@ -616,30 +625,32 @@ class BiomarkerIntegrationService {
     report += `- **Last Updated**: ${profile.lastUpdate.toLocaleString()}\n\n`;
 
     report += '## Risk Factors Identified\n';
-    profile.riskFactors.forEach((factor, i) => {
-      report += `${i + 1}. ${factor}\n`;
-    });
+    for (let i = 0; i < profile.riskFactors.length; i++) {
+      report += `${i + 1}. ${profile.riskFactors[i]}\n`;
+    }
 
     report += '\n## Abnormal Biomarkers\n';
-    profile.abnormalBiomarkers.forEach((bm, i) => {
+    for (let i = 0; i < profile.abnormalBiomarkers.length; i++) {
+      const bm = profile.abnormalBiomarkers[i];
       report += `${i + 1}. **${bm.name}**: ${bm.value} ${bm.unit}\n`;
       report += `   - Reference: ${bm.referenceRange.min}-${bm.referenceRange.max}\n`;
       report += `   - Severity: ${bm.severity.toUpperCase()}\n`;
       report += `   - Significance: ${bm.clinicalSignificance}\n`;
-    });
+    }
 
     if (profile.trends.length > 0) {
       report += '\n## Biomarker Trends\n';
-      profile.trends.forEach((trend, i) => {
+      for (let i = 0; i < profile.trends.length; i++) {
+        const trend = profile.trends[i];
         report += `${i + 1}. ${trend.biomarker}: **${trend.trend.toUpperCase()}** (${trend.changePercentage > 0 ? '+' : ''}${trend.changePercentage}%)\n`;
         report += `   - ${trend.clinicalInterpretation}\n`;
-      });
+      }
     }
 
     report += '\n## Clinical Recommendations\n';
-    profile.recommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < profile.recommendations.length; i++) {
+      report += `${i + 1}. ${profile.recommendations[i]}\n`;
+    }
 
     return report;
   }

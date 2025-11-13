@@ -50,7 +50,7 @@ export default function PatientFormWithValidation({
    * Handle field change
    */
   const handleFieldChange = useCallback(
-    (fieldName: string, value: any) => {
+    (fieldName: string, value: unknown) => {
       setFormData(prev => ({ ...prev, [fieldName]: value }));
 
       // Validate field on change
@@ -60,11 +60,9 @@ export default function PatientFormWithValidation({
       if (fieldName === 'weight' || fieldName === 'height') {
         if (formData.weight && formData.height) {
           const heightInMeters = (formData.height || 0) / 100;
-          const weight = fieldName === 'weight' ? value : formData.weight;
-          const height =
-            fieldName === 'height'
-              ? value / 100
-              : (formData.height || 0) / 100;
+          const numValue = typeof value === 'number' ? value : 0;
+          const weight = fieldName === 'weight' ? numValue : (formData.weight || 0);
+          const height = fieldName === 'height' ? numValue / 100 : (formData.height || 0) / 100;
           const bmi = weight / (height * height);
           setFormData(prev => ({ ...prev, BMI: Math.round(bmi * 10) / 10 }));
         }
@@ -97,25 +95,25 @@ export default function PatientFormWithValidation({
         const patientData: PatientData = {
           age: formData.age || 0,
           gender: (formData.gender as 'male' | 'female') || 'male',
-          chestPainType: (formData.chestPainType as any) || 'typical',
+          chestPainType: String(formData.chestPainType || 'typical') as 'typical' | 'atypical' | 'non-anginal' | 'asymptomatic',
           restingBP: formData.restingBP || 0,
           cholesterol: formData.cholesterol || 0,
           fastingBS: formData.fastingBS || false,
-          restingECG: (formData.restingECG as any) || 'normal',
+          restingECG: String(formData.restingECG || 'normal') as 'normal' | 'st-t' | 'lvh',
           maxHR: formData.maxHR || 0,
           exerciseAngina: formData.exerciseAngina || false,
           oldpeak: formData.oldpeak || 0,
-          stSlope: (formData.stSlope as any) || 'flat',
+          stSlope: String(formData.stSlope || 'flat') as 'flat' | 'up' | 'down',
           smoking: formData.smoking || false,
           diabetes: formData.diabetes || false,
           previousHeartAttack: formData.previousHeartAttack || false,
           cholesterolMedication: formData.cholesterolMedication || false,
           bpMedication: formData.bpMedication || false,
           lifestyleChanges: formData.lifestyleChanges || false,
-          dietType: (formData.dietType as any) || 'non-vegetarian',
+          dietType: String(formData.dietType || 'non-vegetarian') as 'vegetarian' | 'non-vegetarian' | 'vegan',
           stressLevel: formData.stressLevel || 5,
           sleepHours: formData.sleepHours || 7,
-          physicalActivity: (formData.physicalActivity as any) || 'moderate',
+          physicalActivity: String(formData.physicalActivity || 'moderate') as 'low' | 'high' | 'moderate',
           height: formData.height,
           weight: formData.weight,
           heartRate: formData.maxHR,

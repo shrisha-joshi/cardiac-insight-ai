@@ -53,7 +53,7 @@ export interface LogEntry {
   level: LogLevel;
   levelName: string;
   message: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   error?: {
     name: string;
     message: string;
@@ -89,7 +89,7 @@ class ConsoleLogSink implements LogSink {
       ...(entry.duration && { duration: `${entry.duration}ms` }),
     };
 
-    console.log(`${prefix}:`, output);
+    if (import.meta.env.DEV) console.log(`${prefix}:`, output);
   }
 
   private getColorCode(level: LogLevel): string {
@@ -115,7 +115,7 @@ class ConsoleLogSink implements LogSink {
  */
 export class InMemoryLogSink implements LogSink {
   private logs: LogEntry[] = [];
-  private maxSize: number;
+  private readonly maxSize: number;
 
   constructor(maxSize: number = 1000) {
     this.maxSize = maxSize;
@@ -144,16 +144,16 @@ export class InMemoryLogSink implements LogSink {
 // ============================================================================
 
 export class Logger {
-  private minLevel: LogLevel;
-  private sinks: LogSink[];
-  private context: Record<string, any>;
-  private performanceMarkers: Map<string, number>;
+  private readonly minLevel: LogLevel;
+  private readonly sinks: LogSink[];
+  private readonly context: Record<string, unknown>;
+  private readonly performanceMarkers: Map<string, number>;
   private userId?: string;
 
   constructor(options: {
     minLevel?: LogLevel;
     sinks?: LogSink[];
-    context?: Record<string, any>;
+    context?: Record<string, unknown>;
   } = {}) {
     this.minLevel = options.minLevel ?? LogLevel.INFO;
     this.sinks = options.sinks ?? [new ConsoleLogSink()];
@@ -171,7 +171,7 @@ export class Logger {
   /**
    * Create a child logger with additional context
    */
-  child(context: Record<string, any>): Logger {
+  child(context: Record<string, unknown>): Logger {
     return new Logger({
       minLevel: this.minLevel,
       sinks: this.sinks,
@@ -182,35 +182,35 @@ export class Logger {
   /**
    * Log at DEBUG level
    */
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
   /**
    * Log at INFO level
    */
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.INFO, message, context);
   }
 
   /**
    * Log at WARN level
    */
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log(LogLevel.WARN, message, context);
   }
 
   /**
    * Log at ERROR level
    */
-  error(message: string, error?: Error | AppError, context?: Record<string, any>): void {
+  error(message: string, error?: Error | AppError, context?: Record<string, unknown>): void {
     this.logError(LogLevel.ERROR, message, error, context);
   }
 
   /**
    * Log at FATAL level
    */
-  fatal(message: string, error?: Error | AppError, context?: Record<string, any>): void {
+  fatal(message: string, error?: Error | AppError, context?: Record<string, unknown>): void {
     this.logError(LogLevel.FATAL, message, error, context);
   }
 
@@ -224,7 +224,7 @@ export class Logger {
   /**
    * End performance measurement and log
    */
-  endTimer(label: string, context?: Record<string, any>): number {
+  endTimer(label: string, context?: Record<string, unknown>): number {
     const startTime = this.performanceMarkers.get(label);
     if (startTime === undefined) {
       this.warn(`Performance marker '${label}' not found`);
@@ -250,7 +250,7 @@ export class Logger {
   private log(
     level: LogLevel,
     message: string,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
     metadata?: { duration?: number }
   ): void {
     if (level < this.minLevel) {
@@ -277,7 +277,7 @@ export class Logger {
     level: LogLevel,
     message: string,
     error?: Error | AppError,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ): void {
     if (level < this.minLevel) {
       return;
@@ -293,12 +293,15 @@ export class Logger {
     };
 
     if (error) {
+      const errorCode = (error && 'code' in error) ? (error as unknown as Record<string, unknown>).code : undefined;
+      const errorStatusCode = (error && 'statusCode' in error) ? (error as unknown as Record<string, unknown>).statusCode : undefined;
+      
       entry.error = {
         name: error.name,
         message: error.message,
         ...(error instanceof Error && { stack: error.stack }),
-        ...(error && 'code' in error && { code: (error as any).code }),
-        ...(error && 'statusCode' in error && { statusCode: (error as any).statusCode }),
+        ...(errorCode && { code: String(errorCode) }),
+        ...(errorStatusCode && { statusCode: Number(errorStatusCode) }),
       };
     }
 
@@ -312,10 +315,10 @@ export class Logger {
     this.sinks.forEach(sink => {
       try {
         sink.send(entry).catch(err => {
-          console.error('Error sending log to sink:', err);
+          if (import.meta.env.DEV) console.error('Error sending log to sink:', err);
         });
       } catch (err) {
-        console.error('Error in log sink:', err);
+        if (import.meta.env.DEV) console.error('Error in log sink:', err);
       }
     });
   }
@@ -333,7 +336,7 @@ let globalLogger: Logger = new Logger({
 /**
  * Get global logger instance
  */
-export function getLogger(context?: Record<string, any>): Logger {
+export function getLogger(context?: Record<string, unknown>): Logger {
   return context ? globalLogger.child(context) : globalLogger;
 }
 
@@ -343,7 +346,7 @@ export function getLogger(context?: Record<string, any>): Logger {
 export function configureLogger(options: {
   minLevel?: LogLevel;
   sinks?: LogSink[];
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }): void {
   globalLogger = new Logger(options);
 }
@@ -359,15 +362,15 @@ export function setLoggerUserId(userId: string): void {
  * Quick logging functions
  */
 export const log = {
-  debug: (message: string, context?: Record<string, any>) =>
+  debug: (message: string, context?: Record<string, unknown>) =>
     getLogger().debug(message, context),
-  info: (message: string, context?: Record<string, any>) =>
+  info: (message: string, context?: Record<string, unknown>) =>
     getLogger().info(message, context),
-  warn: (message: string, context?: Record<string, any>) =>
+  warn: (message: string, context?: Record<string, unknown>) =>
     getLogger().warn(message, context),
-  error: (message: string, error?: Error | AppError, context?: Record<string, any>) =>
+  error: (message: string, error?: Error | AppError, context?: Record<string, unknown>) =>
     getLogger().error(message, error, context),
-  fatal: (message: string, error?: Error | AppError, context?: Record<string, any>) =>
+  fatal: (message: string, error?: Error | AppError, context?: Record<string, unknown>) =>
     getLogger().fatal(message, error, context),
 };
 

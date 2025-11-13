@@ -48,7 +48,7 @@ interface DatasetStats {
 }
 
 class IndianDatasetLoaderService {
-  private datasets: Map<string, IndianPatientRecord[]> = new Map();
+  private readonly datasets: Map<string, IndianPatientRecord[]> = new Map();
   private isLoaded: boolean = false;
 
   /**
@@ -56,11 +56,11 @@ class IndianDatasetLoaderService {
    */
   async loadAllDatasets(): Promise<void> {
     if (this.isLoaded) {
-      console.log('✅ Datasets already loaded');
+      if (import.meta.env.DEV) console.log('✅ Datasets already loaded');
       return;
     }
 
-    console.log('📥 Loading Indian cardiac patient datasets...');
+    if (import.meta.env.DEV) console.log('📥 Loading Indian cardiac patient datasets...');
 
     try {
       // Load UCI Heart Disease Dataset (Cleveland + Hungarian + Switzerland + VA)
@@ -74,9 +74,9 @@ class IndianDatasetLoaderService {
 
       this.isLoaded = true;
       const stats = this.getStatistics();
-      console.log(`✅ Loaded ${stats.totalRecords} Indian patient records from ${stats.sources.length} sources`);
+      if (import.meta.env.DEV) console.log(`✅ Loaded ${stats.totalRecords} Indian patient records from ${stats.sources.length} sources`);
     } catch (error) {
-      console.error('❌ Error loading datasets:', error);
+      if (import.meta.env.DEV) console.error('❌ Error loading datasets:', error);
       throw error;
     }
   }
@@ -110,7 +110,7 @@ class IndianDatasetLoaderService {
     ];
 
     this.datasets.set('UCI', uciData);
-    console.log(`✅ Loaded ${uciData.length} records from UCI Heart Disease Dataset`);
+    if (import.meta.env.DEV) console.log(`✅ Loaded ${uciData.length} records from UCI Heart Disease Dataset`);
   }
 
   /**
@@ -143,7 +143,7 @@ class IndianDatasetLoaderService {
     ];
 
     this.datasets.set('Indian-Regional', indianData);
-    console.log(`✅ Loaded ${indianData.length} records from Indian Regional Dataset`);
+    if (import.meta.env.DEV) console.log(`✅ Loaded ${indianData.length} records from Indian Regional Dataset`);
   }
 
   /**
@@ -179,18 +179,18 @@ class IndianDatasetLoaderService {
       icmrData.push({
         age,
         gender,
-        chestPainType: ['typical', 'atypical', 'non-anginal', 'asymptomatic'][Math.floor(Math.random() * 4)] as any,
+        chestPainType: ['typical', 'atypical', 'non-anginal', 'asymptomatic'][Math.floor(Math.random() * 4)] as 'typical' | 'atypical' | 'non-anginal' | 'asymptomatic',
         restingBP,
         cholesterol,
         fastingBS,
-        restingECG: ['normal', 'st-t abnormality', 'lv hypertrophy'][Math.floor(Math.random() * 3)] as any,
+        restingECG: ['normal', 'st-t abnormality', 'lv hypertrophy'][Math.floor(Math.random() * 3)] as 'normal' | 'st-t abnormality' | 'lv hypertrophy',
         maxHR,
         exerciseAngina: Math.random() > 0.7,
         oldpeak: Math.random() * 3,
-        stSlope: ['up', 'flat', 'down'][Math.floor(Math.random() * 3)] as any,
+        stSlope: ['up', 'flat', 'down'][Math.floor(Math.random() * 3)] as 'flat' | 'up' | 'down',
         target: target as 0 | 1,
         datasetSource: 'ICMR-Simulated',
-        region: ['north', 'south', 'east', 'west', 'central'][Math.floor(Math.random() * 5)] as any,
+        region: ['north', 'south', 'east', 'west', 'central'][Math.floor(Math.random() * 5)] as 'north' | 'south' | 'east' | 'west' | 'central' | 'northeast',
         urban,
         diet,
         smoking,
@@ -199,7 +199,7 @@ class IndianDatasetLoaderService {
     }
 
     this.datasets.set('ICMR-Simulated', icmrData);
-    console.log(`✅ Loaded ${icmrData.length} records from simulated ICMR dataset`);
+    if (import.meta.env.DEV) console.log(`✅ Loaded ${icmrData.length} records from simulated ICMR dataset`);
   }
 
   /**

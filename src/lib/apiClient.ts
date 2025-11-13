@@ -17,18 +17,18 @@ import { ErrorMessages, createErrorResponse, logErrorForDebugging } from '@/lib/
 export interface APIOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
   timeout?: number;
   retries?: number;
 }
 
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: {
     message: string;
     code: string;
-    details?: any;
+    details?: unknown;
   };
   status: number;
   timestamp: string;
@@ -68,7 +68,7 @@ class APIClient {
   /**
    * Make API request with built-in error handling
    */
-  async request<T = any>(
+  async request<T = unknown>(
     endpoint: string,
     options: APIOptions = {}
   ): Promise<APIResponse<T>> {
@@ -84,7 +84,7 @@ class APIClient {
     const startTime = Date.now();
 
     // Log outgoing request
-    console.log(`[API] ${method} ${endpoint}`);
+    if (import.meta.env.DEV) console.log(`[API] ${method} ${endpoint}`);
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -101,7 +101,7 @@ class APIClient {
         // Log successful request
         const duration = Date.now() - startTime;
         this.logRequest(url, method, response.status, duration);
-        console.log(`[API] ✅ ${method} ${endpoint} (${response.status}) - ${duration}ms`);
+        if (import.meta.env.DEV) console.log(`[API] ✅ ${method} ${endpoint} (${response.status}) - ${duration}ms`);
 
         return response;
       } catch (error) {
@@ -113,13 +113,13 @@ class APIClient {
           this.logRequest(url, method, undefined, duration);
 
           const errorMessage = this.getErrorMessage(error);
-          console.error(`[API] ❌ ${method} ${endpoint} - ${errorMessage}`);
+          if (import.meta.env.DEV) console.error(`[API] ❌ ${method} ${endpoint} - ${errorMessage}`);
 
           return this.createErrorResponse<T>(error, endpoint);
         } else {
           // Retry after delay
           const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-          console.warn(`[API] ⚠️ Retrying ${method} ${endpoint} in ${delay}ms (attempt ${attempt + 1}/${retries})`);
+          if (import.meta.env.DEV) console.warn(`[API] ⚠️ Retrying ${method} ${endpoint} in ${delay}ms (attempt ${attempt + 1}/${retries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -196,7 +196,7 @@ class APIClient {
   /**
    * Extract error message from various error types
    */
-  private getErrorMessage(error: any): string {
+  private getErrorMessage(error: unknown): string {
     if (error instanceof TypeError) {
       if (error.message.includes('Failed to fetch')) {
         return 'Network error - unable to reach server';
@@ -216,7 +216,7 @@ class APIClient {
   /**
    * Create error response
    */
-  private createErrorResponse<T>(error: any, endpoint: string): APIResponse<T> {
+  private createErrorResponse<T>(error: unknown, endpoint: string): APIResponse<T> {
     const message = this.getErrorMessage(error);
     const code = this.getErrorCode(error);
 
@@ -240,7 +240,7 @@ class APIClient {
   /**
    * Map error to code
    */
-  private getErrorCode(error: any): string {
+  private getErrorCode(error: unknown): string {
     if (error instanceof TypeError) {
       if (error.message.includes('Failed to fetch')) {
         return 'NETWORK_ERROR';
@@ -289,33 +289,33 @@ class APIClient {
   // Convenience methods
   // ============================================================================
 
-  async GET<T = any>(endpoint: string, options?: APIOptions): Promise<APIResponse<T>> {
+  async GET<T = unknown>(endpoint: string, options?: APIOptions): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  async POST<T = any>(
+  async POST<T = unknown>(
     endpoint: string,
-    body?: any,
+    body?: unknown,
     options?: APIOptions
   ): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'POST', body });
   }
 
-  async PUT<T = any>(
+  async PUT<T = unknown>(
     endpoint: string,
-    body?: any,
+    body?: unknown,
     options?: APIOptions
   ): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PUT', body });
   }
 
-  async DELETE<T = any>(endpoint: string, options?: APIOptions): Promise<APIResponse<T>> {
+  async DELETE<T = unknown>(endpoint: string, options?: APIOptions): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 
-  async PATCH<T = any>(
+  async PATCH<T = unknown>(
     endpoint: string,
-    body?: any,
+    body?: unknown,
     options?: APIOptions
   ): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PATCH', body });

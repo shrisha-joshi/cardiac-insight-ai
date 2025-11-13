@@ -23,18 +23,21 @@ interface ConversationContext {
   patientGender?: string;
 }
 
+type MessageType = 'general' | 'medical' | 'emergency' | 'educational' | 'personalized';
+type NonEmergencyMessageType = Exclude<MessageType, 'emergency'>;
+
 interface ChatResponse {
   message: string;
-  type: 'general' | 'medical' | 'emergency' | 'educational' | 'personalized';
+  type: MessageType;
   followUpQuestions?: string[];
   references?: string[];
 }
 
 class EnhancedCardiacChatService {
-  private gemini: GoogleGenerativeAI | null = null;
-  private model: any = null;
-  private conversationContexts: Map<string, ConversationContext> = new Map();
-  private responseCache: Map<string, string> = new Map();
+  private readonly gemini: GoogleGenerativeAI | null = null;
+  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+  private readonly conversationContexts: Map<string, ConversationContext> = new Map();
+  private readonly responseCache: Map<string, string> = new Map();
 
   constructor() {
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
@@ -57,11 +60,14 @@ class EnhancedCardiacChatService {
       // Check cache first for common questions
       const cacheKey = this.generateCacheKey(userMessage, riskScore);
       if (this.responseCache.has(cacheKey)) {
-        return {
-          message: this.responseCache.get(cacheKey)!,
-          type: 'general',
-          followUpQuestions: this.generateFollowUpQuestions(userMessage)
-        };
+        const cachedMessage = this.responseCache.get(cacheKey);
+        if (cachedMessage) {
+          return {
+            message: cachedMessage,
+            type: 'general',
+            followUpQuestions: this.generateFollowUpQuestions(userMessage)
+          };
+        }
       }
 
       // Get or create conversation context
@@ -87,11 +93,11 @@ class EnhancedCardiacChatService {
       if (messageType === 'emergency') {
         response = this.getEmergencyResponse(userMessage);
       } else if (this.model && config.ai.gemini.enabled) {
-        // Try Gemini first
+        // Try Gemini first (messageType is now NonEmergencyMessageType)
         response = await this.getGeminiResponse(userMessage, context, messageType);
       } else if (deepseekIntegration.isAvailable()) {
         // Fall back to DeepSeek if Gemini not available
-        console.log('Using DeepSeek for chat response...');
+        if (import.meta.env.DEV) console.log('Using DeepSeek for chat response...');
         const deepseekResponse = await deepseekIntegration.generateChatbotResponse(
           userMessage,
           userId,
@@ -101,7 +107,7 @@ class EnhancedCardiacChatService {
         );
         response = deepseekResponse.message;
       } else {
-        // Final fallback to rule-based
+        // Final fallback to rule-based (messageType is now NonEmergencyMessageType)
         response = this.getRuleBasedResponse(userMessage, messageType, riskScore, patientAge, patientGender);
       }
 
@@ -125,7 +131,7 @@ class EnhancedCardiacChatService {
         references: this.generateReferences(userMessage)
       };
     } catch (error) {
-      console.error('Chat service error:', error);
+      if (import.meta.env.DEV) console.error('Chat service error:', error);
       return this.getFallbackResponse(userMessage);
     }
   }
@@ -133,7 +139,7 @@ class EnhancedCardiacChatService {
   /**
    * Detect message type for intelligent routing
    */
-  private detectMessageType(message: string): 'general' | 'medical' | 'emergency' | 'educational' | 'personalized' {
+  private detectMessageType(message: string): MessageType {
     const lowerMsg = message.toLowerCase();
 
     // Emergency indicators
@@ -204,7 +210,7 @@ This is not the time for online consultation. **GET PROFESSIONAL HELP NOW.**`;
   private async getGeminiResponse(
     userMessage: string,
     context: ConversationContext,
-    messageType: string
+    messageType: NonEmergencyMessageType
   ): Promise<string> {
     try {
       // Build conversation history for context
@@ -244,10 +250,10 @@ Always be accurate and cite reliable sources when possible.`;
       const response = await this.model.generateContent(systemPrompt);
       const text = response.response.text();
 
-      return text || this.getRuleBasedResponse(userMessage, messageType as any, context.riskScore);
+      return text || this.getRuleBasedResponse(userMessage, messageType, context.riskScore);
     } catch (error) {
-      console.warn('Gemini response failed:', error);
-      return this.getRuleBasedResponse(userMessage, messageType as any, context.riskScore);
+      if (import.meta.env.DEV) console.warn('Gemini response failed:', error);
+      return this.getRuleBasedResponse(userMessage, messageType, context.riskScore);
     }
   }
 
@@ -256,18 +262,57 @@ Always be accurate and cite reliable sources when possible.`;
    */
   private getRuleBasedResponse(
     message: string,
-    type: 'general' | 'medical' | 'educational' | 'personalized',
+    type: NonEmergencyMessageType,
+    riskScore?: number,
+    age?: number,
+    gender?: string
+  ): string {
+    switch (type) {
+      case 'personalized':
+        return this.handlePersonalizedResponse(message, riskScore, age, gender);
+      case 'educational':
+        return this.handleEducationalResponse(message);
+      case 'medical':
+        return this.handleMedicalResponse(message);
+      case 'general':
+        return this.handleGeneralResponse();
+      default:
+        return `👋 Hi! I'm here to help with cardiac health questions. How can I assist you today?`;
+    }
+  }
+
+  /**
+   * Handle personalized health responses
+   */
+  private handlePersonalizedResponse(
+    message: string,
     riskScore?: number,
     age?: number,
     gender?: string
   ): string {
     const lowerMsg = message.toLowerCase();
 
-    // ===== PERSONALIZED RESPONSES =====
-    if (type === 'personalized') {
-      if (lowerMsg.includes('exercise') || lowerMsg.includes('workout')) {
-        if (age && age > 60) {
-          return `👴 **Exercise for Older Adults with Cardiac Risk**
+    if (lowerMsg.includes('exercise') || lowerMsg.includes('workout')) {
+      return this.getExerciseResponse(age);
+    }
+
+    if (lowerMsg.includes('diet') || lowerMsg.includes('food') || lowerMsg.includes('eat')) {
+      return this.getDietResponse();
+    }
+
+    if (riskScore && riskScore > 60) {
+      return this.getHighRiskResponse(riskScore, message);
+    }
+
+    return `👋 Hi! I'm here to help with cardiac health questions. How can I assist you today?`;
+  }
+
+  /**
+   * Get exercise recommendations based on age
+   */
+  private getExerciseResponse(age?: number): string {
+    if (age && age > 60) {
+      return `👴 **Exercise for Older Adults with Cardiac Risk**
 
 For your age group, gradual progression is key:
 
@@ -295,8 +340,9 @@ For your age group, gradual progression is key:
 - Unusual fatigue
 
 Would you like specific exercise examples for your condition?`;
-        } else {
-          return `🏃 **Exercise Plan for Cardiac Health**
+    }
+
+    return `🏃 **Exercise Plan for Cardiac Health**
 
 **Target:** 150 minutes moderate + 2x strength training per week
 
@@ -325,11 +371,13 @@ Would you like specific exercise examples for your condition?`;
 - Previous cardiac events
 
 Get started with just 10 minutes today! What type of activity interests you?`;
-        }
-      }
+  }
 
-      if (lowerMsg.includes('diet') || lowerMsg.includes('food') || lowerMsg.includes('eat')) {
-        return `🥘 **Indian Heart-Healthy Diet**
+  /**
+   * Get Indian heart-healthy diet recommendations
+   */
+  private getDietResponse(): string {
+    return `🥘 **Indian Heart-Healthy Diet**
 
 **FOODS TO INCREASE:**
 ✅ Vegetables: Leafy greens, bell peppers, tomatoes, carrots
@@ -358,10 +406,13 @@ Get started with just 10 minutes today! What type of activity interests you?`;
 **Portion Control:** 1 palm-sized portion of protein per meal
 
 Would you like specific recipes or meal plans?`;
-      }
+  }
 
-      if (riskScore && riskScore > 60) {
-        return `⚠️ **Your HIGH-RISK Profile - What You Should Know**
+  /**
+   * Get high-risk profile response
+   */
+  private getHighRiskResponse(riskScore: number, message: string): string {
+    return `⚠️ **Your HIGH-RISK Profile - What You Should Know**
 
 Your risk score of ${riskScore.toFixed(0)}% indicates significant cardiac risk.
 
@@ -390,13 +441,30 @@ ${this.getMainRiskFactors(message)}
 - Medication adherence
 
 Would you like help tracking these or understanding your specific risk factors?`;
-      }
+  }
+
+  /**
+   * Handle educational health responses
+   */
+  private handleEducationalResponse(message: string): string {
+    const lowerMsg = message.toLowerCase();
+
+    if (lowerMsg.includes('cholesterol')) {
+      return this.getCholesterolEducation();
     }
 
-    // ===== EDUCATIONAL RESPONSES =====
-    if (type === 'educational') {
-      if (lowerMsg.includes('cholesterol')) {
-        return `💊 **Understanding Cholesterol for Cardiac Health**
+    if (lowerMsg.includes('blood pressure') || lowerMsg.includes('bp')) {
+      return this.getBloodPressureEducation();
+    }
+
+    return `👋 Hi! I'm here to help with cardiac health questions. How can I assist you today?`;
+  }
+
+  /**
+   * Get cholesterol education content
+   */
+  private getCholesterolEducation(): string {
+    return `💊 **Understanding Cholesterol for Cardiac Health**
 
 **What is cholesterol?**
 Cholesterol is a fat-like substance your body needs. But too much causes buildup in arteries.
@@ -433,10 +501,13 @@ Cholesterol is a fat-like substance your body needs. But too much causes buildup
 Your numbers are important - ask your doctor for lipid profile.
 
 Want to know about specific medications or dietary changes?`;
-      }
+  }
 
-      if (lowerMsg.includes('blood pressure') || lowerMsg.includes('bp')) {
-        return `🩸 **Understanding Blood Pressure**
+  /**
+   * Get blood pressure education content
+   */
+  private getBloodPressureEducation(): string {
+    return `🩸 **Understanding Blood Pressure**
 
 **Reading:** 120/80 (Systolic/Diastolic)
 
@@ -472,13 +543,26 @@ Want to know about specific medications or dietary changes?`;
 **Monitoring:** Check BP regularly at home
 
 Want specific strategies to lower BP naturally?`;
-      }
+  }
+
+  /**
+   * Handle medical information responses
+   */
+  private handleMedicalResponse(message: string): string {
+    const lowerMsg = message.toLowerCase();
+
+    if (lowerMsg.includes('medication')) {
+      return this.getMedicationInformation();
     }
 
-    // ===== MEDICAL RESPONSES =====
-    if (type === 'medical') {
-      if (lowerMsg.includes('medication')) {
-        return `💊 **Common Cardiac Medications Explained**
+    return `👋 Hi! I'm here to help with cardiac health questions. How can I assist you today?`;
+  }
+
+  /**
+   * Get medication information content
+   */
+  private getMedicationInformation(): string {
+    return `💊 **Common Cardiac Medications Explained**
 
 **Statins** (Atorvastatin, Rosuvastatin)
 - Purpose: Lower cholesterol
@@ -519,13 +603,14 @@ Want specific strategies to lower BP naturally?`;
 **Note:** This is education only. Work with YOUR doctor on YOUR medications.
 
 Have specific questions about medications?`;
-      }
-    }
+  }
 
-    // ===== GENERAL RESPONSES =====
-    if (type === 'general') {
-      const generalResponses = [
-        `👋 Great question! I'm here to help you understand cardiac health. Ask me about:
+  /**
+   * Handle general health responses
+   */
+  private handleGeneralResponse(): string {
+    const generalResponses = [
+      `👋 Great question! I'm here to help you understand cardiac health. Ask me about:
 - Risk factors and how they affect you
 - Lifestyle changes for heart health
 - Understanding medical tests
@@ -535,7 +620,7 @@ Have specific questions about medications?`;
 
 What would you like to learn about?`,
 
-        `💗 Heart health is important, and I'm glad you're asking questions! I can help explain:
+      `💗 Heart health is important, and I'm glad you're asking questions! I can help explain:
 - What your risk score means
 - How to lower your cardiac risk
 - Lifestyle modifications that work
@@ -545,7 +630,7 @@ What would you like to learn about?`,
 
 What's on your mind?`,
 
-        `🏥 Good to see you're proactive about your health! I can provide information on:
+      `🏥 Good to see you're proactive about your health! I can provide information on:
 - Cardiac risk factors
 - Prevention strategies
 - Healthy lifestyle changes
@@ -555,7 +640,7 @@ What's on your mind?`,
 
 What would help you most?`,
 
-        `📚 You're in the right place! I specialize in cardiac health education for Indian patients. Feel free to ask about:
+      `📚 You're in the right place! I specialize in cardiac health education for Indian patients. Feel free to ask about:
 - Risk factors
 - Prevention and lifestyle
 - Understanding tests
@@ -565,7 +650,7 @@ What would help you most?`,
 
 What can I explain for you?`,
 
-        `🎯 I'm here to help you navigate cardiac health. You can ask me about:
+      `🎯 I'm here to help you navigate cardiac health. You can ask me about:
 - Assessing your cardiac risk
 - Making healthier choices
 - Understanding your results
@@ -574,14 +659,10 @@ What can I explain for you?`,
 - Cardiac health for Indians
 
 What interests you?`
-      ];
+    ];
 
-      // Return varied response
-      const randomResponse = generalResponses[Math.floor(Math.random() * generalResponses.length)];
-      return randomResponse;
-    }
-
-    return `👋 Hi! I'm here to help with cardiac health questions. How can I assist you today?`;
+    const randomResponse = generalResponses[Math.floor(Math.random() * generalResponses.length)];
+    return randomResponse;
   }
 
   /**
@@ -592,33 +673,43 @@ What interests you?`
     const questions: string[] = [];
 
     if (lowerMsg.includes('risk')) {
-      questions.push('What are my main risk factors?');
-      questions.push('How can I lower my risk?');
-      questions.push('When should I see a doctor?');
+      questions.push(
+        'What are my main risk factors?',
+        'How can I lower my risk?',
+        'When should I see a doctor?'
+      );
     }
 
     if (lowerMsg.includes('exercise') || lowerMsg.includes('workout')) {
-      questions.push('What exercise is best for my condition?');
-      questions.push('How much exercise should I do?');
-      questions.push('Can I do intense exercise?');
+      questions.push(
+        'What exercise is best for my condition?',
+        'How much exercise should I do?',
+        'Can I do intense exercise?'
+      );
     }
 
     if (lowerMsg.includes('diet') || lowerMsg.includes('food')) {
-      questions.push('What foods should I avoid?');
-      questions.push('Are there specific Indian foods that are healthy?');
-      questions.push('What about salt and oil?');
+      questions.push(
+        'What foods should I avoid?',
+        'Are there specific Indian foods that are healthy?',
+        'What about salt and oil?'
+      );
     }
 
     if (lowerMsg.includes('medication')) {
-      questions.push('What are the side effects?');
-      questions.push('How long do I need to take it?');
-      questions.push('Can I stop if I feel better?');
+      questions.push(
+        'What are the side effects?',
+        'How long do I need to take it?',
+        'Can I stop if I feel better?'
+      );
     }
 
     if (questions.length === 0) {
-      questions.push('Tell me more - what specific aspect?');
-      questions.push('Do you have other health concerns?');
-      questions.push('Would you like personalized recommendations?');
+      questions.push(
+        'Tell me more - what specific aspect?',
+        'Do you have other health concerns?',
+        'Would you like personalized recommendations?'
+      );
     }
 
     return questions.slice(0, 3);
@@ -684,7 +775,6 @@ Could you rephrase your question or ask about one of these topics?`,
    * Clear old conversations to free memory
    */
   clearOldConversations(maxAge: number = 3600000) {
-    const now = Date.now();
     // In production, track timestamps and remove old ones
     // This is a simplified version
     if (this.conversationContexts.size > 10) {

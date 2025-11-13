@@ -190,7 +190,7 @@ export interface ImagingProfile {
 }
 
 class ImagingAnalysisService {
-  private imagingProfiles: Map<string, ImagingProfile> = new Map();
+  private readonly imagingProfiles: Map<string, ImagingProfile> = new Map();
 
   /**
    * Add echocardiogram findings
@@ -511,7 +511,7 @@ class ImagingAnalysisService {
    */
   private analyzeCatheterization(cath: CatheterizationFindings, profile: ImagingProfile): void {
     // Assess coronary stenosis
-    Object.entries(cath.coronaryStenosis).forEach(([vessel, details]) => {
+    for (const [vessel, details] of Object.entries(cath.coronaryStenosis)) {
       if (details.stenosis > 90) {
         profile.riskScore += 25;
         profile.structuralAbnormalities.push({
@@ -528,7 +528,7 @@ class ImagingAnalysisService {
       } else if (details.stenosis > 50) {
         profile.riskScore += 8;
       }
-    });
+    }
 
     // Assess left ventricular function
     if (cath.lvEjectionFraction && cath.lvEjectionFraction < 35) {
@@ -555,9 +555,11 @@ class ImagingAnalysisService {
     const recommendations: string[] = [];
 
     if (profile.riskScore >= 70) {
-      recommendations.push('URGENT: Critical structural abnormalities detected');
-      recommendations.push('Immediate cardiology consultation required');
-      recommendations.push('Consider advanced interventions (surgery, catheterization)');
+      recommendations.push(
+        'URGENT: Critical structural abnormalities detected',
+        'Immediate cardiology consultation required',
+        'Consider advanced interventions (surgery, catheterization)'
+      );
     }
 
     // Echo-based recommendations
@@ -565,9 +567,11 @@ class ImagingAnalysisService {
       const latest = profile.imaging.echocardiograms[profile.imaging.echocardiograms.length - 1];
 
       if (latest.lvef < 40) {
-        recommendations.push('Initiate ACE inhibitor/ARB and beta-blocker therapy');
-        recommendations.push('Consider aldosterone antagonist if LVEF < 35');
-        recommendations.push('Evaluate for device therapy (ICD, CRT)');
+        recommendations.push(
+          'Initiate ACE inhibitor/ARB and beta-blocker therapy',
+          'Consider aldosterone antagonist if LVEF < 35',
+          'Evaluate for device therapy (ICD, CRT)'
+        );
       }
 
       if (latest.mitralRegurgitation === 'severe' || latest.aorticRegurgitation === 'severe') {
@@ -575,8 +579,10 @@ class ImagingAnalysisService {
       }
 
       if (latest.diastolicDysfunction === 'grade-3') {
-        recommendations.push('Optimize blood pressure and heart rate control');
-        recommendations.push('Consider diuretics and calcium channel blockers');
+        recommendations.push(
+          'Optimize blood pressure and heart rate control',
+          'Consider diuretics and calcium channel blockers'
+        );
       }
     }
 
@@ -585,14 +591,18 @@ class ImagingAnalysisService {
       const latest = profile.imaging.ctFindings[profile.imaging.ctFindings.length - 1];
 
       if ((latest.coronaryCalciumScore || 0) > 400) {
-        recommendations.push('Initiate or intensify lipid-lowering therapy');
-        recommendations.push('Consider aspirin therapy');
-        recommendations.push('Stress testing recommended');
+        recommendations.push(
+          'Initiate or intensify lipid-lowering therapy',
+          'Consider aspirin therapy',
+          'Stress testing recommended'
+        );
       }
 
       if (latest.aorticAneurysm || latest.aorticDissection) {
-        recommendations.push('Urgent surgical evaluation');
-        recommendations.push('Control blood pressure strictly');
+        recommendations.push(
+          'Urgent surgical evaluation',
+          'Control blood pressure strictly'
+        );
       }
     }
 
@@ -606,20 +616,28 @@ class ImagingAnalysisService {
     const schedule: string[] = [];
 
     if (profile.riskScore >= 70) {
-      schedule.push('Clinical evaluation: 1 week');
-      schedule.push('Repeat echo: 3 weeks');
-      schedule.push('Specialist consultation: STAT');
+      schedule.push(
+        'Clinical evaluation: 1 week',
+        'Repeat echo: 3 weeks',
+        'Specialist consultation: STAT'
+      );
     } else if (profile.riskScore >= 50) {
-      schedule.push('Clinical evaluation: 2 weeks');
-      schedule.push('Repeat echo: 3 months');
-      schedule.push('Specialist consultation: 2 weeks');
+      schedule.push(
+        'Clinical evaluation: 2 weeks',
+        'Repeat echo: 3 months',
+        'Specialist consultation: 2 weeks'
+      );
     } else if (profile.riskScore >= 30) {
-      schedule.push('Clinical evaluation: 1 month');
-      schedule.push('Repeat echo: 6 months');
-      schedule.push('Specialist consultation: As needed');
+      schedule.push(
+        'Clinical evaluation: 1 month',
+        'Repeat echo: 6 months',
+        'Specialist consultation: As needed'
+      );
     } else {
-      schedule.push('Clinical evaluation: 3 months');
-      schedule.push('Repeat echo: 12 months');
+      schedule.push(
+        'Clinical evaluation: 3 months',
+        'Repeat echo: 12 months'
+      );
     }
 
     return schedule;
@@ -649,24 +667,25 @@ class ImagingAnalysisService {
 
     if (profile.structuralAbnormalities.length > 0) {
       report += '## Structural Abnormalities\n';
-      profile.structuralAbnormalities.forEach((abnormality, i) => {
+      for (let i = 0; i < profile.structuralAbnormalities.length; i++) {
+        const abnormality = profile.structuralAbnormalities[i];
         report += `${i + 1}. **${abnormality.type}**\n`;
         report += `   - Location: ${abnormality.location}\n`;
         report += `   - Severity: ${abnormality.severity.toUpperCase()}\n`;
         report += `   - Natural History: ${abnormality.naturalHistory}\n`;
         report += `   - Follow-up: ${abnormality.recommendedFollowUp}\n`;
-      });
+      }
     }
 
     report += '\n## Clinical Recommendations\n';
-    profile.recommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < profile.recommendations.length; i++) {
+      report += `${i + 1}. ${profile.recommendations[i]}\n`;
+    }
 
     report += '\n## Follow-up Schedule\n';
-    profile.followUpSchedule.forEach((item, i) => {
-      report += `${i + 1}. ${item}\n`;
-    });
+    for (let i = 0; i < profile.followUpSchedule.length; i++) {
+      report += `${i + 1}. ${profile.followUpSchedule[i]}\n`;
+    }
 
     return report;
   }

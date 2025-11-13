@@ -52,8 +52,8 @@ export interface FamilyRiskSummary {
 }
 
 class FamilyRiskClusteringService {
-  private familyClusters: Map<string, FamilyCluster> = new Map();
-  private memberToFamily: Map<string, string> = new Map();
+  private readonly familyClusters: Map<string, FamilyCluster> = new Map();
+  private readonly memberToFamily: Map<string, string> = new Map();
 
   /**
    * Create new family cluster
@@ -78,9 +78,9 @@ class FamilyRiskClusteringService {
     this.familyClusters.set(familyId, cluster);
 
     // Map members to family
-    members.forEach(member => {
+    for (const member of members) {
       this.memberToFamily.set(member.id, familyId);
-    });
+    }
 
     return cluster;
   }
@@ -162,9 +162,9 @@ class FamilyRiskClusteringService {
 
     // Check for vertical transmission (parent-child)
     let verticalTransmission = 0;
-    let skipsGenerations = 0;
+    const skipsGenerations = 0;
 
-    members.forEach(member => {
+    for (const member of members) {
       if ((member.relation === 'parent' || member.relation === 'grandparent') && member.conditions.length > 0) {
         // Check if children are affected
         const affectedChildren = members.filter(c =>
@@ -174,7 +174,7 @@ class FamilyRiskClusteringService {
           verticalTransmission++;
         }
       }
-    });
+    }
 
     // Check for X-linked pattern (males more affected)
     const malesAffected = affected.filter(m => m.gender === 'Male').length;
@@ -200,7 +200,7 @@ class FamilyRiskClusteringService {
     const generations = new Map<string, boolean>();
 
     // Map generations
-    members.forEach(member => {
+    for (const member of members) {
       let gen = 'self';
       if (member.relation === 'grandparent') gen = 'grandparent';
       else if (member.relation === 'parent') gen = 'parent';
@@ -209,7 +209,7 @@ class FamilyRiskClusteringService {
       if (member.conditions.length > 0) {
         generations.set(gen, true);
       }
-    });
+    }
 
     return generations.size;
   }
@@ -246,18 +246,24 @@ class FamilyRiskClusteringService {
     const recommendations: string[] = [];
 
     if (cluster.familyRiskScore > 70) {
-      recommendations.push('URGENT: This family appears to have a significant genetic predisposition');
-      recommendations.push('Recommend comprehensive family genetic counseling');
-      recommendations.push('Consider genetic testing for index case and cascade screening');
-      recommendations.push('Family members should undergo cardiovascular risk assessment');
+      recommendations.push(
+        'URGENT: This family appears to have a significant genetic predisposition',
+        'Recommend comprehensive family genetic counseling',
+        'Consider genetic testing for index case and cascade screening',
+        'Family members should undergo cardiovascular risk assessment'
+      );
     } else if (cluster.familyRiskScore > 50) {
-      recommendations.push('Strong family history of cardiovascular disease');
-      recommendations.push('Genetic counseling recommended for the family');
-      recommendations.push('All family members should be screened');
+      recommendations.push(
+        'Strong family history of cardiovascular disease',
+        'Genetic counseling recommended for the family',
+        'All family members should be screened'
+      );
     } else if (cluster.familyRiskScore > 30) {
-      recommendations.push('Moderate family history of cardiovascular disease');
-      recommendations.push('Family members should be aware of increased risk');
-      recommendations.push('Regular screening recommended');
+      recommendations.push(
+        'Moderate family history of cardiovascular disease',
+        'Family members should be aware of increased risk',
+        'Regular screening recommended'
+      );
     }
 
     if (cluster.affectedGenerations >= 3) {
@@ -278,24 +284,30 @@ class FamilyRiskClusteringService {
     const recommendations: string[] = [];
 
     // All family members
-    recommendations.push('Lipid panel (total, LDL, HDL, triglycerides)');
-    recommendations.push('Blood pressure monitoring');
-    recommendations.push('Fasting glucose/HbA1c');
-    recommendations.push('Annual risk factor assessment');
+    recommendations.push(
+      'Lipid panel (total, LDL, HDL, triglycerides)',
+      'Blood pressure monitoring',
+      'Fasting glucose/HbA1c',
+      'Annual risk factor assessment'
+    );
 
     // Higher risk families
     if (cluster.familyRiskScore > 50) {
-      recommendations.push('Early cardiovascular imaging (ECG, stress test by age 40-50)');
-      recommendations.push('Coronary calcium scoring');
-      recommendations.push('Consider genetic testing for FH and other mutations');
-      recommendations.push('ECG screening every 1-2 years');
+      recommendations.push(
+        'Early cardiovascular imaging (ECG, stress test by age 40-50)',
+        'Coronary calcium scoring',
+        'Consider genetic testing for FH and other mutations',
+        'ECG screening every 1-2 years'
+      );
     }
 
     if (cluster.riskCategory === 'very-high') {
-      recommendations.push('Genetic testing strongly recommended');
-      recommendations.push('Cardiology referral for cascade screening');
-      recommendations.push('Advanced imaging (echo, stress test)');
-      recommendations.push('Consider preventive pharmacotherapy');
+      recommendations.push(
+        'Genetic testing strongly recommended',
+        'Cardiology referral for cascade screening',
+        'Advanced imaging (echo, stress test)',
+        'Consider preventive pharmacotherapy'
+      );
     }
 
     return recommendations;
@@ -327,19 +339,19 @@ class FamilyRiskClusteringService {
   private analyzeConditionFrequency(members: FamilyMember[]): ConditionFrequency[] {
     const conditionMap = new Map<string, { count: number; members: string[]; ages: number[] }>();
 
-    members.forEach(member => {
-      member.conditions.forEach(condition => {
+    for (const member of members) {
+      for (const condition of member.conditions) {
         const existing = conditionMap.get(condition) || { count: 0, members: [], ages: [] };
         existing.count++;
         existing.members.push(member.name);
         if (member.age) existing.ages.push(member.age);
         conditionMap.set(condition, existing);
-      });
-    });
+      }
+    }
 
     const frequencies: ConditionFrequency[] = [];
 
-    conditionMap.forEach((data, condition) => {
+    for (const [condition, data] of conditionMap.entries()) {
       const avgAge = data.ages.length > 0 ?
         data.ages.reduce((a, b) => a + b, 0) / data.ages.length : undefined;
 
@@ -353,7 +365,7 @@ class FamilyRiskClusteringService {
         averageAgeOfOnset: avgAge,
         prematureOnset
       });
-    });
+    }
 
     return frequencies;
   }
@@ -423,24 +435,25 @@ class FamilyRiskClusteringService {
     report += `- **Inheritance Pattern**: ${cluster.inheritancePattern}\n\n`;
 
     report += '## Primary Conditions\n';
-    summary.primaryConditions.forEach((cond, i) => {
+    for (let i = 0; i < summary.primaryConditions.length; i++) {
+      const cond = summary.primaryConditions[i];
       report += `${i + 1}. ${cond.condition}\n`;
       report += `   - Affected Members: ${cond.affectedMembers.join(', ')}\n`;
       report += `   - Frequency: ${cond.percentage.toFixed(1)}%\n`;
       if (cond.averageAgeOfOnset) {
         report += `   - Average Age of Onset: ${cond.averageAgeOfOnset.toFixed(0)} years\n`;
       }
-    });
+    }
 
     report += '\n## Recommendations\n';
-    cluster.recommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < cluster.recommendations.length; i++) {
+      report += `${i + 1}. ${cluster.recommendations[i]}\n`;
+    }
 
     report += '\n## Screening Guidelines\n';
-    cluster.screeningRecommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < cluster.screeningRecommendations.length; i++) {
+      report += `${i + 1}. ${cluster.screeningRecommendations[i]}\n`;
+    }
 
     if (summary.relationshipConcern) {
       report += `\n⚠️ **Note**: ${summary.relationshipConcern}\n`;

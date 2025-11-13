@@ -99,6 +99,18 @@ interface YogaPose {
   cardiacSafe: boolean;
 }
 
+interface YogaAPIResponse {
+  english_name?: string;
+  name?: string;
+  sanskrit_name?: string;
+  difficulty_level?: string;
+  difficulty?: string;
+  benefits?: string[];
+  contraindications?: string[];
+  img_url?: string;
+  image_url?: string;
+}
+
 interface ClinicalTrial {
   nctId: string;
   title: string;
@@ -130,8 +142,8 @@ class ComprehensiveFreeAPIsService {
   private readonly HUGGINGFACE_TOKEN = import.meta.env.VITE_HUGGINGFACE_TOKEN || ''; // Get from: https://huggingface.co/settings/tokens
 
   // Cache for API responses (reduce API calls)
-  private cache: Map<string, any> = new Map();
-  private cacheExpiry: Map<string, number> = new Map();
+  private readonly cache: Map<string, unknown> = new Map();
+  private readonly cacheExpiry: Map<string, number> = new Map();
   private readonly CACHE_DURATION = 3600000; // 1 hour
 
   /**
@@ -146,7 +158,7 @@ class ComprehensiveFreeAPIsService {
    */
   async getMedlinePlusContent(icd10Code: string = 'I21'): Promise<MedlinePlusResult[]> {
     const cacheKey = `medlineplus_${icd10Code}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<MedlinePlusResult[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -162,7 +174,7 @@ class ComprehensiveFreeAPIsService {
       this.setCache(cacheKey, results);
       return results;
     } catch (error) {
-      console.error('MedlinePlus API error:', error);
+      if (import.meta.env.DEV) console.error('MedlinePlus API error:', error);
       return this.getFallbackMedicalContent();
     }
   }
@@ -173,12 +185,13 @@ class ComprehensiveFreeAPIsService {
    */
   async searchPubMed(query: string, maxResults: number = 5): Promise<PubMedArticle[]> {
     const cacheKey = `pubmed_${query}_${maxResults}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<PubMedArticle[]>(cacheKey);
     if (cached) return cached;
 
     try {
       // Step 1: Search for article IDs
-      const searchUrl = `${this.PUBMED_API}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmode=json&retmax=${maxResults}${this.NCBI_API_KEY ? `&api_key=${this.NCBI_API_KEY}` : ''}`;
+      const apiKeyParam = this.NCBI_API_KEY ? `&api_key=${this.NCBI_API_KEY}` : '';
+      const searchUrl = `${this.PUBMED_API}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmode=json&retmax=${maxResults}${apiKeyParam}`;
       
       const searchResponse = await fetch(searchUrl);
       const searchData = await searchResponse.json();
@@ -187,7 +200,7 @@ class ComprehensiveFreeAPIsService {
       if (pmids.length === 0) return [];
 
       // Step 2: Fetch article details
-      const fetchUrl = `${this.PUBMED_API}/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${this.NCBI_API_KEY ? `&api_key=${this.NCBI_API_KEY}` : ''}`;
+      const fetchUrl = `${this.PUBMED_API}/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml${apiKeyParam}`;
       
       const fetchResponse = await fetch(fetchUrl);
       const xmlText = await fetchResponse.text();
@@ -196,7 +209,7 @@ class ComprehensiveFreeAPIsService {
       this.setCache(cacheKey, articles);
       return articles;
     } catch (error) {
-      console.error('PubMed API error:', error);
+      if (import.meta.env.DEV) console.error('PubMed API error:', error);
       return [];
     }
   }
@@ -213,7 +226,7 @@ class ComprehensiveFreeAPIsService {
    */
   async normalizeDrugName(drugName: string): Promise<DrugInfo | null> {
     const cacheKey = `rxnorm_${drugName.toLowerCase()}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<DrugInfo | null>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -232,7 +245,7 @@ class ComprehensiveFreeAPIsService {
 
       return null;
     } catch (error) {
-      console.error('RxNorm API error:', error);
+      if (import.meta.env.DEV) console.error('RxNorm API error:', error);
       return null;
     }
   }
@@ -254,6 +267,8 @@ class ComprehensiveFreeAPIsService {
         doseForm: data.properties?.rxtty || ''
       };
     } catch (error) {
+      // Return fallback data if API fails
+      if (import.meta.env.DEV) console.warn('RxNorm drug details fetch failed:', error);
       return { rxcui, name: 'Unknown' };
     }
   }
@@ -264,7 +279,7 @@ class ComprehensiveFreeAPIsService {
    */
   async getAdverseEvents(drugName: string, limit: number = 5): Promise<AdverseEvent[]> {
     const cacheKey = `openfda_${drugName.toLowerCase()}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<AdverseEvent[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -291,7 +306,7 @@ class ComprehensiveFreeAPIsService {
       this.setCache(cacheKey, events);
       return events;
     } catch (error) {
-      console.error('openFDA API error:', error);
+      if (import.meta.env.DEV) console.error('openFDA API error:', error);
       return [];
     }
   }
@@ -308,12 +323,12 @@ class ComprehensiveFreeAPIsService {
    */
   async searchFood(foodName: string): Promise<NutrientInfo | null> {
     if (!this.USDA_API_KEY) {
-      console.warn('USDA API key not configured. Get free key from: https://fdc.nal.usda.gov/api-key-signup.html');
+      if (import.meta.env.DEV) console.warn('USDA API key not configured. Get free key from: https://fdc.nal.usda.gov/api-key-signup.html');
       return null;
     }
 
     const cacheKey = `usda_${foodName.toLowerCase()}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<NutrientInfo | null>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -326,8 +341,13 @@ class ComprehensiveFreeAPIsService {
         const food = data.foods[0];
         const nutrients = food.foodNutrients || [];
 
+        interface FoodNutrient {
+          nutrientName?: string;
+          value?: number;
+        }
+
         const getNutrient = (name: string) => {
-          const nutrient = nutrients.find((n: any) => n.nutrientName?.toLowerCase().includes(name.toLowerCase()));
+          const nutrient = nutrients.find((n: FoodNutrient) => n.nutrientName?.toLowerCase().includes(name.toLowerCase()));
           return nutrient?.value || 0;
         };
 
@@ -353,7 +373,7 @@ class ComprehensiveFreeAPIsService {
 
       return null;
     } catch (error) {
-      console.error('USDA API error:', error);
+      if (import.meta.env.DEV) console.error('USDA API error:', error);
       return null;
     }
   }
@@ -371,7 +391,7 @@ class ComprehensiveFreeAPIsService {
 
     for (const food of cardiacSafeFoods) {
       const nutrientInfo = await this.searchFood(food);
-      if (nutrientInfo && nutrientInfo.cardiacSafe) {
+      if (nutrientInfo?.cardiacSafe) {
         recommendations.push(
           `✅ ${nutrientInfo.foodName}: ${nutrientInfo.calories}cal, Sodium: ${nutrientInfo.sodium}mg (SAFE)`
         );
@@ -393,7 +413,7 @@ class ComprehensiveFreeAPIsService {
    */
   async getCardiacSafeExercises(): Promise<ExerciseInfo[]> {
     const cacheKey = 'wger_cardiac_exercises';
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<ExerciseInfo[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -410,7 +430,7 @@ class ComprehensiveFreeAPIsService {
           
           exercises.push({
             name: ex.name,
-            description: ex.description?.replace(/<[^>]*>/g, '') || '', // Remove HTML tags
+            description: ex.description?.replaceAll(/<[^>]*>/g, '') || '', // Remove HTML tags
             category: this.getExerciseCategory(ex.category),
             muscles: ex.muscles || [],
             equipment: ex.equipment || [],
@@ -424,7 +444,7 @@ class ComprehensiveFreeAPIsService {
       this.setCache(cacheKey, cardiacSafe);
       return cardiacSafe;
     } catch (error) {
-      console.error('wger API error:', error);
+      if (import.meta.env.DEV) console.error('wger API error:', error);
       return this.getFallbackExercises();
     }
   }
@@ -434,98 +454,92 @@ class ComprehensiveFreeAPIsService {
    * NO API KEY REQUIRED - Completely FREE
    * 🎯 NEW: Personalized based on age, risk score, and conditions
    */
-  async getCardiacSafeYogaPoses(age: number = 50, riskScore: number = 0, conditions: string[] = []): Promise<YogaPose[]> {
-    // Don't cache personalized recommendations - generate fresh each time
-    const cacheKey = `yoga_all_poses`; // Cache only the full pose list
-    let allPoses: any[] = [];
-    
-    const cached = this.getFromCache(cacheKey);
-    if (cached) {
-      allPoses = cached;
-    } else {
-      try {
-        const url = `${this.YOGA_API}/poses`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        allPoses = data || [];
-        this.setCache(cacheKey, allPoses);
-      } catch (error) {
-        console.error('Yoga API error:', error);
-        return this.getFallbackYogaPoses();
+  /**
+   * Check if pose is safe based on age
+   */
+  private isPoseSafeForAge(age: number, poseName: string, difficulty: string): boolean {
+    if (age > 65) {
+      // Elderly: Only gentle poses, avoid inversions and intense backbends
+      if (poseName.includes('headstand') || poseName.includes('shoulderstand') || 
+          poseName.includes('wheel') || poseName.includes('full boat') ||
+          difficulty.toLowerCase() === 'advanced') {
+        return false;
+      }
+    } else if (age > 50) {
+      // Middle age: Avoid advanced inversions
+      if (difficulty.toLowerCase() === 'advanced' && 
+          (poseName.includes('headstand') || poseName.includes('forearm stand'))) {
+        return false;
       }
     }
+    return true;
+  }
 
-    // 🎯 PERSONALIZATION LOGIC based on patient profile
-    const poses: YogaPose[] = [];
-    const hasHighBP = conditions.some(c => c.toLowerCase().includes('hypertension') || c.toLowerCase().includes('blood pressure'));
-    const hasDiabetes = conditions.some(c => c.toLowerCase().includes('diabetes'));
-    const hasHeartDisease = conditions.some(c => c.toLowerCase().includes('heart') || c.toLowerCase().includes('cardiac'));
-    
-    for (const pose of allPoses) {
-      const difficulty = pose.difficulty_level || pose.difficulty || 'Beginner';
-      const poseName = (pose.english_name || pose.name || '').toLowerCase();
-      const benefits = (pose.benefits || []).join(' ').toLowerCase();
-      const contraindications = (pose.contraindications || []).join(' ').toLowerCase();
-      
-      // Age-based filtering
-      let isSafeForAge = true;
-      if (age > 65) {
-        // Elderly: Only gentle poses, avoid inversions and intense backbends
-        if (poseName.includes('headstand') || poseName.includes('shoulderstand') || 
-            poseName.includes('wheel') || poseName.includes('full boat') ||
-            difficulty.toLowerCase() === 'advanced') {
-          isSafeForAge = false;
-        }
-      } else if (age > 50) {
-        // Middle age: Avoid advanced inversions
-        if (difficulty.toLowerCase() === 'advanced' && 
-            (poseName.includes('headstand') || poseName.includes('forearm stand'))) {
-          isSafeForAge = false;
-        }
+  /**
+   * Check if pose is safe based on cardiovascular risk score
+   */
+  private isPoseSafeForRiskScore(riskScore: number, difficulty: string, contraindications: string): boolean {
+    if (riskScore > 70) {
+      // High risk: Only beginner, gentle poses
+      if (difficulty.toLowerCase() !== 'beginner' || 
+          contraindications.includes('heart') || contraindications.includes('cardiac')) {
+        return false;
       }
-      
-      // Risk score based filtering
-      let isSafeForRisk = true;
-      if (riskScore > 70) {
-        // High risk: Only beginner, gentle poses
-        if (difficulty.toLowerCase() !== 'beginner' || 
-            contraindications.includes('heart') || contraindications.includes('cardiac')) {
-          isSafeForRisk = false;
-        }
-      } else if (riskScore > 40) {
-        // Medium risk: Beginner to intermediate
-        if (difficulty.toLowerCase() === 'advanced' || contraindications.includes('heart')) {
-          isSafeForRisk = false;
-        }
-      }
-      
-      // Condition-based filtering
-      let isSafeForConditions = true;
-      if (hasHighBP && (poseName.includes('inversion') || contraindications.includes('hypertension') || 
-                        contraindications.includes('high blood pressure'))) {
-        isSafeForConditions = false;
-      }
-      if (hasHeartDisease && (contraindications.includes('heart') || contraindications.includes('cardiac'))) {
-        isSafeForConditions = false;
-      }
-      
-      // Only include if safe for all criteria
-      if (isSafeForAge && isSafeForRisk && isSafeForConditions) {
-        poses.push({
-          name: pose.english_name || pose.name || '',
-          sanskritName: pose.sanskrit_name || '',
-          difficulty: difficulty,
-          benefits: pose.benefits || [],
-          contraindications: pose.contraindications || [],
-          imageUrl: pose.img_url || pose.image_url,
-          cardiacSafe: true
-        });
+    } else if (riskScore > 40) {
+      // Medium risk: Beginner to intermediate
+      if (difficulty.toLowerCase() === 'advanced' || contraindications.includes('heart')) {
+        return false;
       }
     }
+    return true;
+  }
+
+  /**
+   * Check if pose is safe based on medical conditions
+   */
+  private isPoseSafeForConditions(
+    conditions: string[], 
+    poseName: string, 
+    contraindications: string
+  ): boolean {
+    const hasHighBP = conditions.some(c => 
+      c.toLowerCase().includes('hypertension') || c.toLowerCase().includes('blood pressure'));
+    const hasHeartDisease = conditions.some(c => 
+      c.toLowerCase().includes('heart') || c.toLowerCase().includes('cardiac'));
     
-    // Prioritize poses based on patient needs
-    const prioritizedPoses = poses.sort((a, b) => {
+    if (hasHighBP && (poseName.includes('inversion') || 
+        contraindications.includes('hypertension') || 
+        contraindications.includes('high blood pressure'))) {
+      return false;
+    }
+    
+    if (hasHeartDisease && (contraindications.includes('heart') || contraindications.includes('cardiac'))) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Convert API pose to YogaPose format
+   */
+  private convertToYogaPose(pose: YogaAPIResponse): YogaPose {
+    return {
+      name: pose.english_name || pose.name || '',
+      sanskritName: pose.sanskrit_name || '',
+      difficulty: pose.difficulty_level || pose.difficulty || 'Beginner',
+      benefits: pose.benefits || [],
+      contraindications: pose.contraindications || [],
+      imageUrl: pose.img_url || pose.image_url,
+      cardiacSafe: true
+    };
+  }
+
+  /**
+   * Prioritize poses based on patient needs
+   */
+  private prioritizeYogaPoses(poses: YogaPose[], age: number, riskScore: number): YogaPose[] {
+    return [...poses].sort((a, b) => {
       // Prioritize stress relief for high-risk patients
       const aStressRelief = a.benefits.some(b => 
         b.toLowerCase().includes('stress') || b.toLowerCase().includes('calm') || 
@@ -552,10 +566,58 @@ class ComprehensiveFreeAPIsService {
       
       return 0;
     });
+  }
+
+  /**
+   * Get yoga poses from Yoga API - PERSONALIZED for patient
+   * NO API KEY REQUIRED - Completely FREE
+   * 🎯 NEW: Personalized based on age, risk score, and conditions
+   */
+  async getCardiacSafeYogaPoses(age: number = 50, riskScore: number = 0, conditions: string[] = []): Promise<YogaPose[]> {
+    // Don't cache personalized recommendations - generate fresh each time
+    const cacheKey = `yoga_all_poses`; // Cache only the full pose list
+    let allPoses: YogaAPIResponse[] = [];
     
-    // Return randomized selection from top matches for variety
+    const cached = this.getFromCache<YogaAPIResponse[]>(cacheKey);
+    if (cached) {
+      allPoses = cached;
+    } else {
+      try {
+        const url = `${this.YOGA_API}/poses`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        allPoses = data || [];
+        this.setCache(cacheKey, allPoses);
+      } catch (error) {
+        if (import.meta.env.DEV) console.error('Yoga API error:', error);
+        return this.getFallbackYogaPoses();
+      }
+    }
+
+    // Filter poses based on patient profile
+    const poses: YogaPose[] = [];
+    
+    for (const pose of allPoses) {
+      const difficulty = pose.difficulty_level || pose.difficulty || 'Beginner';
+      const poseName = (pose.english_name || pose.name || '').toLowerCase();
+      const contraindications = (pose.contraindications || []).join(' ').toLowerCase();
+      
+      // Apply all safety filters
+      const isSafeForAge = this.isPoseSafeForAge(age, poseName, difficulty);
+      const isSafeForRisk = this.isPoseSafeForRiskScore(riskScore, difficulty, contraindications);
+      const isSafeForConditions = this.isPoseSafeForConditions(conditions, poseName, contraindications);
+      
+      // Only include if safe for all criteria
+      if (isSafeForAge && isSafeForRisk && isSafeForConditions) {
+        poses.push(this.convertToYogaPose(pose));
+      }
+    }
+    
+    // Prioritize and return personalized selection
+    const prioritizedPoses = this.prioritizeYogaPoses(poses, age, riskScore);
     const topMatches = prioritizedPoses.slice(0, 20);
-    const shuffled = topMatches.sort(() => Math.random() - 0.5);
+    const shuffled = [...topMatches].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 8);
   }
 
@@ -571,7 +633,7 @@ class ComprehensiveFreeAPIsService {
    */
   async searchClinicalTrials(condition: string = 'myocardial infarction rehabilitation'): Promise<ClinicalTrial[]> {
     const cacheKey = `clinicaltrials_${condition}`;
-    const cached = this.getFromCache(cacheKey);
+    const cached = this.getFromCache<ClinicalTrial[]>(cacheKey);
     if (cached) return cached;
 
     try {
@@ -579,6 +641,10 @@ class ComprehensiveFreeAPIsService {
       
       const response = await fetch(url);
       const data = await response.json();
+
+      interface Intervention {
+        name?: string;
+      }
 
       const trials: ClinicalTrial[] = [];
       if (data.studies) {
@@ -590,7 +656,7 @@ class ComprehensiveFreeAPIsService {
             status: protocol.statusModule?.overallStatus || '',
             phase: protocol.designModule?.phases?.[0] || '',
             conditions: protocol.conditionsModule?.conditions || [],
-            interventions: protocol.armsInterventionsModule?.interventions?.map((i: any) => i.name) || [],
+            interventions: protocol.armsInterventionsModule?.interventions?.map((i: Intervention) => i.name || '') || [],
             url: `https://clinicaltrials.gov/study/${protocol.identificationModule?.nctId}`
           });
         }
@@ -599,7 +665,7 @@ class ComprehensiveFreeAPIsService {
       this.setCache(cacheKey, trials);
       return trials;
     } catch (error) {
-      console.error('ClinicalTrials.gov API error:', error);
+      if (import.meta.env.DEV) console.error('ClinicalTrials.gov API error:', error);
       return [];
     }
   }
@@ -611,6 +677,84 @@ class ComprehensiveFreeAPIsService {
    */
 
   /**
+   * Add medical literature recommendations
+   */
+  private async addLiteratureRecommendations(recommendations: string[]): Promise<void> {
+    // MedlinePlus - Evidence-based health information
+    const medlinePlus = await this.getMedlinePlusContent('I21');
+    if (medlinePlus.length > 0) {
+      recommendations.push(`📚 MedlinePlus: ${medlinePlus[0].title} - ${medlinePlus[0].url}`);
+    }
+
+    // PubMed - Latest research
+    const pubmedArticles = await this.searchPubMed('myocardial infarction secondary prevention', 3);
+    for (const article of pubmedArticles) {
+      recommendations.push(`📄 Latest Research: "${article.title}" - ${article.url}`);
+    }
+  }
+
+  /**
+   * Add medication recommendations
+   */
+  private async addMedicationRecommendations(
+    recommendations: string[], 
+    conditions: string[]
+  ): Promise<void> {
+    if (conditions.includes('dyslipidemia')) {
+      const statin = await this.normalizeDrugName('atorvastatin');
+      if (statin) {
+        recommendations.push(`💊 Medication: ${statin.name} ${statin.strength || '40mg'} - Discuss with doctor [RxNorm: ${statin.rxcui}]`);
+        
+        const adverseEvents = await this.getAdverseEvents('atorvastatin', 3);
+        if (adverseEvents.length > 0) {
+          recommendations.push(`⚠️ Common side effects: ${adverseEvents.map(e => e.reaction).join(', ')} [openFDA data]`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Add lifestyle recommendations
+   */
+  private async addLifestyleRecommendations(
+    recommendations: string[], 
+    age: number, 
+    riskScore: number, 
+    riskLevel: string, 
+    conditions: string[]
+  ): Promise<void> {
+    // Nutrition
+    const cardiacMeals = await this.getCardiacSafeMeals();
+    if (cardiacMeals.length > 0) {
+      recommendations.push(`🥗 Cardiac-Safe Foods (USDA):`, ...cardiacMeals.slice(0, 5));
+    }
+
+    // Exercise
+    const exercises = await this.getCardiacSafeExercises();
+    if (exercises.length > 0) {
+      recommendations.push(`🏃 Recommended Exercises (wger):`);
+      for (const ex of exercises.slice(0, 3)) {
+        recommendations.push(`  - ${ex.name}: ${ex.description.substring(0, 100)}...`);
+      }
+    }
+
+    // Yoga
+    const yogaPoses = await this.getCardiacSafeYogaPoses(age, riskScore, conditions);
+    if (yogaPoses.length > 0) {
+      recommendations.push(`🧘 Personalized Cardiac-Safe Yoga Poses for ${age}-year-old with ${riskLevel} risk:`);
+      for (const pose of yogaPoses.slice(0, 4)) {
+        recommendations.push(`  - ${pose.name} (${pose.sanskritName}): ${pose.benefits.slice(0, 2).join(', ')}`);
+      }
+    }
+
+    // Ayurvedic
+    const ayurvedicAdvice = this.generatePersonalizedAyurvedicAdvice(age, riskScore, riskLevel, conditions);
+    if (ayurvedicAdvice.length > 0) {
+      recommendations.push(`🌿 Personalized Ayurvedic Recommendations:`, ...ayurvedicAdvice.map(advice => `  - ${advice}`));
+    }
+  }
+
+  /**
    * Generate comprehensive, evidence-based recommendations using ALL FREE APIs
    */
   async generateComprehensiveRecommendations(
@@ -620,77 +764,31 @@ class ComprehensiveFreeAPIsService {
     conditions: string[],
     riskFactors: string[]
   ): Promise<string[]> {
-    console.log('🌐 Fetching recommendations from ALL FREE APIs...');
+    if (import.meta.env.DEV) console.log('🌐 Fetching recommendations from ALL FREE APIs...');
     
     const recommendations: string[] = [];
 
     try {
-      // 1. MedlinePlus - Evidence-based health information
-      const medlinePlus = await this.getMedlinePlusContent('I21');
-      if (medlinePlus.length > 0) {
-        recommendations.push(`📚 MedlinePlus: ${medlinePlus[0].title} - ${medlinePlus[0].url}`);
-      }
+      // 1. Medical Literature
+      await this.addLiteratureRecommendations(recommendations);
 
-      // 2. PubMed - Latest research
-      const pubmedArticles = await this.searchPubMed('myocardial infarction secondary prevention', 3);
-      for (const article of pubmedArticles) {
-        recommendations.push(`📄 Latest Research: "${article.title}" - ${article.url}`);
-      }
+      // 2. Medications
+      await this.addMedicationRecommendations(recommendations, conditions);
 
-      // 3. Medications - RxNorm + openFDA
-      if (conditions.includes('dyslipidemia')) {
-        const statin = await this.normalizeDrugName('atorvastatin');
-        if (statin) {
-          recommendations.push(`💊 Medication: ${statin.name} ${statin.strength || '40mg'} - Discuss with doctor [RxNorm: ${statin.rxcui}]`);
-          
-          const adverseEvents = await this.getAdverseEvents('atorvastatin', 3);
-          if (adverseEvents.length > 0) {
-            recommendations.push(`⚠️ Common side effects: ${adverseEvents.map(e => e.reaction).join(', ')} [openFDA data]`);
-          }
-        }
-      }
+      // 3. Lifestyle (Nutrition, Exercise, Yoga, Ayurveda)
+      await this.addLifestyleRecommendations(recommendations, age, riskScore, riskLevel, conditions);
 
-      // 4. Nutrition - USDA FoodData Central
-      const cardiacMeals = await this.getCardiacSafeMeals();
-      recommendations.push(`🥗 Cardiac-Safe Foods (USDA):`);
-      recommendations.push(...cardiacMeals.slice(0, 5));
-
-      // 5. Exercise - wger API
-      const exercises = await this.getCardiacSafeExercises();
-      if (exercises.length > 0) {
-        recommendations.push(`🏃 Recommended Exercises (wger):`);
-        for (const ex of exercises.slice(0, 3)) {
-          recommendations.push(`  - ${ex.name}: ${ex.description.substring(0, 100)}...`);
-        }
-      }
-
-      // 6. Yoga - Yoga API (PERSONALIZED)
-      const yogaPoses = await this.getCardiacSafeYogaPoses(age, riskScore, conditions);
-      if (yogaPoses.length > 0) {
-        recommendations.push(`🧘 Personalized Cardiac-Safe Yoga Poses for ${age}-year-old with ${riskLevel} risk:`);
-        for (const pose of yogaPoses.slice(0, 4)) {
-          recommendations.push(`  - ${pose.name} (${pose.sanskritName}): ${pose.benefits.slice(0, 2).join(', ')}`);
-        }
-      }
-
-      // 6.5. Ayurvedic Recommendations (PERSONALIZED & DYNAMIC)
-      const ayurvedicAdvice = this.generatePersonalizedAyurvedicAdvice(age, riskScore, riskLevel, conditions);
-      if (ayurvedicAdvice.length > 0) {
-        recommendations.push(`🌿 Personalized Ayurvedic Recommendations:`);
-        recommendations.push(...ayurvedicAdvice.map(advice => `  - ${advice}`));
-      }
-
-      // 7. Clinical Trials - Education
+      // 4. Clinical Trials
       const trials = await this.searchClinicalTrials('post myocardial infarction');
       if (trials.length > 0) {
         recommendations.push(`🔬 Ongoing Research: ${trials[0].title} - ${trials[0].url}`);
       }
 
-      console.log(`✅ Generated ${recommendations.length} evidence-based recommendations from FREE APIs`);
+      if (import.meta.env.DEV) console.log(`✅ Generated ${recommendations.length} evidence-based recommendations from FREE APIs`);
       return recommendations;
 
     } catch (error) {
-      console.error('Error generating comprehensive recommendations:', error);
+      if (import.meta.env.DEV) console.error('Error generating comprehensive recommendations:', error);
       return this.getFallbackRecommendations(riskLevel);
     }
   }
@@ -705,9 +803,13 @@ class ComprehensiveFreeAPIsService {
     // Simple XML parsing for MedlinePlus response
     const results: MedlinePlusResult[] = [];
     
-    const titleMatch = xml.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const summaryMatch = xml.match(/<summary[^>]*>([^<]+)<\/summary>/i);
-    const linkMatch = xml.match(/<link[^>]*href="([^"]+)"/i);
+    const titleRegex = /<title[^>]*>([^<]+)<\/title>/i;
+    const summaryRegex = /<summary[^>]*>([^<]+)<\/summary>/i;
+    const linkRegex = /<link[^>]*href="([^"]+)"/i;
+
+    const titleMatch = titleRegex.exec(xml);
+    const summaryMatch = summaryRegex.exec(xml);
+    const linkMatch = linkRegex.exec(xml);
 
     if (titleMatch && summaryMatch && linkMatch) {
       results.push({
@@ -782,32 +884,44 @@ class ComprehensiveFreeAPIsService {
     
     // Vata (air) increases with age, causes anxiety, irregular heartbeat
     if (age > 60 || riskScore > 60) {
-      advice.push(`Arjuna bark tea (2 cups daily) - Clinically proven to strengthen heart muscles and regulate blood pressure`);
-      advice.push(`Ashwagandha (300mg before bed) - Reduces cortisol by 28%, improves cardiac stress resilience`);
+      const vataAdvice = [
+        `Arjuna bark tea (2 cups daily) - Clinically proven to strengthen heart muscles and regulate blood pressure`,
+        `Ashwagandha (300mg before bed) - Reduces cortisol by 28%, improves cardiac stress resilience`
+      ];
       
       if (isWinter) {
-        advice.push(`Winter season aggravates Vata: Add warming spices (ginger, cinnamon, black pepper) to meals for circulation`);
+        vataAdvice.push(`Winter season aggravates Vata: Add warming spices (ginger, cinnamon, black pepper) to meals for circulation`);
       }
+      
+      advice.push(...vataAdvice);
     }
     
     // Pitta (fire) - inflammation, heat, high BP
     if (hasHighBP || hasHighCholesterol) {
-      advice.push(`Triphala powder (1 tsp with warm water at bedtime) - Reduces LDL cholesterol by 15-20% naturally`);
-      advice.push(`Coriander seeds water (soak overnight, drink morning) - Natural diuretic, reduces blood pressure`);
+      const pittaAdvice = [
+        `Triphala powder (1 tsp with warm water at bedtime) - Reduces LDL cholesterol by 15-20% naturally`,
+        `Coriander seeds water (soak overnight, drink morning) - Natural diuretic, reduces blood pressure`
+      ];
       
       if (isSummer) {
-        advice.push(`Summer aggravates Pitta: Consume cooling foods (cucumber, watermelon, mint, coconut water)`);
+        pittaAdvice.push(`Summer aggravates Pitta: Consume cooling foods (cucumber, watermelon, mint, coconut water)`);
       }
+      
+      advice.push(...pittaAdvice);
     }
     
     // Kapha (earth/water) - congestion, high cholesterol, diabetes
     if (hasDiabetes || hasHighCholesterol) {
-      advice.push(`Fenugreek seeds (1 tsp soaked overnight, chew morning) - Reduces blood sugar by 25%, lowers triglycerides`);
-      advice.push(`Turmeric golden milk (1 tsp turmeric + black pepper in warm milk) - Powerful anti-inflammatory, reduces arterial plaque`);
+      const kaphaAdvice = [
+        `Fenugreek seeds (1 tsp soaked overnight, chew morning) - Reduces blood sugar by 25%, lowers triglycerides`,
+        `Turmeric golden milk (1 tsp turmeric + black pepper in warm milk) - Powerful anti-inflammatory, reduces arterial plaque`
+      ];
       
       if (isMonsoon) {
-        advice.push(`Monsoon increases Kapha: Avoid heavy, oily foods. Prefer light, warm, spiced meals (kitchari, soups)`);
+        kaphaAdvice.push(`Monsoon increases Kapha: Avoid heavy, oily foods. Prefer light, warm, spiced meals (kitchari, soups)`);
       }
+      
+      advice.push(...kaphaAdvice);
     }
     
     // Age-specific recommendations
@@ -819,8 +933,10 @@ class ComprehensiveFreeAPIsService {
     
     // Risk-based lifestyle advice
     if (riskScore > 70) {
-      advice.push(`Daily Abhyanga (warm sesame oil massage) - Calms nervous system, reduces blood pressure by 10-15 mmHg`);
-      advice.push(`Practice Sheetali Pranayama (cooling breath) 10 min daily - Scientifically proven to lower heart rate`);
+      advice.push(
+        `Daily Abhyanga (warm sesame oil massage) - Calms nervous system, reduces blood pressure by 10-15 mmHg`,
+        `Practice Sheetali Pranayama (cooling breath) 10 min daily - Scientifically proven to lower heart rate`
+      );
     } else if (riskScore > 40) {
       advice.push(`Eat meals at consistent times (Ayurvedic circadian rhythm) - Breakfast 7-8am, Lunch 12-1pm, Dinner before 7pm`);
     }
@@ -892,15 +1008,16 @@ class ComprehensiveFreeAPIsService {
     ];
   }
 
-  private getFromCache(key: string): any | null {
+  private getFromCache<T>(key: string): T | null {
     const expiry = this.cacheExpiry.get(key);
     if (expiry && Date.now() < expiry) {
-      return this.cache.get(key);
+      const cached = this.cache.get(key);
+      return cached as T;
     }
     return null;
   }
 
-  private setCache(key: string, value: any): void {
+  private setCache(key: string, value: unknown): void {
     this.cache.set(key, value);
     this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION);
   }

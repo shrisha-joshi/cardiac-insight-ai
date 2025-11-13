@@ -121,11 +121,11 @@ export const InfoMessages = {
  */
 export function getErrorMessage(
   errorType: string,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): string {
   // Simple lookup for generic errors
   const parts = errorType.split('.');
-  let message = (ErrorMessages as any);
+  let message = (ErrorMessages as unknown);
 
   for (const part of parts) {
     if (message[part]) {
@@ -137,10 +137,10 @@ export function getErrorMessage(
 
   // If it's a function, call it with context
   if (typeof message === 'function') {
-    return message(context?.value || context);
+    return String(message(context?.value || context));
   }
 
-  return message || 'An unexpected error occurred.';
+  return String(message) || 'An unexpected error occurred.';
 }
 
 /**
@@ -177,9 +177,9 @@ export function formatMultipleErrors(errors: (string | Error)[]): string {
 export function logErrorForDebugging(
   context: string,
   error: Error | string,
-  additionalData?: Record<string, any>
+  additionalData?: Record<string, unknown>
 ): void {
-  console.error(`[${context}]`, {
+  if (import.meta.env.DEV) console.error(`[${context}]`, {
     error: typeof error === 'string' ? error : error.message,
     stack: typeof error === 'string' ? undefined : error.stack,
     ...additionalData,
@@ -192,7 +192,7 @@ export function logErrorForDebugging(
 export function createErrorResponse(
   message: string,
   code?: string,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ) {
   return {
     success: false,
@@ -209,7 +209,7 @@ export function createErrorResponse(
  * Create consistent success response object
  */
 export function createSuccessResponse(
-  data?: any,
+  data?: unknown,
   message?: string
 ) {
   return {

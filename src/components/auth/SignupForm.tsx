@@ -73,7 +73,7 @@ export default function SignupForm() {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          if (import.meta.env.DEV) console.error('Profile creation error:', profileError);
         }
 
         toast({

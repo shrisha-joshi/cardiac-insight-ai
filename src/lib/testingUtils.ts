@@ -240,7 +240,7 @@ export class TestDataValidator {
  * Test helpers for React components
  */
 export class ComponentTestHelper {
-  static createMockProps(overrides?: Record<string, any>) {
+  static createMockProps(overrides?: Record<string, unknown>) {
     return {
       onSubmit: () => {},
       onCancel: () => {},
@@ -270,7 +270,7 @@ export class ComponentTestHelper {
     };
   }
 
-  static mockFetch(responses: Record<string, any>) {
+  static mockFetch(responses: Record<string, unknown>) {
     return (url: string) =>
       Promise.resolve({
         ok: true,
@@ -365,8 +365,8 @@ export function createMockResponse<T>(data: T, statusCode: number = 200) {
  * Create mock error
  */
 export function createMockError(message: string, statusCode: number = 500) {
-  const error = new Error(message);
-  (error as any).response = {
+  const error = new Error(message) as Error & { response?: Record<string, unknown> };
+  error.response = {
     status: statusCode,
     data: { message },
   };

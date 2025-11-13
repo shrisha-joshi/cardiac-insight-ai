@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
-import { validatePatientDataComprehensive, getChecksBySeverity } from '@/lib/edgeCaseHandler';
+import { validatePatientDataComprehensive, getChecksBySeverity, type EdgeCaseValidationResult } from '@/lib/edgeCaseHandler';
 import { Heart, Activity, User, Stethoscope, Upload, FileText, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface PatientFormProps {
@@ -19,7 +19,7 @@ interface PatientFormProps {
 export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
   const [formData, setFormData] = useState<PatientData>(defaultPatientData);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [validationResult, setValidationResult] = useState<any>(null);
+  const [validationResult, setValidationResult] = useState<EdgeCaseValidationResult | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {

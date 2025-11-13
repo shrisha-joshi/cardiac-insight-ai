@@ -66,8 +66,8 @@ export interface PatientMedicationProfile {
 }
 
 class MedicationInteractionService {
-  private medications: Map<string, Medication> = this.initializeMedications();
-  private interactions: Map<string, DrugInteraction> = this.initializeInteractions();
+  private readonly medications: Map<string, Medication> = this.initializeMedications();
+  private readonly interactions: Map<string, DrugInteraction> = this.initializeInteractions();
 
   /**
    * Initialize cardiac medications database
@@ -507,19 +507,19 @@ class MedicationInteractionService {
 
     // Current medications
     report += '## Current Medications\n';
-    profile.medications.forEach(med => {
+    for (const med of profile.medications) {
       const medDetails = this.medications.get(med.medicationId);
       if (medDetails) {
         report += `- **${medDetails.name}** (${med.dose}, ${med.frequency})\n`;
       }
-    });
+    }
 
     // Allergies
     report += '\n## Known Allergies\n';
     if (profile.allergies.length > 0) {
-      profile.allergies.forEach(allergy => {
+      for (const allergy of profile.allergies) {
         report += `- ${allergy}\n`;
-      });
+      }
     } else {
       report += '- No known allergies\n';
     }
@@ -530,11 +530,11 @@ class MedicationInteractionService {
     if (interactions.hasMajorInteractions) {
       report += '⚠️ **MAJOR INTERACTIONS DETECTED**\n';
     }
-    interactions.interactions.forEach(inter => {
+    for (const inter of interactions.interactions) {
       report += `- **${inter.drug1} + ${inter.drug2}** (${inter.severity})\n`;
       report += `  - ${inter.description}\n`;
       report += `  - Management: ${inter.management}\n`;
-    });
+    }
 
     if (interactions.interactions.length === 0) {
       report += 'No significant drug-drug interactions detected.\n';

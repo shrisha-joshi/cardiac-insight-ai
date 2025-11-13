@@ -119,7 +119,7 @@ export default function Header() {
 
   const MobileNavLink = ({ to, icon: Icon, children, onClick }: { 
     to: string; 
-    icon: any; 
+    icon: unknown; 
     children: React.ReactNode;
     onClick?: () => void;
   }) => (

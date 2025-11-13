@@ -66,7 +66,7 @@ export default function BasicDashboard() {
       
       setUser(user);
     } catch (error) {
-      console.error('Auth check error:', error);
+      if (import.meta.env.DEV) console.error('Auth check error:', error);
       // Don't redirect on network or temporary errors
     } finally {
       setAuthLoading(false);
@@ -144,7 +144,7 @@ export default function BasicDashboard() {
     
     // Basic document processing for free tier (limited features)
     for (const file of files) {
-      console.log('Basic processing:', file.name);
+      if (import.meta.env.DEV) console.log('Basic processing:', file.name);
       if (file.name.toLowerCase().includes('blood')) {
         // Basic data extraction - limited compared to premium
         updateField('cholesterol', 200);
@@ -181,7 +181,7 @@ export default function BasicDashboard() {
         duration: 6000,
       });
     } catch (error) {
-      console.error('Error:', error);
+      if (import.meta.env.DEV) console.error('Error:', error);
       toast({
         title: "Assessment Error",
         description: "Failed to complete assessment. Please try again.",

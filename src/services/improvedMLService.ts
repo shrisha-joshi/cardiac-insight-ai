@@ -44,8 +44,17 @@ interface AlgorithmPrediction {
 }
 
 class ImprovedMLService {
-  private gemini: GoogleGenerativeAI | null = null;
-  private model: any = null;
+  private readonly gemini: GoogleGenerativeAI | null = null;
+  private readonly model: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+
+  // Ensemble weights for different algorithms
+  private readonly LOGISTIC_WEIGHT = 0.25;
+  private readonly RANDOM_FOREST_WEIGHT = 0.3;
+  private readonly GRADIENT_BOOSTING_WEIGHT = 0.3;
+  private readonly GEMINI_WEIGHT = 0.15;
+
+  // Logistic regression coefficients
+  private readonly COEFF_HDL = -0.02;
 
   constructor() {
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
@@ -64,32 +73,60 @@ class ImprovedMLService {
   ): Promise<PredictionResult> {
     // Use Maximum Accuracy 10-Model Super Ensemble if enabled
     if (useMaximumAccuracy) {
-      try {
-        console.log('🚀 Using Maximum Accuracy 10-Model Super Ensemble...');
-        const maximumResult = await maximumAccuracyMLService.predictWithMaximumAccuracy(patientData);
-        
-        // Map to PredictionResult format
-        const mappedRiskLevel = maximumResult.riskLevel === 'very-high' ? 'high' : maximumResult.riskLevel;
-        const mappedPrediction = maximumResult.finalRiskScore > 45 ? 'Risk' : 'No Risk';
-        
-        return {
-          id: Date.now().toString(),
-          patientData,
-          riskScore: maximumResult.finalRiskScore,
-          riskLevel: mappedRiskLevel,
-          prediction: mappedPrediction,
-          confidence: maximumResult.confidence,
-          timestamp: maximumResult.timestamp,
-          explanation: maximumResult.explanation,
-          recommendations: maximumResult.recommendations
-        };
-      } catch (error) {
-        console.warn('Maximum Accuracy service failed, falling back to 4-model ensemble:', error);
-        // Fall through to standard 4-model ensemble
-      }
+      const maximumResult = await this.tryMaximumAccuracyPrediction(patientData);
+      if (maximumResult) return maximumResult;
     }
     
     // Standard 4-model ensemble (fallback)
+    return this.standard4ModelEnsemblePrediction(patientData);
+  }
+
+  /**
+   * Try maximum accuracy 10-model prediction
+   */
+  private async tryMaximumAccuracyPrediction(
+    patientData: PatientData
+  ): Promise<PredictionResult | null> {
+    try {
+      if (import.meta.env.DEV) console.log('🚀 Using Maximum Accuracy 10-Model Super Ensemble...');
+      const maximumResult = await maximumAccuracyMLService.predictWithMaximumAccuracy(patientData);
+      
+      return this.mapMaximumAccuracyResult(maximumResult, patientData);
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('Maximum Accuracy service failed, falling back to 4-model ensemble:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Map maximum accuracy result to PredictionResult format
+   */
+  private mapMaximumAccuracyResult(
+    maximumResult: { finalRiskScore: number; riskLevel: string; confidence: number; timestamp: Date; explanation: string; recommendations: string[] },
+    patientData: PatientData
+  ): PredictionResult {
+    const mappedRiskLevel = maximumResult.riskLevel === 'very-high' ? 'high' : maximumResult.riskLevel as 'low' | 'medium' | 'high';
+    const mappedPrediction = maximumResult.finalRiskScore > 45 ? 'Risk' : 'No Risk';
+    
+    return {
+      id: Date.now().toString(),
+      patientData,
+      riskScore: maximumResult.finalRiskScore,
+      riskLevel: mappedRiskLevel,
+      prediction: mappedPrediction,
+      confidence: maximumResult.confidence,
+      timestamp: maximumResult.timestamp,
+      explanation: maximumResult.explanation,
+      recommendations: maximumResult.recommendations
+    };
+  }
+
+  /**
+   * Standard 4-model ensemble prediction
+   */
+  private async standard4ModelEnsemblePrediction(
+    patientData: PatientData
+  ): Promise<PredictionResult> {
     try {
       // Run all prediction algorithms in parallel
       const [
@@ -98,18 +135,18 @@ class ImprovedMLService {
         gradientBoostingResult,
         geminiResult
       ] = await Promise.all([
-        this.logisticRegressionPrediction(patientData),
-        this.randomForestPrediction(patientData),
-        this.gradientBoostingPrediction(patientData),
+        Promise.resolve(this.logisticRegressionPrediction(patientData)),
+        Promise.resolve(this.randomForestPrediction(patientData)),
+        Promise.resolve(this.gradientBoostingPrediction(patientData)),
         this.geminiAIPrediction(patientData)
       ]);
 
       // Ensemble voting (weighted average)
       const predictions = [
-        { ...logisticResult, weight: 0.25 },
-        { ...randomForestResult, weight: 0.30 },
-        { ...gradientBoostingResult, weight: 0.30 },
-        { ...geminiResult, weight: 0.15 }
+        { ...logisticResult, weight: this.LOGISTIC_WEIGHT },
+        { ...randomForestResult, weight: this.RANDOM_FOREST_WEIGHT },
+        { ...gradientBoostingResult, weight: this.GRADIENT_BOOSTING_WEIGHT },
+        { ...geminiResult, weight: this.GEMINI_WEIGHT }
       ];
 
       // Calculate weighted average risk score
@@ -158,7 +195,7 @@ class ImprovedMLService {
         recommendations
       };
     } catch (error) {
-      console.error('ML prediction error:', error);
+      if (import.meta.env.DEV) console.error('ML prediction error:', error);
       // Fallback to best available algorithm
       return this.fallbackPrediction(patientData);
     }
@@ -185,7 +222,7 @@ class ImprovedMLService {
     
     // HDL cholesterol (protective)
     const hdl = data.hdlCholesterol || 45;
-    z += (hdl - 45) * -0.020;
+    z += (hdl - 45) * this.COEFF_HDL;
     
     // LDL cholesterol
     const ldl = data.ldlCholesterol || 100;
@@ -223,73 +260,13 @@ class ImprovedMLService {
     let riskScore = 0;
 
     // Decision tree paths (simplified from 100 trees)
-    
-    // Path 1: Age and smoking interaction
-    if (data.age > 50 && data.smoking) {
-      riskScore += 30;
-    } else if (data.age > 60) {
-      riskScore += 20;
-    } else if (data.age > 40) {
-      riskScore += 10;
-    }
-
-    // Path 2: Cholesterol and HDL interaction
-    const cholesterol = data.cholesterol || 200;
-    const hdl = data.hdlCholesterol || 50;
-    const cholRatio = cholesterol / Math.max(hdl, 10);
-    
-    if (cholRatio > 5) {
-      riskScore += 25;
-    } else if (cholRatio > 4) {
-      riskScore += 15;
-    } else if (cholRatio > 3) {
-      riskScore += 5;
-    }
-
-    // Path 3: BP and exercise interaction
-    const systolic = data.systolicBP || data.restingBP || 120;
-    if (systolic > 140 && data.physicalActivity === 'low') {
-      riskScore += 22;
-    } else if (systolic > 140) {
-      riskScore += 12;
-    } else if (systolic > 130) {
-      riskScore += 6;
-    }
-
-    // Path 4: Diabetes complications
-    if (data.diabetes) {
-      riskScore += 20;
-      if (data.stressLevel > 7) {
-        riskScore += 8;
-      }
-    }
-
-    // Path 5: Genetic factors (Indian specific)
-    if (data.lipoproteinA && data.lipoproteinA > 30) {
-      riskScore += Math.min((data.lipoproteinA - 30) * 0.8, 20);
-    }
-    
-    if (data.hasPositiveFamilyHistory) {
-      riskScore += 15;
-    }
-
-    // Path 6: Lifestyle protective factors
-    if (data.physicalActivity === 'high') {
-      riskScore -= 12;
-    }
-    if (data.dietType === 'vegetarian') {
-      riskScore -= 8;
-    }
-    if (data.stressLevel <= 3) {
-      riskScore -= 8;
-    }
-
-    // Path 7: Sleep quality
-    if (data.sleepHours < 6 || data.sleepHours > 9) {
-      riskScore += 10;
-    } else if (data.sleepHours >= 7 && data.sleepHours <= 8) {
-      riskScore -= 5;
-    }
+    riskScore += this.evaluateAgeSmokingPath(data);
+    riskScore += this.evaluateCholesterolPath(data);
+    riskScore += this.evaluateBPExercisePath(data);
+    riskScore += this.evaluateDiabetesPath(data);
+    riskScore += this.evaluateGeneticFactorsPath(data);
+    riskScore += this.evaluateLifestyleFactorsPath(data);
+    riskScore += this.evaluateSleepQualityPath(data);
 
     riskScore = Math.max(Math.min(riskScore, 95), 0);
 
@@ -301,6 +278,70 @@ class ImprovedMLService {
     };
   }
 
+  private evaluateAgeSmokingPath(data: PatientData): number {
+    if (data.age > 50 && data.smoking) return 30;
+    if (data.age > 60) return 20;
+    if (data.age > 40) return 10;
+    return 0;
+  }
+
+  private evaluateCholesterolPath(data: PatientData): number {
+    const cholesterol = data.cholesterol || 200;
+    const hdl = data.hdlCholesterol || 50;
+    const cholRatio = cholesterol / Math.max(hdl, 10);
+    
+    if (cholRatio > 5) return 25;
+    if (cholRatio > 4) return 15;
+    if (cholRatio > 3) return 5;
+    return 0;
+  }
+
+  private evaluateBPExercisePath(data: PatientData): number {
+    const systolic = data.systolicBP || data.restingBP || 120;
+    if (systolic > 140 && data.physicalActivity === 'low') return 22;
+    if (systolic > 140) return 12;
+    if (systolic > 130) return 6;
+    return 0;
+  }
+
+  private evaluateDiabetesPath(data: PatientData): number {
+    if (!data.diabetes) return 0;
+    
+    let score = 20;
+    if (data.stressLevel > 7) score += 8;
+    return score;
+  }
+
+  private evaluateGeneticFactorsPath(data: PatientData): number {
+    let score = 0;
+    
+    if (data.lipoproteinA && data.lipoproteinA > 30) {
+      score += Math.min((data.lipoproteinA - 30) * 0.8, 20);
+    }
+    
+    if (data.hasPositiveFamilyHistory) {
+      score += 15;
+    }
+    
+    return score;
+  }
+
+  private evaluateLifestyleFactorsPath(data: PatientData): number {
+    let score = 0;
+    
+    if (data.physicalActivity === 'high') score -= 12;
+    if (data.dietType === 'vegetarian') score -= 8;
+    if (data.stressLevel <= 3) score -= 8;
+    
+    return score;
+  }
+
+  private evaluateSleepQualityPath(data: PatientData): number {
+    if (data.sleepHours < 6 || data.sleepHours > 9) return 10;
+    if (data.sleepHours >= 7 && data.sleepHours <= 8) return -5;
+    return 0;
+  }
+
   /**
    * ALGORITHM 3: Gradient Boosting (30% weight)
    * Sequential error correction
@@ -308,47 +349,13 @@ class ImprovedMLService {
   private gradientBoostingPrediction(data: PatientData): AlgorithmPrediction {
     let riskScore = 20; // Base score
 
-    // Round 1: Initial predictions
-    if (data.age > 55) riskScore += 18;
-    if (data.smoking) riskScore += 22;
-    if (data.diabetes) riskScore += 18;
-
-    // Round 2: Error correction for extremes
-    if (data.age > 65 && data.smoking) {
-      riskScore += 12; // Correction for high-risk combination
-    }
-    if (data.cholesterol > 260 && data.diabetes) {
-      riskScore += 10; // Correction for metabolic issues
-    }
-
-    // Round 3: BP-specific corrections
-    const systolic = data.systolicBP || data.restingBP || 120;
-    if (systolic > 150 && data.age > 50) {
-      riskScore += 15;
-    } else if (systolic > 140 && data.physicalActivity === 'low') {
-      riskScore += 12;
-    }
-
-    // Round 4: Protective factor reductions
-    const hscrp = data.hscrp || 0;
-    if (hscrp > 3 && data.stressLevel > 7) {
-      riskScore += 12; // Inflammation + stress
-    }
-    if (hscrp < 1 && !data.smoking) {
-      riskScore -= 10; // Good inflammation markers
-    }
-
-    // Round 5: Indian-specific calibration
-    if (data.region === 'south' || data.region === 'east') {
-      riskScore += 3; // Higher CVD prevalence in these regions
-    }
-
-    // Round 6: Final adjustments
-    if (data.exerciseAngina) riskScore += 18;
-    if (data.previousHeartAttack) riskScore += 25;
-    if (data.hasPositiveFamilyHistory && data.age < 50) {
-      riskScore += 20; // Early family history is concerning
-    }
+    // Apply sequential boosting rounds
+    riskScore += this.boostingRound1InitialPredictions(data);
+    riskScore += this.boostingRound2ExtremeCorrections(data);
+    riskScore += this.boostingRound3BPCorrections(data);
+    riskScore += this.boostingRound4InflammationFactors(data);
+    riskScore += this.boostingRound5RegionalCalibration(data);
+    riskScore += this.boostingRound6FinalAdjustments(data);
 
     riskScore = Math.max(Math.min(riskScore, 95), 0);
 
@@ -358,6 +365,53 @@ class ImprovedMLService {
       confidence: Math.min(85 + Math.random() * 10, 95),
       reasoning: `Sequential error correction refined to ${riskScore.toFixed(1)}% after 6 learning rounds`
     };
+  }
+
+  private boostingRound1InitialPredictions(data: PatientData): number {
+    let score = 0;
+    if (data.age > 55) score += 18;
+    if (data.smoking) score += 22;
+    if (data.diabetes) score += 18;
+    return score;
+  }
+
+  private boostingRound2ExtremeCorrections(data: PatientData): number {
+    let score = 0;
+    if (data.age > 65 && data.smoking) score += 12;
+    if (data.cholesterol > 260 && data.diabetes) score += 10;
+    return score;
+  }
+
+  private boostingRound3BPCorrections(data: PatientData): number {
+    const systolic = data.systolicBP || data.restingBP || 120;
+    if (systolic > 150 && data.age > 50) return 15;
+    if (systolic > 140 && data.physicalActivity === 'low') return 12;
+    return 0;
+  }
+
+  private boostingRound4InflammationFactors(data: PatientData): number {
+    const hscrp = data.hscrp || 0;
+    let score = 0;
+    
+    if (hscrp > 3 && data.stressLevel > 7) score += 12;
+    if (hscrp < 1 && !data.smoking) score -= 10;
+    
+    return score;
+  }
+
+  private boostingRound5RegionalCalibration(data: PatientData): number {
+    if (data.region === 'south' || data.region === 'east') return 3;
+    return 0;
+  }
+
+  private boostingRound6FinalAdjustments(data: PatientData): number {
+    let score = 0;
+    
+    if (data.exerciseAngina) score += 18;
+    if (data.previousHeartAttack) score += 25;
+    if (data.hasPositiveFamilyHistory && data.age < 50) score += 20;
+    
+    return score;
   }
 
   /**
@@ -403,12 +457,16 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
       const responseText = response.response.text();
 
       // Parse response
-      const riskScoreMatch = responseText.match(/RISK_SCORE:\s*(\d+(?:\.\d+)?)/);
-      const confidenceMatch = responseText.match(/CONFIDENCE:\s*(\d+(?:\.\d+)?)/);
-      const reasoningMatch = responseText.match(/REASONING:\s*(.+?)(?:\n|$)/);
+      const riskScoreRegex = /RISK_SCORE:\s*(\d+(?:\.\d+)?)/;
+      const confidenceRegex = /CONFIDENCE:\s*(\d+(?:\.\d+)?)/;
+      const reasoningRegex = /REASONING:\s*(.+?)(?:\n|$)/;
+      
+      const riskScoreMatch = riskScoreRegex.exec(responseText);
+      const confidenceMatch = confidenceRegex.exec(responseText);
+      const reasoningMatch = reasoningRegex.exec(responseText);
 
-      const riskScore = riskScoreMatch ? parseFloat(riskScoreMatch[1]) : 50;
-      const confidence = confidenceMatch ? parseFloat(confidenceMatch[1]) : 60;
+      const riskScore = riskScoreMatch ? Number.parseFloat(riskScoreMatch[1]) : 50;
+      const confidence = confidenceMatch ? Number.parseFloat(confidenceMatch[1]) : 60;
       const reasoning = reasoningMatch ? reasoningMatch[1].trim() : 'Gemini analysis completed';
 
       return {
@@ -418,7 +476,7 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
         reasoning
       };
     } catch (error) {
-      console.warn('Gemini API error:', error);
+      if (import.meta.env.DEV) console.warn('Gemini API error:', error);
       return {
         algorithm: 'Gemini AI',
         riskScore: 50,
@@ -478,18 +536,21 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
   /**
    * Calculate ensemble confidence
    */
-  private calculateEnsembleConfidence(predictions: any[]): number {
+  private calculateEnsembleConfidence(predictions: unknown[]): number {
     // Standard deviation indicates agreement
-    const scores = predictions.map(p => p.riskScore);
-    const mean = scores.reduce((a, b) => a + b) / scores.length;
-    const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2)) / scores.length;
+    const scores = (predictions as AlgorithmPrediction[]).map(p => p.riskScore);
+    const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
     const stdDev = Math.sqrt(variance);
 
     // Lower std dev = higher confidence
     let confidence = 85 - Math.min(stdDev / 2, 15);
 
     // Average individual confidences
-    const avgConfidence = predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length;
+    const avgConfidence = (predictions as AlgorithmPrediction[]).reduce(
+      (sum, p) => sum + p.confidence, 
+      0
+    ) / predictions.length;
     confidence = (confidence + avgConfidence) / 2;
 
     return Math.min(confidence, 98);
@@ -508,7 +569,7 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
    * Generate ensemble explanation
    */
   private generateEnsembleExplanation(
-    predictions: any[],
+    predictions: unknown[],
     finalRiskScore: number,
     riskLevel: string,
     data: PatientData
@@ -517,10 +578,7 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
     
     explanation += `**Final Risk Score: ${finalRiskScore.toFixed(1)}% (${riskLevel.toUpperCase()})**\n\n`;
 
-    explanation += `This assessment combines 4 advanced ML algorithms:\n`;
-    predictions.forEach((p, idx) => {
-      explanation += `${idx + 1}. ${p.algorithm}: ${p.riskScore.toFixed(1)}% (${p.reasoning})\n`;
-    });
+    explanation = this.addAlgorithmPredictionsToExplanation(explanation, predictions);
 
     explanation += `\n**Consensus:** All models agree on a ${riskLevel} risk profile.\n\n`;
 
@@ -542,19 +600,41 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
   }
 
   /**
+   * Add algorithm predictions to explanation
+   */
+  private addAlgorithmPredictionsToExplanation(
+    explanation: string,
+    predictions: unknown[]
+  ): string {
+    let result = explanation;
+    result += `This assessment combines 4 advanced ML algorithms:\n`;
+    
+    const typedPredictions = predictions as AlgorithmPrediction[];
+    for (let idx = 0; idx < typedPredictions.length; idx++) {
+      const p = typedPredictions[idx];
+      result += `${idx + 1}. ${p.algorithm}: ${p.riskScore.toFixed(1)}% (${p.reasoning})\n`;
+    }
+    
+    return result;
+  }
+
+  /**
    * Generate advanced recommendations
    */
   private generateAdvancedRecommendations(
     riskScore: number,
     riskLevel: string,
     data: PatientData,
-    predictions: any[]
+    predictions: unknown[]
   ): string[] {
     const recommendations: string[] = [];
 
+    // Add urgent actions based on risk level
     if (riskLevel === 'high') {
-      recommendations.push('🔴 URGENT: Schedule comprehensive cardiac evaluation with a cardiologist within 1 week');
-      recommendations.push('🚑 Seek immediate medical attention if you experience: chest pain, shortness of breath, severe fatigue, or palpitations');
+      recommendations.push(
+        '🔴 URGENT: Schedule comprehensive cardiac evaluation with a cardiologist within 1 week',
+        '🚑 Seek immediate medical attention if you experience: chest pain, shortness of breath, severe fatigue, or palpitations'
+      );
     } else if (riskLevel === 'medium') {
       recommendations.push('🟡 Schedule cardiac check-up with your doctor within 2-4 weeks');
     } else {
@@ -563,33 +643,45 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
 
     // Specific modifiable factors
     if (data.smoking) {
-      recommendations.push('🚭 Smoking Cessation: Quit smoking immediately - this single action can reduce your risk by 20% within 1 year');
-      recommendations.push('📱 Use smoking cessation apps or call your doctor for nicotine replacement therapy (NRT)');
+      recommendations.push(
+        '🚭 Smoking Cessation: Quit smoking immediately - this single action can reduce your risk by 20% within 1 year',
+        '📱 Use smoking cessation apps or call your doctor for nicotine replacement therapy (NRT)'
+      );
     }
 
     if (data.cholesterol > 240) {
-      recommendations.push('💊 Cholesterol Management: Consider statin therapy (Atorvastatin 20-40mg daily) in consultation with your doctor');
-      recommendations.push('🥗 Adopt Mediterranean or DASH diet: reduce saturated fats, increase fiber, oily fish 2x/week');
+      recommendations.push(
+        '💊 Cholesterol Management: Consider statin therapy (Atorvastatin 20-40mg daily) in consultation with your doctor',
+        '🥗 Adopt Mediterranean or DASH diet: reduce saturated fats, increase fiber, oily fish 2x/week'
+      );
     }
 
     if (data.systolicBP && data.systolicBP > 140) {
-      recommendations.push('🩸 Blood Pressure: Discuss ACE inhibitors or ARBs with your doctor');
-      recommendations.push('🧂 Reduce sodium intake to <2300mg/day');
+      recommendations.push(
+        '🩸 Blood Pressure: Discuss ACE inhibitors or ARBs with your doctor',
+        '🧂 Reduce sodium intake to <2300mg/day'
+      );
     }
 
     if (data.diabetes && !data.diabetesMedication || data.diabetesMedication === 'none') {
-      recommendations.push('🔬 Diabetes Management: Discuss metformin or SGLT2 inhibitors with your doctor');
-      recommendations.push('📊 Monitor fasting blood sugar regularly (weekly)');
+      recommendations.push(
+        '🔬 Diabetes Management: Discuss metformin or SGLT2 inhibitors with your doctor',
+        '📊 Monitor fasting blood sugar regularly (weekly)'
+      );
     }
 
     if (data.physicalActivity === 'low') {
-      recommendations.push('🏃 Exercise: Start with 30 minutes moderate activity, 5 days/week (walking, swimming, cycling)');
-      recommendations.push('❤️ Cardiac rehabilitation program if available');
+      recommendations.push(
+        '🏃 Exercise: Start with 30 minutes moderate activity, 5 days/week (walking, swimming, cycling)',
+        '❤️ Cardiac rehabilitation program if available'
+      );
     }
 
     if (data.stressLevel > 7) {
-      recommendations.push('🧘 Stress Management: 20 minutes daily meditation or yoga');
-      recommendations.push('💬 Consider counseling or cardiac psychology program');
+      recommendations.push(
+        '🧘 Stress Management: 20 minutes daily meditation or yoga',
+        '💬 Consider counseling or cardiac psychology program'
+      );
     }
 
     if (data.sleepHours < 6 || data.sleepHours > 9) {
@@ -597,8 +689,10 @@ REASONING: [brief medical reasoning in 1-2 sentences]`;
     }
 
     // Monitoring
-    recommendations.push('📋 Track: Blood pressure, weight, fasting sugar weekly');
-    recommendations.push('🏥 Follow-up: Repeat risk assessment in 3 months after lifestyle changes');
+    recommendations.push(
+      '📋 Track: Blood pressure, weight, fasting sugar weekly',
+      '🏥 Follow-up: Repeat risk assessment in 3 months after lifestyle changes'
+    );
 
     return recommendations;
   }

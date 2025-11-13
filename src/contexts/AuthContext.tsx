@@ -35,13 +35,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting session:', error);
+          if (import.meta.env.DEV) console.error('Error getting session:', error);
         } else {
           setSession(session);
           setUser(session?.user ?? null);
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error);
+        if (import.meta.env.DEV) console.error('Error in getInitialSession:', error);
       } finally {
         setLoading(false);
       }
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.email);
+      if (import.meta.env.DEV) console.log('Auth state change:', event, session?.user?.email);
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -74,10 +74,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        if (import.meta.env.DEV) console.error('Error signing out:', error);
       }
     } catch (error) {
-      console.error('Error in signOut:', error);
+      if (import.meta.env.DEV) console.error('Error in signOut:', error);
     } finally {
       setLoading(false);
     }

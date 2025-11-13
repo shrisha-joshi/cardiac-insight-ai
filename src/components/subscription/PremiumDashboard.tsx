@@ -121,7 +121,7 @@ export default function PremiumDashboard() {
       
       setUser(user);
     } catch (error) {
-      console.error('Auth check error:', error);
+      if (import.meta.env.DEV) console.error('Auth check error:', error);
       // Don't redirect on network or temporary errors
     } finally {
       setAuthLoading(false);
@@ -307,7 +307,7 @@ export default function PremiumDashboard() {
         description: `Enhanced recommendations from ${suggestions.source === 'gemini' ? 'Google Gemini' : suggestions.source === 'openai' ? 'OpenAI' : 'Rule-based AI'}`,
       });
     } catch (error) {
-      console.error('Error getting AI suggestions:', error);
+      if (import.meta.env.DEV) console.error('Error getting AI suggestions:', error);
       toast({
         title: "AI Suggestions Unavailable",
         description: "Using standard medical recommendations instead.",
@@ -360,7 +360,7 @@ export default function PremiumDashboard() {
         description: "Premium assessment report has been downloaded successfully.",
       });
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      if (import.meta.env.DEV) console.error('Error generating PDF:', error);
       toast({
         title: "Download Error",
         description: "Failed to generate PDF report. Please try again.",

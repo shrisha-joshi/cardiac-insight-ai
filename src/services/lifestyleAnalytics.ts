@@ -99,7 +99,7 @@ export interface RiskRecommendation {
  * Lifestyle Analytics Service - Main export singleton
  */
 class LifestyleAnalyticsService {
-  private assessments: Map<string, LifestyleProfile[]> = new Map();
+  private readonly assessments: Map<string, LifestyleProfile[]> = new Map();
 
   /**
    * Comprehensive lifestyle analysis
@@ -156,21 +156,25 @@ class LifestyleAnalyticsService {
    * Smoking risk assessment
    */
   assessSmokingRisk(patientData: PatientData): SmokingAssessment {
-    let status: 'never' | 'former' | 'current' = patientData.smoking ? 'current' : 'never';
+    const status: 'never' | 'former' | 'current' = patientData.smoking ? 'current' : 'never';
     let riskScore = patientData.smoking ? 65 : 0;
-    let packYears = 0;
-    let cessationBenefit = '';
+    const packYears = 0;
+    const cessationBenefit = '';
     const recommendations: string[] = [];
 
     if (patientData.smoking) {
       riskScore = 65;
-      recommendations.push('Current smoking significantly increases CVD risk');
-      recommendations.push('Immediate smoking cessation is critical');
-      recommendations.push('Consider nicotine replacement therapy or prescription medications');
-      recommendations.push('Enroll in structured cessation program');
+      recommendations.push(
+        'Current smoking significantly increases CVD risk',
+        'Immediate smoking cessation is critical',
+        'Consider nicotine replacement therapy or prescription medications',
+        'Enroll in structured cessation program'
+      );
     } else {
-      recommendations.push('Excellent - non-smoker status is protective');
-      recommendations.push('Avoid secondhand smoke exposure');
+      recommendations.push(
+        'Excellent - non-smoker status is protective',
+        'Avoid secondhand smoke exposure'
+      );
     }
 
     return {
@@ -463,7 +467,7 @@ class LifestyleAnalyticsService {
     }
 
     // Noise exposure (default low without specific data)
-    let noiseExposure: 'low' | 'moderate' | 'high' = 'low';
+    const noiseExposure: 'low' | 'moderate' | 'high' = 'low';
     recommendations.push('Minimize noise exposure where possible');
 
     // Occupational hazards (use stressLevel as proxy - if high stress likely higher occupational exposure)

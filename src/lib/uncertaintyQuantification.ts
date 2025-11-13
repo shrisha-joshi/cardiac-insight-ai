@@ -90,7 +90,7 @@ function calculateDataCompletenessFactor(patientData: PatientData): number {
 
   let completeness = 0;
   Object.entries(criticalFields).forEach(([field, weight]) => {
-    const value = (patientData as any)[field];
+    const value = (patientData as unknown)[field];
     if (value !== null && value !== undefined && value !== '') {
       completeness += weight as number;
     }

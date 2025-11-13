@@ -103,7 +103,7 @@ export async function getRecommendations(
     // Try Gemini first (primary provider)
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey && geminiService.isAvailable()) {
       try {
-        console.log('[RecommendationEngine] Attempting to use Gemini...');
+        if (import.meta.env.DEV) console.log('[RecommendationEngine] Attempting to use Gemini...');
         
         // Request medicines from Gemini
         const geminiResult = await geminiService.getRecommendations({
@@ -130,14 +130,14 @@ export async function getRecommendations(
           };
         }
       } catch (geminiError) {
-        console.warn('[RecommendationEngine] Gemini failed, trying OpenAI...', geminiError);
+        if (import.meta.env.DEV) console.warn('[RecommendationEngine] Gemini failed, trying OpenAI...', geminiError);
       }
     }
 
     // Try OpenAI second (secondary provider)
     if (config.ai.openai.enabled && config.ai.openai.apiKey && openaiService.isAvailable()) {
       try {
-        console.log('[RecommendationEngine] Attempting to use OpenAI...');
+        if (import.meta.env.DEV) console.log('[RecommendationEngine] Attempting to use OpenAI...');
         
         const openaiResult = await openaiService.getRecommendations({
           riskLevel: riskLevelLower,
@@ -164,15 +164,15 @@ export async function getRecommendations(
           };
         }
       } catch (openaiError) {
-        console.warn('[RecommendationEngine] OpenAI failed, using fallback...', openaiError);
+        if (import.meta.env.DEV) console.warn('[RecommendationEngine] OpenAI failed, using fallback...', openaiError);
       }
     }
 
     // Use rule-based fallback (always works)
-    console.log('[RecommendationEngine] Using rule-based fallback...');
+    if (import.meta.env.DEV) console.log('[RecommendationEngine] Using rule-based fallback...');
     return getFallbackRecommendations(request, timestamp);
   } catch (error) {
-    console.error('[RecommendationEngine] Unexpected error, using fallback:', error);
+    if (import.meta.env.DEV) console.error('[RecommendationEngine] Unexpected error, using fallback:', error);
     return getFallbackRecommendations(request, timestamp);
   }
 }
@@ -195,7 +195,7 @@ async function getAyurvedaRecommendation(riskLevel: 'low' | 'medium' | 'high'): 
       })) || getAyurvedaFallback(riskLevel);
     }
   } catch (error) {
-    console.warn('Ayurveda recommendation failed:', error);
+    if (import.meta.env.DEV) console.warn('Ayurveda recommendation failed:', error);
   }
   return getAyurvedaFallback(riskLevel);
 }
@@ -218,7 +218,7 @@ async function getYogaRecommendation(riskLevel: 'low' | 'medium' | 'high'): Prom
       })) || getYogaFallback(riskLevel);
     }
   } catch (error) {
-    console.warn('Yoga recommendation failed:', error);
+    if (import.meta.env.DEV) console.warn('Yoga recommendation failed:', error);
   }
   return getYogaFallback(riskLevel);
 }
@@ -241,7 +241,7 @@ async function getDietRecommendation(riskLevel: 'low' | 'medium' | 'high', patie
       })) || getDietFallback(riskLevel, patientData);
     }
   } catch (error) {
-    console.warn('Diet recommendation failed:', error);
+    if (import.meta.env.DEV) console.warn('Diet recommendation failed:', error);
   }
   return getDietFallback(riskLevel, patientData);
 }

@@ -133,7 +133,7 @@ export interface ECGTrend {
 }
 
 class ECGAnalysisService {
-  private ecgProfiles: Map<string, ECGProfile> = new Map();
+  private readonly ecgProfiles: Map<string, ECGProfile> = new Map();
   private qTcFormulas = {
     bazett: (qt: number, rr: number) => qt / Math.sqrt(rr / 1000),
     fridericia: (qt: number, rr: number) => qt / Math.pow(rr / 1000, 1 / 3),
@@ -309,7 +309,7 @@ class ECGAnalysisService {
     let anteriorElevation = 0, lateralElevation = 0, inferiorElevation = 0;
     let anteriorDepression = 0, lateralDepression = 0, inferiorDepression = 0;
 
-    Object.entries(reading.stSegment).forEach(([lead, segment]) => {
+    for (const [lead, segment] of Object.entries(reading.stSegment)) {
       if (segment.elevation > 1) {
         changes.elevation[lead] = segment.elevation;
         if (anteriorLeads.includes(lead)) anteriorElevation++;
@@ -322,7 +322,7 @@ class ECGAnalysisService {
         if (lateralLeads.includes(lead)) lateralDepression++;
         if (inferiorLeads.includes(lead)) inferiorDepression++;
       }
-    });
+    }
 
     // Determine ischemic pattern
     if (anteriorElevation >= 2) {
@@ -352,10 +352,10 @@ class ECGAnalysisService {
     const invertedLeads: string[] = [];
     const peakedLeads: string[] = [];
 
-    Object.entries(reading.tWave).forEach(([lead, morphology]) => {
+    for (const [lead, morphology] of Object.entries(reading.tWave)) {
       if (morphology === 'inverted') invertedLeads.push(lead);
       if (morphology === 'peaked') peakedLeads.push(lead);
-    });
+    }
 
     if (invertedLeads.length > 0) {
       return {
@@ -483,14 +483,14 @@ class ECGAnalysisService {
     profile.riskScore = 0;
     profile.abnormalityTypes = [];
 
-    latest.abnormalities.forEach(abn => {
+    for (const abn of latest.abnormalities) {
       profile.abnormalityTypes.push(abn.type);
 
       if (abn.severity === 'critical') profile.riskScore += 35;
       else if (abn.severity === 'severe') profile.riskScore += 20;
       else if (abn.severity === 'moderate') profile.riskScore += 10;
       else profile.riskScore += 5;
-    });
+    }
 
     // Categorize
     if (profile.riskScore < 15) profile.riskCategory = 'very-low';
@@ -566,8 +566,10 @@ class ECGAnalysisService {
     // Critical abnormalities
     const criticalAbnormalities = latest.abnormalities.filter(a => a.severity === 'critical');
     if (criticalAbnormalities.length > 0) {
-      recommendations.push('URGENT: Critical ECG findings detected');
-      recommendations.push('Immediate physician evaluation required');
+      recommendations.push(
+        'URGENT: Critical ECG findings detected',
+        'Immediate physician evaluation required'
+      );
       criticalAbnormalities.forEach(abn => {
         recommendations.push(`- ${abn.type}: ${abn.clinicalSignificance}`);
       });
@@ -576,38 +578,48 @@ class ECGAnalysisService {
 
     // ST elevation
     if (latest.abnormalities.some(a => a.type.includes('ST elevation'))) {
-      recommendations.push('EMERGENCY: Possible acute MI');
-      recommendations.push('Activate STEMI protocol if not already done');
-      recommendations.push('Prepare for emergency catheterization');
+      recommendations.push(
+        'EMERGENCY: Possible acute MI',
+        'Activate STEMI protocol if not already done',
+        'Prepare for emergency catheterization'
+      );
     }
 
     // ST depression / ischemia
     if (latest.abnormalities.some(a => a.type.includes('ST'))) {
-      recommendations.push('Possible acute ischemia detected');
-      recommendations.push('Obtain serial troponins');
-      recommendations.push('Repeat ECG in 5-10 minutes');
-      recommendations.push('Consider stress testing');
+      recommendations.push(
+        'Possible acute ischemia detected',
+        'Obtain serial troponins',
+        'Repeat ECG in 5-10 minutes',
+        'Consider stress testing'
+      );
     }
 
     // Prolonged QTc
     if (latest.abnormalities.some(a => a.type.includes('QTc'))) {
-      recommendations.push('Review current medications for QT-prolonging drugs');
-      recommendations.push('Check electrolytes (K, Mg, Ca)');
-      recommendations.push('Consider cardiac monitoring');
+      recommendations.push(
+        'Review current medications for QT-prolonging drugs',
+        'Check electrolytes (K, Mg, Ca)',
+        'Consider cardiac monitoring'
+      );
     }
 
     // Arrhythmia
     if (latest.abnormalities.some(a => ['VT', 'SVT', 'AFib'].some(t => a.type.includes(t)))) {
-      recommendations.push('Arrhythmia detected - clinical correlation needed');
-      recommendations.push('Consider Holter or event monitoring');
-      recommendations.push('Evaluate for precipitating factors');
+      recommendations.push(
+        'Arrhythmia detected - clinical correlation needed',
+        'Consider Holter or event monitoring',
+        'Evaluate for precipitating factors'
+      );
     }
 
     // Wide QRS
     if (latest.abnormalities.some(a => a.type.includes('Wide QRS'))) {
-      recommendations.push('Differentiate between LBBB and RBBB');
-      recommendations.push('Rule out ventricular ectopy');
-      recommendations.push('Check potassium level');
+      recommendations.push(
+        'Differentiate between LBBB and RBBB',
+        'Rule out ventricular ectopy',
+        'Check potassium level'
+      );
     }
 
     return recommendations;
@@ -646,21 +658,22 @@ class ECGAnalysisService {
     if (latest.abnormalities.length === 0) {
       report += 'No significant abnormalities detected.\n';
     } else {
-      latest.abnormalities.forEach((abn, i) => {
+      for (let i = 0; i < latest.abnormalities.length; i++) {
+        const abn = latest.abnormalities[i];
         report += `${i + 1}. **${abn.type}**\n`;
         report += `   - Severity: ${abn.severity.toUpperCase()}\n`;
         report += `   - Description: ${abn.description}\n`;
         report += `   - Significance: ${abn.clinicalSignificance}\n`;
-      });
+      }
     }
 
     report += '\n## Clinical Interpretation\n';
     report += latest.interpretation || 'See abnormalities section above.\n';
 
     report += '\n## Recommendations\n';
-    profile.recommendations.forEach((rec, i) => {
-      report += `${i + 1}. ${rec}\n`;
-    });
+    for (let i = 0; i < profile.recommendations.length; i++) {
+      report += `${i + 1}. ${profile.recommendations[i]}\n`;
+    }
 
     return report;
   }

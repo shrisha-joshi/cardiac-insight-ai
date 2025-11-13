@@ -134,8 +134,8 @@ export type Database = {
  */
 export async function savePredictionToDatabase(
   userId: string,
-  patientData: any,
-  predictionResult: any
+  patientData: PatientData,
+  predictionResult: PredictionResult
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     if (!userId) {
@@ -156,8 +156,8 @@ export async function savePredictionToDatabase(
         exercise_induced_angina: patientData.exerciseAngina || false,
         oldpeak: patientData.oldpeak || 0,
         st_slope: patientData.stSlope || '',
-        num_major_vessels: patientData.num_major_vessels || 0,
-        thalassemia: patientData.thalassemia || '',
+        num_major_vessels: Number((patientData as unknown as Record<string, unknown>)['num_major_vessels'] ?? 0),
+        thalassemia: String((patientData as unknown as Record<string, unknown>)['thalassemia'] ?? ''),
         risk_level: predictionResult.riskLevel,
         risk_score: Math.round(predictionResult.riskScore),
         confidence: Math.round(predictionResult.confidence),
@@ -173,14 +173,14 @@ export async function savePredictionToDatabase(
       .single();
 
     if (error) {
-      console.error('Database save error:', error);
+      if (import.meta.env.DEV) console.error('Database save error:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('✅ Prediction saved to database:', data?.id);
+    if (import.meta.env.DEV) console.log('✅ Prediction saved to database:', data?.id);
     return { success: true, id: data?.id };
   } catch (error) {
-    console.error('Save prediction error:', error);
+    if (import.meta.env.DEV) console.error('Save prediction error:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -191,7 +191,7 @@ export async function savePredictionToDatabase(
 /**
  * Load predictions from database
  */
-export async function loadPredictionsFromDatabase(userId: string): Promise<any[]> {
+export async function loadPredictionsFromDatabase(userId: string): Promise<unknown[]> {
   try {
     if (!userId) return [];
 
@@ -202,14 +202,14 @@ export async function loadPredictionsFromDatabase(userId: string): Promise<any[]
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Load predictions error:', error);
+      if (import.meta.env.DEV) console.error('Load predictions error:', error);
       return [];
     }
 
-    console.log('✅ Loaded predictions from database:', data?.length || 0);
+    if (import.meta.env.DEV) console.log('✅ Loaded predictions from database:', data?.length || 0);
     return data || [];
   } catch (error) {
-    console.error('Load predictions error:', error);
+    if (import.meta.env.DEV) console.error('Load predictions error:', error);
     return [];
   }
 }
