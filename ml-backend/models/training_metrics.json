@@ -1,0 +1,24 @@
+{
+  "xgboost": {
+    "train_accuracy": 0.8871785714285715,
+    "val_accuracy": 0.851
+  },
+  "random_forest": {
+    "train_accuracy": 0.9273571428571429,
+    "val_accuracy": 0.8506666666666667
+  },
+  "neural_network": {
+    "train_accuracy": 0.8552678823471069,
+    "val_accuracy": 0.847000002861023,
+    "train_loss": 0.31880325078964233,
+    "val_loss": 0.32607147097587585
+  },
+  "ensemble": {
+    "val_accuracy": 0.8525833333333334,
+    "weights": {
+      "xgboost": 0.4,
+      "random_forest": 0.35,
+      "neural_network": 0.25
+    }
+  }
+}

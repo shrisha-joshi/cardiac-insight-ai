@@ -10,6 +10,19 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     middlewareMode: false,
   },
+  build: {
+    // Suppress large chunk warnings and improve chunking
+    chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          supabase: ["@supabase/supabase-js"],
+          tanstack: ["@tanstack/react-query"],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     // mode === 'development' &&

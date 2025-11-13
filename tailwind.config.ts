@@ -162,9 +162,12 @@ export default {
 				'heartbeat': 'heartbeat 2.4s ease-in-out infinite',
 				'shimmer': 'shimmer 2s infinite',
 				'fade-in-up': 'fade-in-up 0.6s ease-out',
-				'fade-in': 'fade-in 0.6s ease-out'
-			}
+			'fade-in': 'fade-in 0.6s ease-out'
 		}
+	}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		// @ts-expect-error - tailwindcss-animate uses require
+		require("tailwindcss-animate")
+	],
 } satisfies Config;
