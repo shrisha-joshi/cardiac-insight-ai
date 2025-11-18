@@ -14,7 +14,7 @@ Endpoints:
 ═══════════════════════════════════════════════════════════════════════════════
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -22,6 +22,7 @@ import numpy as np
 import joblib
 import keras
 import os
+import sqlite3
 import json
 from datetime import datetime
 import time
@@ -47,6 +48,125 @@ models = {}
 preprocessor = None
 ensemble_weights = None
 model_metadata = {}
+# In-memory prediction history store keyed by user_id (kept as cache)
+prediction_history: Dict[str, List[Dict[str, Any]]] = {}
+
+# SQLite persistence
+DB_PATH = os.path.join(os.path.dirname(__file__), "prediction_history.db")
+
+def init_db(reset: bool = False):
+    """Initialize SQLite database and tables.
+
+    Args:
+        reset: If True, deletes existing DB file and recreates schema (for tests).
+    """
+    if reset and os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                risk_level TEXT NOT NULL,
+                risk_score REAL NOT NULL,
+                confidence REAL NOT NULL,
+                prediction TEXT NOT NULL,
+                explanation TEXT,
+                recommendations TEXT,
+                patient_age REAL,
+                patient_gender TEXT,
+                resting_bp REAL,
+                cholesterol REAL,
+                blood_sugar_fasting INTEGER,
+                max_heart_rate REAL,
+                exercise_induced_angina INTEGER,
+                oldpeak REAL,
+                st_slope TEXT
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def save_prediction_to_db(user_id: str, record: Dict[str, Any]):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            """
+            INSERT INTO predictions (
+                user_id, created_at, risk_level, risk_score, confidence, prediction,
+                explanation, recommendations, patient_age, patient_gender, resting_bp,
+                cholesterol, blood_sugar_fasting, max_heart_rate, exercise_induced_angina,
+                oldpeak, st_slope
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                record["created_at"],
+                record["risk_level"],
+                record["risk_score"],
+                record["confidence"],
+                record["prediction"],
+                record.get("explanation", ""),
+                json.dumps(record.get("recommendations", [])),
+                record.get("patient_age"),
+                record.get("patient_gender"),
+                record.get("resting_bp"),
+                record.get("cholesterol"),
+                1 if record.get("blood_sugar_fasting") else 0,
+                record.get("max_heart_rate"),
+                1 if record.get("exercise_induced_angina") else 0,
+                record.get("oldpeak"),
+                record.get("st_slope")
+            )
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def fetch_history_from_db(user_id: str, limit: int) -> List[Dict[str, Any]]:
+    if not os.path.exists(DB_PATH):
+        return []
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cursor = conn.execute(
+            "SELECT id, created_at, risk_level, risk_score, confidence, prediction, explanation, recommendations, patient_age, patient_gender, resting_bp, cholesterol, blood_sugar_fasting, max_heart_rate, exercise_induced_angina, oldpeak, st_slope FROM predictions WHERE user_id = ? ORDER BY id DESC LIMIT ?",
+            (user_id, limit)
+        )
+        rows = cursor.fetchall()
+        predictions_list: List[Dict[str, Any]] = []
+        for row in rows:
+            (
+                pid, created_at, risk_level, risk_score, confidence, prediction_val,
+                explanation, recommendations_json, patient_age, patient_gender, resting_bp,
+                cholesterol, blood_sugar_fasting, max_hr, exercise_angina, oldpeak, st_slope
+            ) = row
+            predictions_list.append({
+                "id": f"pred-{pid}",
+                "created_at": created_at,
+                "risk_level": risk_level,
+                "risk_score": risk_score,
+                "confidence": confidence,
+                "prediction": prediction_val,
+                "explanation": explanation,
+                "recommendations": json.loads(recommendations_json or "[]"),
+                "patient_age": patient_age,
+                "patient_gender": patient_gender,
+                "resting_bp": resting_bp,
+                "cholesterol": cholesterol,
+                "blood_sugar_fasting": bool(blood_sugar_fasting),
+                "max_heart_rate": max_hr,
+                "exercise_induced_angina": bool(exercise_angina),
+                "oldpeak": oldpeak,
+                "st_slope": st_slope
+            })
+        return predictions_list
+    finally:
+        conn.close()
 
 # Pydantic models for request/response
 class PatientData(BaseModel):
@@ -64,9 +184,9 @@ class PatientData(BaseModel):
     slope: int = Field(..., ge=0, le=2, description="Slope of peak exercise ST segment (0-2)")
     ca: int = Field(..., ge=0, le=4, description="Number of major vessels colored by fluoroscopy (0-4)")
     thal: int = Field(..., ge=0, le=3, description="Thalassemia (0-3)")
-    
-    class Config:
-        json_schema_extra = {
+
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "age": 63,
                 "sex": 1,
@@ -83,6 +203,7 @@ class PatientData(BaseModel):
                 "thal": 1
             }
         }
+    }
 
 class PredictionResponse(BaseModel):
     """Response for prediction request"""
@@ -117,37 +238,29 @@ class ModelInfoResponse(BaseModel):
 async def load_models():
     """Load trained models and preprocessor on startup"""
     global models, preprocessor, ensemble_weights, model_metadata
-    
-    print("🚀 Loading ML models...")
-    
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context replacing deprecated startup events."""
+    global models, preprocessor, ensemble_weights, model_metadata
+    print("🚀 Lifespan start: loading ML models...")
     model_dir = "models"
-    
     try:
-        # Load preprocessor
         preprocessor_path = os.path.join(model_dir, "preprocessor.pkl")
         if os.path.exists(preprocessor_path):
             preprocessor = joblib.load(preprocessor_path)
             print("✅ Loaded preprocessor")
-        
-        # Load XGBoost
         xgb_path = os.path.join(model_dir, "xgboost_model.pkl")
         if os.path.exists(xgb_path):
             models['xgboost'] = joblib.load(xgb_path)
             print("✅ Loaded XGBoost model")
-        
-        # Load Random Forest
         rf_path = os.path.join(model_dir, "random_forest_model.pkl")
         if os.path.exists(rf_path):
             models['random_forest'] = joblib.load(rf_path)
             print("✅ Loaded Random Forest model")
-        
-        # Load Neural Network
         nn_path = os.path.join(model_dir, "neural_network_model.h5")
         if os.path.exists(nn_path):
             models['neural_network'] = keras.models.load_model(nn_path)
             print("✅ Loaded Neural Network model")
-        
-        # Load ensemble weights
         metrics_path = os.path.join(model_dir, "training_metrics.json")
         if os.path.exists(metrics_path):
             with open(metrics_path, 'r') as f:
@@ -168,19 +281,14 @@ async def load_models():
                 'random_forest': 0.35,
                 'neural_network': 0.25
             }
-        
         print(f"✅ Successfully loaded {len(models)} models")
-        
-    except Exception as e:
-        print(f"❌ Error loading models: {e}")
-        raise
-
-
-# Utility functions
-def preprocess_input(patient_data: PatientData) -> np.ndarray:
+        init_db()
+        yield
+    finally:
+        print("🛑 Lifespan end: cleanup complete")
     """Preprocess patient data for model input"""
     # Convert to dictionary
-    data = patient_data.dict()
+    data = patient_data.model_dump()
     
     # Create feature array (match training feature order)
     features = np.array([[
@@ -249,7 +357,7 @@ async def root():
 
 
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(patient: PatientData):
+async def predict(patient: PatientData, request: Request):
     """
     Make cardiac risk prediction for a single patient
     
@@ -297,7 +405,7 @@ async def predict(patient: PatientData):
         # Calculate latency
         latency_ms = (time.time() - start_time) * 1000
         
-        return PredictionResponse(
+        response = PredictionResponse(
             risk_score=round(risk_score, 2),
             risk_level=risk_level,
             confidence=round(confidence, 2),
@@ -306,6 +414,39 @@ async def predict(patient: PatientData):
             prediction_time_ms=round(latency_ms, 2),
             timestamp=datetime.now().isoformat()
         )
+
+        # Store prediction in history if user id provided via header
+        user_id = request.headers.get("X-User-Id")
+        if user_id:
+            record = {
+                "id": f"pred-{int(time.time() * 1000)}",
+                "created_at": response.timestamp,
+                "risk_level": response.risk_level,
+                "risk_score": response.risk_score,
+                "confidence": response.confidence,
+                "prediction": "Risk" if response.risk_level in ["high", "very-high"] else "No Risk",
+                "explanation": "Ensemble prediction based on loaded models.",
+                "recommendations": ["Consult cardiologist" if response.risk_level in ["high", "very-high"] else "Maintain healthy lifestyle"],
+                # Minimal patient data snapshot
+                "patient_age": patient.age,
+                "patient_gender": "male" if patient.sex == 1 else "female",
+                "resting_bp": patient.trestbps,
+                "cholesterol": patient.chol,
+                "blood_sugar_fasting": bool(patient.fbs),
+                "max_heart_rate": patient.thalach,
+                "exercise_induced_angina": bool(patient.exang),
+                "oldpeak": patient.oldpeak,
+                "st_slope": "flat",
+            }
+            history = prediction_history.setdefault(user_id, [])
+            history.insert(0, record)  # most recent first
+            # Keep only latest 500 entries per user to bound memory
+            if len(history) > 500:
+                del history[500:]
+            # Persist to SQLite
+            save_prediction_to_db(user_id, record)
+
+        return response
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
@@ -362,6 +503,24 @@ async def model_info():
         training_date=datetime.now().isoformat(),
         version="1.0.0"
     )
+
+
+@app.get("/history/{user_id}")
+async def get_prediction_history(user_id: str, limit: int = 100):
+    """Return persisted prediction history for a user (SQLite backed)."""
+    db_history = fetch_history_from_db(user_id, limit)
+    # Merge with any newer in-memory records not yet persisted (should be rare)
+    mem_history = prediction_history.get(user_id, [])
+    combined_ids = {h["id"] for h in db_history}
+    combined = mem_history + [h for h in db_history if h["id"] not in combined_ids]
+    # Truncate to limit
+    combined = combined[:limit]
+    return {
+        "user_id": user_id,
+        "count": len(combined),
+        "predictions": combined,
+        "limit": limit
+    }
 
 
 # Run server

@@ -77,7 +77,7 @@ export interface RegionalDietProfile {
     limit: string[];
   };
   traditionalMeals: string[];
-  cardiacSuper foods: string[];
+  cardiacSuperfoods: string[];
   healthyModifications: string[];
   references: string[];
 }

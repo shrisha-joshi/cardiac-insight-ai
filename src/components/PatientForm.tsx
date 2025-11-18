@@ -9,7 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
 import { validatePatientDataComprehensive, getChecksBySeverity, type EdgeCaseValidationResult } from '@/lib/edgeCaseHandler';
-import { Heart, Activity, User, Stethoscope, Upload, FileText, AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Heart, Activity, User, Stethoscope, Upload, FileText, AlertTriangle, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { parsePDFForFormData, convertToFormData, type ParsedField } from '@/services/pdfParserService';
+import { isValidPDF } from '@/services/pdfExtractionService';
+import PDFParseConfirmationModal from '@/components/PDFParseConfirmationModal';
+import { useToast } from '@/hooks/use-toast';
 
 interface PatientFormProps {
   onSubmit: (data: PatientData) => void;
@@ -17,10 +21,25 @@ interface PatientFormProps {
 }
 
 export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState<PatientData>(defaultPatientData);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [validationResult, setValidationResult] = useState<EdgeCaseValidationResult | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  
+  // PDF parsing state
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedFields, setParsedFields] = useState<ParsedField[]>([]);
+  const [unmappedData, setUnmappedData] = useState<string[]>([]);
+  const [unknownFields, setUnknownFields] = useState<Array<{
+    label: string;
+    value: string;
+    rawText: string;
+    unknown_field: true;
+  }>>([]);
+  const [extractionMethod, setExtractionMethod] = useState<'text-extraction' | 'ocr'>('text-extraction');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingParsedData, setPendingParsedData] = useState<Record<string, any>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +61,123 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
+    
+    // Check for PDF files
+    const pdfFiles = files.filter(file => isValidPDF(file));
+    const otherFiles = files.filter(file => !isValidPDF(file));
+    
+    // Add non-PDF files to uploaded files
+    if (otherFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...otherFiles]);
+    }
+    
+    // Process first PDF file
+    if (pdfFiles.length > 0) {
+      const pdfFile = pdfFiles[0];
+      await handlePDFUpload(pdfFile);
+      
+      if (pdfFiles.length > 1) {
+        toast({
+          title: 'Multiple PDFs detected',
+          description: 'Only the first PDF will be processed for auto-fill.',
+          variant: 'default',
+        });
+      }
+    }
+    
+    // Reset input
+    e.target.value = '';
+  };
+  
+  const handlePDFUpload = async (file: File) => {
+    setIsParsing(true);
+    
+    try {
+      toast({
+        title: 'Processing PDF',
+        description: 'Extracting data from your PDF file...',
+      });
+      
+      const parseResult = await parsePDFForFormData(file);
+      
+      if (!parseResult.success || parseResult.parsedFields.length === 0) {
+        toast({
+          title: 'No data found',
+          description: parseResult.error || 'Could not extract recognizable fields from the PDF.',
+          variant: 'destructive',
+        });
+        setIsParsing(false);
+        return;
+      }
+      
+      // Store parsed data
+      setParsedFields(parseResult.parsedFields);
+      setUnmappedData(parseResult.unmappedData);
+      setUnknownFields(parseResult.unknownFields);
+      setExtractionMethod(parseResult.extractionMethod);
+      
+      // Convert to form data format (excludes unknown fields automatically)
+      const formDataFromPDF = convertToFormData(parseResult.parsedFields);
+      setPendingParsedData(formDataFromPDF);
+      
+      // Show confirmation modal
+      setShowConfirmModal(true);
+      
+      // Enhanced toast with unknown fields warning
+      const unknownCount = parseResult.unknownFields.length;
+      toast({
+        title: 'PDF parsed successfully',
+        description: unknownCount > 0 
+          ? `Found ${parseResult.parsedFields.length} known fields. ${unknownCount} unknown fields detected (will not be auto-filled).`
+          : `Found ${parseResult.parsedFields.length} fields. Please review and confirm.`,
+        variant: unknownCount > 0 ? 'default' : 'default',
+      });
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      toast({
+        title: 'Error processing PDF',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsParsing(false);
+    }
+  };
+  
+  const handleAcceptParsedData = () => {
+    // Merge parsed data into form
+    setFormData(prev => ({
+      ...prev,
+      ...pendingParsedData
+    }));
+    
+    setShowConfirmModal(false);
+    
+    toast({
+      title: 'Data applied',
+      description: `${Object.keys(pendingParsedData).length} fields have been populated from the PDF.`,
+    });
+    
+    // Clear pending data
+    setPendingParsedData({});
+    setParsedFields([]);
+    setUnmappedData([]);
+    setUnknownFields([]);
+  };
+  
+  const handleRejectParsedData = () => {
+    setShowConfirmModal(false);
+    setPendingParsedData({});
+    setParsedFields([]);
+    setUnmappedData([]);
+    setUnknownFields([]);
+    
+    toast({
+      title: 'Data rejected',
+      description: 'PDF data was not applied. You can fill the form manually.',
+    });
   };
 
   const removeFile = (index: number) => {
@@ -71,11 +204,18 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
               Medical Documents (Optional)
             </div>
             <div className="space-y-4">
+              <Alert className="bg-blue-50 border-blue-200">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  <strong>PDF Auto-Fill:</strong> Upload a PDF medical report and we'll automatically extract and fill the form fields for you!
+                </AlertDescription>
+              </Alert>
+              
               <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center">
                 <div className="flex flex-col items-center gap-2">
                   <FileText className="h-8 w-8 text-muted-foreground" />
                   <div className="text-sm text-muted-foreground">
-                    Upload medical reports, ECG results, or other relevant documents
+                    Upload medical reports (PDF for auto-fill), ECG results, or other relevant documents
                   </div>
                   <Input
                     type="file"
@@ -84,12 +224,33 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
                     className="hidden"
                     id="file-upload"
                     onChange={handleFileUpload}
+                    disabled={isParsing}
                   />
                   <Label htmlFor="file-upload" className="cursor-pointer">
-                    <Button type="button" variant="outline" className="mt-2">
-                      Choose Files
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="mt-2"
+                      disabled={isParsing}
+                    >
+                      {isParsing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing PDF...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Choose Files
+                        </>
+                      )}
                     </Button>
                   </Label>
+                  {isParsing && (
+                    <div className="text-xs text-muted-foreground animate-pulse">
+                      Extracting text and mapping fields...
+                    </div>
+                  )}
                 </div>
               </div>
               {uploadedFiles.length > 0 && (
@@ -702,6 +863,18 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
           </Button>
         </form>
       </CardContent>
+      
+      {/* PDF Parse Confirmation Modal */}
+      <PDFParseConfirmationModal
+        open={showConfirmModal}
+        onOpenChange={setShowConfirmModal}
+        parsedFields={parsedFields}
+        unmappedData={unmappedData}
+        unknownFields={unknownFields}
+        extractionMethod={extractionMethod}
+        onAccept={handleAcceptParsedData}
+        onReject={handleRejectParsedData}
+      />
     </Card>
   );
 }

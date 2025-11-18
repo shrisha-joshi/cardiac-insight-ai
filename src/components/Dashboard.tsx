@@ -264,6 +264,7 @@ export default function Dashboard() {
               userId={userId}
               onAddFeedback={addFeedback}
               feedbackStats={getFeedbackStats()}
+              isLoading={historyLoading}
             />
           </TabsContent>
         </Tabs>

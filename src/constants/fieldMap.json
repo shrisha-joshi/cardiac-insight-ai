@@ -1,0 +1,326 @@
+{
+  "age": {
+    "fieldName": "age",
+    "labels": [
+      "age",
+      "patient age",
+      "age in years",
+      "years old",
+      "current age",
+      "age of patient",
+      "patient's age"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 1,
+      "max": 120
+    },
+    "required": true
+  },
+  "gender": {
+    "fieldName": "gender",
+    "labels": [
+      "gender",
+      "sex",
+      "patient gender",
+      "patient sex",
+      "male/female",
+      "m/f"
+    ],
+    "type": "select",
+    "required": true
+  },
+  "sleep_hours": {
+    "fieldName": "sleep_hours",
+    "labels": [
+      "sleep hours",
+      "hours of sleep",
+      "sleep duration",
+      "sleep per night",
+      "sleeping hours",
+      "hours sleeping"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 0,
+      "max": 24
+    },
+    "required": false
+  },
+  "hdlCholesterol": {
+    "fieldName": "hdlCholesterol",
+    "labels": [
+      "hdl",
+      "hdl cholesterol",
+      "hdl-c",
+      "good cholesterol",
+      "high density lipoprotein"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 0,
+      "max": 200
+    },
+    "required": false
+  },
+  "chestPainType": {
+    "fieldName": "chestPainType",
+    "labels": [
+      "chest pain type",
+      "chest pain",
+      "type of chest pain",
+      "cp type",
+      "angina type",
+      "pain type"
+    ],
+    "type": "select",
+    "required": false
+  },
+  "restingBP": {
+    "fieldName": "restingBP",
+    "labels": [
+      "resting bp",
+      "blood pressure",
+      "resting blood pressure",
+      "bp",
+      "systolic bp",
+      "systolic blood pressure",
+      "systolic pressure",
+      "resting systolic bp"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 60,
+      "max": 250
+    },
+    "required": false
+  },
+  "cholesterol": {
+    "fieldName": "cholesterol",
+    "labels": [
+      "cholesterol",
+      "total cholesterol",
+      "serum cholesterol",
+      "cholesterol level",
+      "chol",
+      "total chol",
+      "cholesterol mg/dl"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 100,
+      "max": 500
+    },
+    "required": false
+  },
+  "maxHR": {
+    "fieldName": "maxHR",
+    "labels": [
+      "max hr",
+      "maximum heart rate",
+      "max heart rate",
+      "heart rate",
+      "hr",
+      "resting heart rate",
+      "resting hr",
+      "pulse rate",
+      "pulse"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 40,
+      "max": 220
+    },
+    "required": false
+  },
+  "oldpeak": {
+    "fieldName": "oldpeak",
+    "labels": [
+      "oldpeak",
+      "st depression",
+      "st segment depression",
+      "exercise st depression",
+      "old peak"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 0,
+      "max": 10
+    },
+    "required": false
+  },
+  "restingECG": {
+    "fieldName": "restingECG",
+    "labels": [
+      "resting ecg",
+      "ecg",
+      "ekg",
+      "electrocardiogram",
+      "resting electrocardiogram",
+      "ecg results",
+      "resting ekg"
+    ],
+    "type": "select",
+    "required": false
+  },
+  "stSlope": {
+    "fieldName": "stSlope",
+    "labels": [
+      "st slope",
+      "exercise st slope",
+      "slope of st segment",
+      "st segment slope",
+      "slope"
+    ],
+    "type": "select",
+    "required": false
+  },
+  "diabetes": {
+    "fieldName": "diabetes",
+    "labels": [
+      "diabetes",
+      "diabetic",
+      "diabetes mellitus",
+      "blood sugar",
+      "high blood sugar",
+      "fasting blood sugar",
+      "fbs"
+    ],
+    "type": "boolean",
+    "required": false
+  },
+  "exerciseAngina": {
+    "fieldName": "exerciseAngina",
+    "labels": [
+      "exercise angina",
+      "exercise induced angina",
+      "angina during exercise",
+      "chest pain during exercise",
+      "exang"
+    ],
+    "type": "boolean",
+    "required": false
+  },
+  "smoking": {
+    "fieldName": "smoking",
+    "labels": [
+      "smoking",
+      "smoker",
+      "tobacco use",
+      "cigarette smoking",
+      "tobacco",
+      "smokes"
+    ],
+    "type": "boolean",
+    "required": false
+  },
+  "height": {
+    "fieldName": "height",
+    "labels": [
+      "height",
+      "height cm",
+      "height in cm",
+      "patient height",
+      "ht"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 100,
+      "max": 250
+    },
+    "required": false
+  },
+  "weight": {
+    "fieldName": "weight",
+    "labels": [
+      "weight",
+      "weight kg",
+      "weight in kg",
+      "body weight",
+      "patient weight",
+      "wt"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 30,
+      "max": 300
+    },
+    "required": false
+  },
+  "ldlCholesterol": {
+    "fieldName": "ldlCholesterol",
+    "labels": [
+      "ldl",
+      "ldl cholesterol",
+      "ldl-c",
+      "bad cholesterol",
+      "low density lipoprotein"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 0,
+      "max": 300
+    },
+    "required": false
+  },
+  "triglycerides": {
+    "fieldName": "triglycerides",
+    "labels": [
+      "triglycerides",
+      "tg",
+      "triglyceride level",
+      "serum triglycerides"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 0,
+      "max": 1000
+    },
+    "required": false
+  },
+  "systolicBP": {
+    "fieldName": "systolicBP",
+    "labels": [
+      "systolic bp",
+      "systolic",
+      "systolic blood pressure",
+      "sbp"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 60,
+      "max": 250
+    },
+    "required": false
+  },
+  "diastolicBP": {
+    "fieldName": "diastolicBP",
+    "labels": [
+      "diastolic bp",
+      "diastolic",
+      "diastolic blood pressure",
+      "dbp"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 30,
+      "max": 150
+    },
+    "required": false
+  },
+  "waistCircumference": {
+    "fieldName": "waistCircumference",
+    "labels": [
+      "waist circumference",
+      "waist",
+      "waist size",
+      "abdominal circumference"
+    ],
+    "type": "number",
+    "validation": {
+      "min": 40,
+      "max": 200
+    },
+    "required": false
+  }
+}

@@ -33,4 +33,13 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Vitest configuration for component/unit testing
+  test: {
+    // Using happy-dom for faster, Node-compatible DOM emulation
+    // Avoid jsdom ESM engine/version issues on current Node runtime
+    environment: 'happy-dom',
+    globals: true,
+    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
+    css: true,
+  },
 }));

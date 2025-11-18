@@ -19,6 +19,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, User, LogOut, Settings, History, MessageCircle, Menu, LayoutDashboard, Activity } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 
@@ -119,7 +120,7 @@ export default function Header() {
 
   const MobileNavLink = ({ to, icon: Icon, children, onClick }: { 
     to: string; 
-    icon: unknown; 
+    icon: LucideIcon; 
     children: React.ReactNode;
     onClick?: () => void;
   }) => (

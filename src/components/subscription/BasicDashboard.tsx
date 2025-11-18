@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3 } from 'lucide-react';
-import { PatientData, defaultPatientData } from '@/lib/mockData';
+import { PatientData, defaultPatientData, PredictionResult } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@supabase/supabase-js';
+import PredictionHistory from '@/components/PredictionHistory';
+import { usePredictionHistory } from '@/hooks/use-prediction-history';
 
 // Import new dashboard components
 import { DashboardHeader } from '@/components/ui/dashboard-header';
@@ -24,11 +27,15 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
 
 export default function BasicDashboard() {
+  const MAX_RISK_SCORE = 14; // Maximum possible score: 2+1+2+2+2+3+2 = 14 points
+  
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [formData, setFormData] = useState<PatientData>(defaultPatientData);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingLoading, setProcessingLoading] = useState(false);
+  const [currentPrediction, setCurrentPrediction] = useState<PredictionResult | null>(null);
+  const [activeTab, setActiveTab] = useState('assess');
   const [riskIndicators, setRiskIndicators] = useState<{score: number, level: string, factors: string[]}>({
     score: 0,
     level: 'low',
@@ -36,6 +43,9 @@ export default function BasicDashboard() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Use custom hook for prediction history management
+  const { predictions, addPrediction, addFeedback, getFeedbackStats, userId: historyUserId, isLoading: historyLoading } = usePredictionHistory();
 
   const checkAuthAndRedirect = useCallback(async () => {
     try {
@@ -121,6 +131,9 @@ export default function BasicDashboard() {
     if (data.smoking) { score += 3; factors.push('Smoking'); }
     if (data.exerciseAngina) { score += 2; factors.push('Exercise-induced chest pain'); }
 
+    // Defensive bounds check: ensure score doesn't exceed maximum
+    score = Math.min(score, MAX_RISK_SCORE);
+    
     const level = score >= 8 ? 'high' : score >= 4 ? 'medium' : 'low';
     setRiskIndicators({ score, level, factors });
   };
@@ -163,6 +176,23 @@ export default function BasicDashboard() {
       // Basic assessment processing (limited compared to premium tiers)
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Create prediction result for history
+      const prediction: PredictionResult = {
+        id: `basic-pred-${Date.now()}`,
+        patientData: formData,
+        riskScore: Math.round((riskIndicators.score / MAX_RISK_SCORE) * 100),
+        riskLevel: riskIndicators.level as 'low' | 'medium' | 'high',
+        confidence: 75, // Basic tier has lower confidence than premium
+        prediction: riskIndicators.level === 'high' ? 'Risk' : 'No Risk',
+        explanation: `Basic assessment identified ${riskIndicators.factors.length} risk factors with a score of ${riskIndicators.score}/${MAX_RISK_SCORE}`,
+        recommendations: riskIndicators.factors.slice(0, 3).map(f => `Monitor: ${f}`),
+        timestamp: new Date()
+      };
+      
+      // Save to prediction history
+      setCurrentPrediction(prediction);
+      addPrediction(prediction);
+      
       toast({
         title: "✅ Basic Risk Assessment Complete!",
         description: (
@@ -171,7 +201,7 @@ export default function BasicDashboard() {
               <Badge variant={riskIndicators.level === 'high' ? 'destructive' : riskIndicators.level === 'medium' ? 'default' : 'secondary'}>
                 {riskIndicators.level.toUpperCase()} RISK
               </Badge>
-              <span className="text-sm">Score: {riskIndicators.score}/12</span>
+              <span className="text-sm">Score: {riskIndicators.score}/{MAX_RISK_SCORE} ({Math.round((riskIndicators.score / MAX_RISK_SCORE) * 100)}%)</span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               🚀 Upgrade to Premium for detailed analysis and recommendations!
@@ -180,6 +210,9 @@ export default function BasicDashboard() {
         ),
         duration: 6000,
       });
+      
+      // Switch to history tab to show the new assessment
+      setActiveTab('history');
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error:', error);
       toast({
@@ -217,7 +250,7 @@ export default function BasicDashboard() {
           />
           <StatCard
             title="Risk Score"
-            value={riskIndicators.score > 0 ? `${riskIndicators.score}/12` : "—"}
+            value={riskIndicators.score > 0 ? `${Math.round((riskIndicators.score / MAX_RISK_SCORE) * 100)}%` : "—"}
             subtitle="Current risk level"
             icon={Activity}
             trend={riskIndicators.level === 'high' ? 'down' : riskIndicators.level === 'medium' ? 'neutral' : 'up'}
@@ -245,9 +278,23 @@ export default function BasicDashboard() {
           />
         </StatsGrid>
 
-        {/* Real-time Risk Indicator */}
-        {riskIndicators.score > 0 && (
-          <Card className="border-l-4 border-l-blue-500 shadow-xl dark:bg-gray-800/50 backdrop-blur-sm">
+        {/* Navigation Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="assess" className="flex items-center gap-2">
+              <Heart className="h-4 w-4" />
+              Risk Assessment
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Medical History ({predictions.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assess" className="space-y-6">
+            {/* Real-time Risk Indicator */}
+            {riskIndicators.score > 0 && (
+              <Card className="border-l-4 border-l-blue-500 shadow-xl dark:bg-gray-800/50 backdrop-blur-sm">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold flex items-center gap-2 text-gray-800 dark:text-gray-100">
@@ -258,8 +305,8 @@ export default function BasicDashboard() {
                   {riskIndicators.level.toUpperCase()} RISK
                 </Badge>
               </div>
-              <Progress value={(riskIndicators.score / 12) * 100} className="mb-3" />
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Risk Score: {riskIndicators.score}/12</p>
+              <Progress value={Math.min((riskIndicators.score / MAX_RISK_SCORE) * 100, 100)} className="mb-3" />
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Risk Score: {riskIndicators.score}/{MAX_RISK_SCORE} ({Math.round((riskIndicators.score / MAX_RISK_SCORE) * 100)}%)</p>
               {riskIndicators.factors.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">Key Risk Factors:</p>
@@ -787,6 +834,31 @@ export default function BasicDashboard() {
             </form>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
+            <Card className="shadow-xl border-blue-200/50 dark:border-blue-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                  <Activity className="h-6 w-6 text-blue-500" />
+                  Your Medical History
+                </CardTitle>
+                <CardDescription>
+                  Track your cardiovascular health assessments over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PredictionHistory 
+                  predictions={predictions}
+                  userId={historyUserId}
+                  onAddFeedback={addFeedback}
+                  feedbackStats={getFeedbackStats()}
+                  isLoading={historyLoading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

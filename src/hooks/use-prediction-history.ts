@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PredictionResult, mockPredictions } from '@/lib/mockData';
 import { useAuth } from './useAuth';
 import { supabase, loadPredictionsFromDatabase, isSupabaseConfigured } from '@/lib/supabase';
+import config from '@/lib/config';
 
 const STORAGE_KEY_PREFIX = 'cardiac_insight_user_';
 const MAX_HISTORY_ITEMS = 100; // Maximum predictions to store
@@ -92,32 +93,126 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
     }
   }, []);
 
-  // Initialize user ID and load predictions from database
+  // Fetch from ML backend history if configured
+  const loadHistoryFromBackend = useCallback(async (currentUserId: string) => {
+    if (!config.mlApi.enabled || !config.mlApi.baseUrl) return [] as PredictionWithFeedback[];
+    try {
+      const res = await fetch(`${config.mlApi.baseUrl.replace(/\/$/, '')}/history/${currentUserId}?limit=${MAX_HISTORY_ITEMS}`);
+      if (!res.ok) return [] as PredictionWithFeedback[];
+      const data = await res.json() as { predictions?: Array<Record<string, unknown>> };
+      const records = Array.isArray(data?.predictions) ? data.predictions : [];
+      const mapped: PredictionWithFeedback[] = records.map((r) => {
+        const rec = r as Record<string, unknown>;
+        return {
+          id: String(rec.id ?? crypto.randomUUID()),
+          timestamp: new Date(String(rec.created_at ?? new Date().toISOString())),
+          riskLevel: String(rec.risk_level ?? 'low') as 'low' | 'medium' | 'high',
+          riskScore: Number(rec.risk_score ?? 0),
+          confidence: Number(rec.confidence ?? 0),
+          prediction: (String(rec.prediction ?? 'No Risk') as 'No Risk' | 'Risk'),
+          explanation: String(rec.explanation ?? ''),
+          recommendations: (rec.recommendations as string[]) ?? [],
+          patientData: {
+            age: Number(rec.patient_age ?? 0),
+            gender: (String(rec.patient_gender ?? 'male') as 'male' | 'female'),
+            chestPainType: 'typical',
+            restingBP: Number(rec.resting_bp ?? 120),
+            cholesterol: Number(rec.cholesterol ?? 200),
+            fastingBS: Boolean(rec.blood_sugar_fasting ?? false),
+            restingECG: 'normal',
+            maxHR: Number(rec.max_heart_rate ?? 150),
+            exerciseAngina: Boolean(rec.exercise_induced_angina ?? false),
+            oldpeak: Number(rec.oldpeak ?? 0),
+            stSlope: 'flat',
+            smoking: false,
+            diabetes: false,
+            previousHeartAttack: false,
+            cholesterolMedication: false,
+            diabetesMedication: 'none',
+            bpMedication: false,
+            lifestyleChanges: false,
+            dietType: 'non-vegetarian',
+            stressLevel: 5,
+            sleepHours: 7,
+            physicalActivity: 'moderate'
+          },
+          feedback: null,
+          feedbackDate: undefined
+        };
+      });
+      return mapped;
+    } catch {
+      return [] as PredictionWithFeedback[];
+    }
+  }, []);
+
+  // Initialize user ID and load predictions from database/backend
   useEffect(() => {
     const initializeUser = async () => {
       try {
         setIsLoading(true);
         
+        if (import.meta.env.DEV) {
+          console.log('🔄 usePredictionHistory: Initializing...', {
+            hasUser: !!user,
+            userId: user?.id?.substring(0, 20),
+            isSupabaseConfigured,
+            authLoading
+          });
+        }
+        
         // Use authenticated user ID from Supabase
         if (user?.id) {
           setUserId(user.id);
           
-          // 🔥 Try to load from Supabase database first
+          // 🔥 Try ML backend history first if available
+          if (config.mlApi.enabled) {
+            try {
+              if (import.meta.env.DEV) console.log('📥 Loading predictions from ML API history...');
+              const backendPreds = await loadHistoryFromBackend(user.id);
+              if (backendPreds.length > 0) {
+                setPredictions(backendPreds);
+                return;
+              }
+            } catch (error) {
+              if (import.meta.env.DEV) console.warn('⚠️ Error loading from ML API history:', error);
+            }
+          }
+
+          // Then try to load from Supabase database
           if (isSupabaseConfigured) {
             try {
               if (import.meta.env.DEV) console.log('📥 Loading predictions from Supabase database...');
+              const startTime = performance.now();
               const dbPredictions = await loadPredictionsFromDatabase(user.id);
+              const loadTime = performance.now() - startTime;
+              
+              if (import.meta.env.DEV) {
+                console.log(`⏱️ Database load time: ${loadTime.toFixed(0)}ms`);
+              }
               
               if (dbPredictions && dbPredictions.length > 0) {
                 // Transform database records to our format
                 const transformed = dbPredictions.map(transformDatabasePrediction);
-                if (import.meta.env.DEV) console.log(`✅ Loaded ${transformed.length} predictions from database`);
+                if (import.meta.env.DEV) {
+                  console.log(`✅ Loaded ${transformed.length} predictions from database`, {
+                    firstPrediction: transformed[0] ? {
+                      id: transformed[0].id,
+                      riskLevel: transformed[0].riskLevel,
+                      timestamp: transformed[0].timestamp
+                    } : null
+                  });
+                }
                 setPredictions(transformed);
                 return; // Exit - we have data from database
+              } else {
+                if (import.meta.env.DEV) console.log('ℹ️ No predictions found in database');
               }
             } catch (error) {
               if (import.meta.env.DEV) console.warn('⚠️ Error loading from database, falling back to localStorage:', error);
             }
+          } else {
+            if (import.meta.env.DEV) console.warn('⚠️ Supabase not configured - using localStorage only');
           }
           
           // Fallback: Load from localStorage if database is unavailable
@@ -158,7 +253,7 @@ export function usePredictionHistory(): UsePredictionHistoryReturn {
     if (!authLoading) {
       initializeUser();
     }
-  }, [user, authLoading, reloadPredictionsFromDatabase]);
+  }, [user, authLoading, reloadPredictionsFromDatabase, loadHistoryFromBackend]);
 
   // Save predictions to localStorage for this user
   const savePredictionsToStorage = useCallback((preds: PredictionWithFeedback[]) => {

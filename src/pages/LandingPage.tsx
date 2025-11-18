@@ -15,7 +15,9 @@ import {
   Users,
   TrendingUp,
   Zap,
+  ChevronDown,
 } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import {
   HeartbeatAnimation,
   HeartPulse,
@@ -145,13 +147,13 @@ export default function LandingPage() {
       <WaveformBackground />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 px-4 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 overflow-hidden">
         {/* Animated Grid Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-emerald-500/10 dark:from-teal-500/5 dark:to-emerald-500/5" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
 
-        <div className="container mx-auto max-w-7xl relative z-10 px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="container mx-auto max-w-7xl relative z-10 px-4 sm:px-6">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left Side - Text Content */}
             <motion.div
               variants={containerVariants}
@@ -165,7 +167,7 @@ export default function LandingPage() {
                 initial="hidden"
                 animate="visible"
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] tracking-tight"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] tracking-tight"
               >
                 <motion.span
                   className="block text-foreground mb-2"
@@ -199,7 +201,7 @@ export default function LandingPage() {
                 initial="hidden"
                 animate="visible"
                 transition={{ duration: 0.8, delay: 0.9 }}
-                className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed pt-2"
+                className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed pt-2"
               >
                 Advanced cardiac risk prediction powered by artificial
                 intelligence.
@@ -214,12 +216,12 @@ export default function LandingPage() {
                 initial="hidden"
                 animate="visible"
                 transition={{ duration: 0.6, delay: 1.1 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center pt-4"
+                className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start items-stretch sm:items-center pt-4"
               >
                 <Button
                   size="lg"
                   onClick={() => navigate("/basic-dashboard")}
-                  className="group relative px-10 py-7 text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 hover:from-teal-600 hover:via-emerald-600 hover:to-teal-600 shadow-2xl shadow-teal-500/30 hover:shadow-teal-500/50 transition-all duration-500 overflow-hidden"
+                  className="group relative w-full sm:w-auto px-8 sm:px-10 py-6 sm:py-7 text-base sm:text-lg font-bold bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-500 hover:from-teal-600 hover:via-emerald-600 hover:to-teal-600 shadow-2xl shadow-teal-500/30 hover:shadow-teal-500/50 transition-all duration-500 overflow-hidden"
                   style={{ backgroundSize: "200% auto" }}
                 >
                   <motion.div
@@ -246,7 +248,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="group glass dark:glass-dark px-10 py-7 text-lg font-semibold border-2 border-teal-500/30 hover:border-teal-500/80 hover:bg-teal-500/10 transition-all duration-300"
+                  className="group glass dark:glass-dark w-full sm:w-auto px-8 sm:px-10 py-6 sm:py-7 text-base sm:text-lg font-semibold border-2 border-teal-500/30 hover:border-teal-500/80 hover:bg-teal-500/10 transition-all duration-300"
                 >
                   <Activity className="w-5 h-5 mr-2 group-hover:animate-pulse" />
                   See How It Works
@@ -305,7 +307,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.8, rotateY: -30 }}
               animate={{ opacity: 1, scale: 1, rotateY: 0 }}
               transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
-              className="relative lg:pl-8"
+              className="relative lg:pl-8 hidden sm:block"
             >
               <HeroVisual />
             </motion.div>
@@ -370,20 +372,20 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4">
+      <section className="py-16 sm:py-20 px-4">
         <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
             <Badge className="mb-4 px-4 py-1">
               <Sparkles className="w-3 h-3 mr-2" />
               Features
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Clinical precision meets{" "}
               <span className="bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
                 ethical AI
@@ -394,7 +396,7 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
@@ -432,7 +434,7 @@ export default function LandingPage() {
                     }}
                   />
 
-                  <CardContent className="p-10 relative z-10">
+                  <CardContent className="p-6 sm:p-8 md:p-10 relative z-10">
                     <motion.div
                       className="w-16 h-16 rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center mb-6 shadow-2xl shadow-teal-500/50 group-hover:shadow-emerald-500/50 transition-all duration-500"
                       whileHover={{
@@ -458,20 +460,20 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Visual */}
-      <section className="py-20 px-4 bg-muted/30 dark:bg-white/5">
+      <section className="py-16 sm:py-20 px-4 bg-muted/30 dark:bg-white/5">
         <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Simple, Fast, <span className="text-teal-500">Accurate</span>
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
                 step: "01",
@@ -522,19 +524,19 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 relative">
+      <section className="py-16 sm:py-20 px-4 relative">
         <div className="container mx-auto max-w-7xl">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
             <Badge className="mb-4">
               <Heart className="w-3 h-3 mr-2 heartbeat" />
               Trusted by Medical Professionals
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold">
+            <h2 className="text-3xl md:text-4xl font-bold">
               What future doctors are saying
             </h2>
             <p className="text-lg text-muted-foreground mt-4 max-w-2xl mx-auto">
@@ -547,7 +549,7 @@ export default function LandingPage() {
       </section>
 
       {/* Subscription Plans Section */}
-      <section className="py-24 px-4 relative">
+      <section className="py-16 sm:py-24 px-4 relative">
         {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-teal-500/5 to-background" />
 
@@ -556,13 +558,13 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
             <Badge className="mb-4 px-4 py-1">
               <Sparkles className="w-3 h-3 mr-2" />
               Flexible Plans
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Choose your{" "}
               <span className="bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
                 health journey
@@ -574,7 +576,7 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
             {/* Basic Plan */}
             <motion.div
               initial={{ opacity: 0, y: 50 }}
@@ -867,7 +869,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4">
+      <section className="py-16 sm:py-24 px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -877,11 +879,11 @@ export default function LandingPage() {
         >
           <Card className="glass dark:glass-dark border-teal-500/20 overflow-hidden shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-emerald-500/10" />
-            <CardContent className="p-12 text-center relative z-10">
+            <CardContent className="p-8 sm:p-12 text-center relative z-10">
               <div className="flex justify-center mb-6">
                 <HeartPulse />
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
                 Take control of your heart health today
               </h2>
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -891,7 +893,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 onClick={() => navigate("/basic-dashboard")}
-                className="px-10 py-7 text-lg font-semibold bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/50 transition-all duration-300"
+                className="w-full sm:w-auto px-8 sm:px-10 py-6 sm:py-7 text-base sm:text-lg font-semibold bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/50 transition-all duration-300"
               >
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5" />

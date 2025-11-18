@@ -11,11 +11,26 @@ interface PredictionHistoryProps {
   userId?: string;
   onAddFeedback?: (predictionId: string, feedback: 'correct' | 'incorrect') => void;
   feedbackStats?: { correct: number; incorrect: number; total: number };
+  isLoading?: boolean;
 }
 
-export default function PredictionHistory({ predictions, userId, onAddFeedback, feedbackStats }: PredictionHistoryProps) {
+export default function PredictionHistory({ predictions, userId, onAddFeedback, feedbackStats, isLoading = false }: PredictionHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [feedbackSubmitting, setFeedbackSubmitting] = useState<string | null>(null);
+
+  // 🔍 Debug: Log predictions on render
+  if (import.meta.env.DEV) {
+    console.log('🔍 PredictionHistory render:', {
+      predictionsCount: predictions.length,
+      userId: userId?.substring(0, 20),
+      isLoading,
+      firstPrediction: predictions[0] ? {
+        id: predictions[0].id,
+        riskLevel: predictions[0].riskLevel,
+        timestamp: predictions[0].timestamp
+      } : null
+    });
+  }
 
   const getRiskBadgeVariant = (level: string) => {
     switch (level) {
@@ -86,6 +101,23 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
     }
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-medical-primary" />
+            <div>
+              <p className="font-medium">Loading History...</p>
+              <p className="text-sm text-muted-foreground">Fetching your prediction history from database</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (predictions.length === 0) {
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -100,6 +132,17 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
           {userId && (
             <div className="mt-2 text-xs text-muted-foreground">
               User ID: {userId.substring(0, 15)}...
+            </div>
+          )}
+          {import.meta.env.DEV && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-left">
+              <p className="text-xs font-semibold text-blue-900 mb-1">🔍 Debug Info:</p>
+              <ul className="text-xs text-blue-800 space-y-1">
+                <li>• User ID: {userId || 'Not set'}</li>
+                <li>• Predictions loaded: {predictions.length}</li>
+                <li>• Check browser console for database logs</li>
+                <li>• Ensure Supabase is configured in .env</li>
+              </ul>
             </div>
           )}
         </CardHeader>
