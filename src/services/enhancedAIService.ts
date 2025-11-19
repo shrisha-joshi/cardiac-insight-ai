@@ -1360,16 +1360,20 @@ I'm here to provide comprehensive heart health education with a focus on **India
               if (import.meta.env.DEV) {
                 console.warn('[AI Service] Gemini response missing expected categories');
               }
+              // Throw error to trigger error categorization
+              throw new Error('GEMINI_INVALID_RESPONSE: Missing expected categories');
             }
           } catch (parseError) {
             if (import.meta.env.DEV) {
               console.error('[AI Service] JSON parse error:', parseError);
             }
+            throw new Error('GEMINI_INVALID_RESPONSE: Failed to parse JSON');
           }
         } else {
           if (import.meta.env.DEV) {
             console.warn('[AI Service] No JSON found in Gemini response');
           }
+          throw new Error('GEMINI_INVALID_RESPONSE: No JSON found');
         }
 
         // If we got here, parsing failed but no exception - don't retry
@@ -1380,16 +1384,23 @@ I'm here to provide comprehensive heart health education with a focus on **India
           console.error(`[AI Service] Gemini API error (attempt ${attempt + 1}):`, error?.message || error);
         }
         
-        // Don't retry on certain errors
-        if (error?.message?.includes('API key') || 
-            error?.message?.includes('invalid') ||
-            error?.message?.includes('quota')) {
-          break;
+        // Categorize error for better user feedback (Phase 7)
+        if (error?.message?.includes('quota') || error?.status === 429) {
+          throw new Error('GEMINI_QUOTA_EXCEEDED');
+        }
+        if (error?.message?.includes('API key') || error?.message?.includes('invalid')) {
+          throw new Error('GEMINI_API_ERROR');
+        }
+        if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+          throw new Error('GEMINI_NETWORK_ERROR');
         }
         
         // Wait before retry (exponential backoff)
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        } else {
+          // Last retry failed - rethrow for fallback handling
+          throw error;
         }
       }
     }

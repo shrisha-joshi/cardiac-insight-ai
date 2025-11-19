@@ -67,6 +67,7 @@ export class PDFService {
   }
 
   static async generateReport(data: PDFReportData): Promise<void> {
+    try {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -308,6 +309,11 @@ export class PDFService {
 
     // Download the PDF
     pdf.save(filename);
+    } catch (error: any) {
+      // Phase 7: Enhanced error handling
+      console.error('[PDF Service] Export failed:', error);
+      throw new Error(`PDF_EXPORT_FAILED: ${error?.message || 'Unknown error'}`);
+    }
   }
 
   /**

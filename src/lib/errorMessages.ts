@@ -49,6 +49,100 @@ export const ErrorMessages = {
     badRequest: 'Invalid request. Please check your input.',
   },
 
+  // ENHANCED ERROR CONFIGURATIONS (Phase 7)
+  ENHANCED: {
+    // Gemini AI Errors
+    GEMINI_QUOTA_EXCEEDED: {
+      title: "AI Service Temporarily Unavailable",
+      description: "Daily quota exceeded. Using fallback recommendations.",
+      action: "Upgrade to Professional for unlimited AI suggestions",
+      variant: 'default' as const
+    },
+    GEMINI_NETWORK_ERROR: {
+      title: "Connection Error",
+      description: "Unable to connect to AI service. Check your internet connection.",
+      action: "Please try again",
+      variant: 'destructive' as const
+    },
+    GEMINI_INVALID_RESPONSE: {
+      title: "AI Processing Error",
+      description: "Received invalid response. Using fallback recommendations.",
+      action: "Try regenerating",
+      variant: 'default' as const
+    },
+    GEMINI_API_ERROR: {
+      title: "AI Service Error",
+      description: "An error occurred while processing your request.",
+      action: "Using fallback recommendations",
+      variant: 'default' as const
+    },
+    
+    // PDF Errors
+    PDF_PARSE_FAILED: {
+      title: "PDF Parsing Failed",
+      description: "Unable to extract data from PDF. Please enter data manually.",
+      action: "Try different PDF or manual entry",
+      variant: 'destructive' as const
+    },
+    PDF_EXPORT_FAILED: {
+      title: "PDF Export Error",
+      description: "Failed to generate PDF report. Please try again.",
+      action: "Retry export",
+      variant: 'destructive' as const
+    },
+    PDF_UPLOAD_FAILED: {
+      title: "Upload Failed",
+      description: "Could not upload PDF file. Check file size and format.",
+      action: "Try again with valid PDF",
+      variant: 'destructive' as const
+    },
+    
+    // Network Errors
+    NETWORK_OFFLINE: {
+      title: "⚠️ No Internet Connection",
+      description: "AI features unavailable. Showing cached recommendations.",
+      variant: 'destructive' as const
+    },
+    NETWORK_TIMEOUT: {
+      title: "Request Timeout",
+      description: "The request took too long. Please try again.",
+      action: "Retry",
+      variant: 'destructive' as const
+    },
+    
+    // Database Errors
+    DATABASE_ERROR: {
+      title: "Database Error",
+      description: "Unable to save prediction history.",
+      action: "Please try again later",
+      variant: 'destructive' as const
+    },
+    
+    // Authentication Errors
+    AUTH_REQUIRED: {
+      title: "Authentication Required",
+      description: "Please sign in to access this feature.",
+      action: "Sign In",
+      variant: 'default' as const
+    },
+    
+    // Subscription Errors
+    SUBSCRIPTION_REQUIRED: {
+      title: "Premium Feature",
+      description: "This feature requires a Premium or Professional subscription.",
+      action: "View Plans",
+      variant: 'default' as const
+    },
+    
+    // Generic Errors
+    UNKNOWN_ERROR: {
+      title: "Something Went Wrong",
+      description: "An unexpected error occurred. Please try again.",
+      action: "Retry",
+      variant: 'destructive' as const
+    }
+  },
+
   // DATABASE ERRORS
   DATABASE: {
     saveError: 'Failed to save data to database.',
@@ -219,3 +313,72 @@ export function createSuccessResponse(
     timestamp: new Date().toISOString(),
   };
 }
+
+/**
+ * Error categorization helper (Phase 7)
+ */
+export type EnhancedErrorType = keyof typeof ErrorMessages.ENHANCED;
+
+export interface ErrorConfig {
+  title: string;
+  description: string;
+  action?: string;
+  variant?: 'default' | 'destructive';
+}
+
+/**
+ * Get error configuration by type
+ */
+export const getErrorConfig = (type: EnhancedErrorType): ErrorConfig => {
+  return ErrorMessages.ENHANCED[type];
+};
+
+/**
+ * Categorize error based on error object
+ */
+export const categorizeError = (error: any): EnhancedErrorType => {
+  const errorMessage = error?.message?.toLowerCase() || '';
+  const errorStatus = error?.status || error?.response?.status;
+  
+  // Gemini AI errors
+  if (errorMessage.includes('quota') || errorStatus === 429) {
+    return 'GEMINI_QUOTA_EXCEEDED';
+  }
+  if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('cors')) {
+    return 'GEMINI_NETWORK_ERROR';
+  }
+  if (errorMessage.includes('invalid') || errorMessage.includes('parse json')) {
+    return 'GEMINI_INVALID_RESPONSE';
+  }
+  if (errorMessage.includes('gemini') || errorMessage.includes('generativeai')) {
+    return 'GEMINI_API_ERROR';
+  }
+  
+  // PDF errors
+  if (errorMessage.includes('pdf')) {
+    if (errorMessage.includes('parse') || errorMessage.includes('extract')) return 'PDF_PARSE_FAILED';
+    if (errorMessage.includes('export') || errorMessage.includes('generate')) return 'PDF_EXPORT_FAILED';
+    if (errorMessage.includes('upload')) return 'PDF_UPLOAD_FAILED';
+  }
+  
+  // Network errors
+  if (errorMessage.includes('offline') || !navigator.onLine) return 'NETWORK_OFFLINE';
+  if (errorMessage.includes('timeout')) return 'NETWORK_TIMEOUT';
+  
+  // Database errors
+  if (errorMessage.includes('supabase') || errorMessage.includes('database') || errorMessage.includes('insert') || errorMessage.includes('update')) {
+    return 'DATABASE_ERROR';
+  }
+  
+  // Auth errors
+  if (errorStatus === 401 || errorMessage.includes('unauthorized') || errorMessage.includes('not authenticated')) {
+    return 'AUTH_REQUIRED';
+  }
+  
+  // Subscription errors
+  if (errorStatus === 403 || errorMessage.includes('subscription') || errorMessage.includes('upgrade')) {
+    return 'SUBSCRIPTION_REQUIRED';
+  }
+  
+  return 'UNKNOWN_ERROR';
+};
