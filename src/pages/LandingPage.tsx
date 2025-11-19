@@ -111,6 +111,15 @@ export default function LandingPage() {
       avatar: "PB",
       rating: 4,
     },
+    {
+      name: "Sathwik A S",
+      role: "Final year MBBS student",
+      institution: "Bangalore Medical College & Research Institute, Bengaluru",
+      content:
+        "I found it to be a thoughtfully designed tool with genuine potential in cardiac care. The promise of assessing heart-attack risk using AI is certainly appealing and aligns well with modern trends in predictive medicine. Website clearly states its purpose, walks users through the required inputs, and presents results in a straightforward manner. This transparency builds confidence and suggests responsible development. However, the website does not seem to replace professional medical evaluation—no algorithm is perfect, and important factors like comorbidities-or-lifestyle nuances may not be fully captured. I would advise users to treat it as supplementary to a full clinical assessment, rather than a standalone diagnosis. And I would say, Cardiac Insight AI is a promising resource, well executed for its intended purpose, and worth exploring. I would say, continue to validate the tool rigorously, ensure continued alignment with clinical guidelines, and make clear to users when professional follow-up is needed. With that in place, it can become a valuable ally in preventive cardiology.",
+      avatar: "SA",
+      rating: 5,
+    },
   ];
 
   const features = [
