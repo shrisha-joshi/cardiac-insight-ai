@@ -90,16 +90,48 @@ class EnhancedAIService {
   constructor() {
     // Initialize Google Gemini
     if (config.ai.gemini.enabled && config.ai.gemini.apiKey) {
-      this.gemini = new GoogleGenerativeAI(config.ai.gemini.apiKey);
+      // Validate API key format (should start with valid prefix)
+      if (this.isValidGeminiKey(config.ai.gemini.apiKey)) {
+        this.gemini = new GoogleGenerativeAI(config.ai.gemini.apiKey);
+        if (import.meta.env.DEV) console.log('[AI Service] ✅ Gemini initialized successfully');
+      } else {
+        if (import.meta.env.DEV) console.warn('[AI Service] ⚠️ Invalid Gemini API key format. Please check VITE_GOOGLE_GEMINI_API_KEY in .env file.');
+      }
+    } else {
+      if (import.meta.env.DEV) console.log('[AI Service] Gemini disabled or no API key configured');
     }
 
     // Initialize OpenAI
     if (config.ai.openai.enabled && config.ai.openai.apiKey) {
-      this.openai = new OpenAI({
-        apiKey: config.ai.openai.apiKey,
-        dangerouslyAllowBrowser: true // Note: In production, calls should go through a backend
-      });
+      // Validate API key format (should start with 'sk-')
+      if (this.isValidOpenAIKey(config.ai.openai.apiKey)) {
+        this.openai = new OpenAI({
+          apiKey: config.ai.openai.apiKey,
+          dangerouslyAllowBrowser: true // Note: In production, calls should go through a backend
+        });
+        if (import.meta.env.DEV) console.log('[AI Service] ✅ OpenAI initialized successfully');
+      } else {
+        if (import.meta.env.DEV) console.warn('[AI Service] ⚠️ Invalid OpenAI API key format. Please check VITE_OPENAI_API_KEY in .env file.');
+      }
+    } else {
+      if (import.meta.env.DEV) console.log('[AI Service] OpenAI disabled or no API key configured');
     }
+
+    // Log available providers
+    if (import.meta.env.DEV) {
+      const providers = this.getAvailableProviders();
+      console.log(`[AI Service] Available providers: ${providers.join(', ')}`);
+    }
+  }
+
+  private isValidGeminiKey(key: string): boolean {
+    // Gemini keys typically start with 'AIzaSy' and are ~39 characters
+    return key.startsWith('AIzaSy') && key.length >= 30 && !key.includes('your_');
+  }
+
+  private isValidOpenAIKey(key: string): boolean {
+    // OpenAI keys start with 'sk-' and are ~48+ characters
+    return key.startsWith('sk-') && key.length >= 40 && !key.includes('your_');
   }
 
   /**
@@ -1156,8 +1188,10 @@ I'm here to provide comprehensive heart health education with a focus on **India
     try {
       // Try Gemini first
       if (this.gemini) {
+        if (import.meta.env.DEV) console.log('[AI Service] Attempting Gemini API call...');
         const response = await this.callGemini(prompt);
         if (response && response.suggestions) {
+          if (import.meta.env.DEV) console.log('[AI Service] ✅ Gemini API success');
           return {
             suggestions: response.suggestions,
             warnings: response.warnings || [],
@@ -1165,12 +1199,17 @@ I'm here to provide comprehensive heart health education with a focus on **India
             disclaimer: this.getMedicalDisclaimer()
           };
         }
+        if (import.meta.env.DEV) console.warn('[AI Service] ⚠️ Gemini API returned no suggestions, trying OpenAI...');
+      } else {
+        if (import.meta.env.DEV) console.log('[AI Service] Gemini not initialized, skipping to OpenAI');
       }
 
       // Fallback to OpenAI
       if (this.openai) {
+        if (import.meta.env.DEV) console.log('[AI Service] Attempting OpenAI API call...');
         const response = await this.callOpenAI(prompt);
         if (response && response.suggestions) {
+          if (import.meta.env.DEV) console.log('[AI Service] ✅ OpenAI API success');
           return {
             suggestions: response.suggestions,
             warnings: response.warnings || [],
@@ -1178,12 +1217,16 @@ I'm here to provide comprehensive heart health education with a focus on **India
             disclaimer: this.getMedicalDisclaimer()
           };
         }
+        if (import.meta.env.DEV) console.warn('[AI Service] ⚠️ OpenAI API returned no suggestions');
+      } else {
+        if (import.meta.env.DEV) console.log('[AI Service] OpenAI not initialized');
       }
 
       // Fallback to rule-based suggestions
+      if (import.meta.env.DEV) console.warn('[AI Service] ⚠️ Using rule-based fallback suggestions');
       return this.getFallbackSuggestions(request);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('AI service error:', error);
+      if (import.meta.env.DEV) console.error('[AI Service] ❌ Error:', error);
       return this.getFallbackSuggestions(request);
     }
   }
@@ -1192,17 +1235,17 @@ I'm here to provide comprehensive heart health education with a focus on **India
     const { riskLevel, patientData, requestType } = request;
     
     return `
-    You are a medical AI assistant providing evidence-based health suggestions. 
+    You are an experienced cardiologist and medical AI assistant providing evidence-based, personalized cardiovascular health recommendations.
     
-    Patient Profile:
-    - Age: ${patientData.age}
+    PATIENT PROFILE:
+    - Age: ${patientData.age} years old
     - Gender: ${patientData.gender}
     - Cardiovascular Risk Level: ${riskLevel.toUpperCase()}
-    - Medical History: ${patientData.medicalHistory.join(', ') || 'None specified'}
-    - Current Conditions: ${patientData.currentConditions.join(', ') || 'None specified'}
-    - Lifestyle Factors: ${patientData.lifestyle.join(', ') || 'None specified'}
+    - Medical History: ${patientData.medicalHistory.length > 0 ? patientData.medicalHistory.join(', ') : 'None reported'}
+    - Current Conditions: ${patientData.currentConditions.length > 0 ? patientData.currentConditions.join(', ') : 'None reported'}
+    - Lifestyle Factors: ${patientData.lifestyle.length > 0 ? patientData.lifestyle.join(', ') : 'None reported'}
 
-    Please provide ${requestType === 'comprehensive' ? 'comprehensive' : requestType} suggestions for cardiovascular health improvement.
+    TASK: Provide ${requestType === 'comprehensive' ? 'comprehensive personalized' : requestType} recommendations for cardiovascular health improvement tailored to this patient's specific risk level and profile.
 
     ${requestType === 'comprehensive' || requestType === 'medicines' ? `
     MEDICINES/SUPPLEMENTS (over-the-counter and general recommendations):
@@ -1235,41 +1278,123 @@ I'm here to provide comprehensive heart health education with a focus on **India
     - Specific nutrients important for cardiovascular health
     ` : ''}
 
-    IMPORTANT: 
-    1. Provide practical, actionable suggestions
-    2. Consider the ${riskLevel} risk level in your recommendations
-    3. Include appropriate warnings for high-risk patients
-    4. Suggest consulting healthcare providers for personalized treatment
-    5. Format your response as JSON with categories: medicines, ayurveda, yoga, diet, warnings
+    CRITICAL FORMATTING REQUIREMENTS:
+    1. Provide 4-6 specific, actionable recommendations per category
+    2. Consider the ${riskLevel} risk level - be more conservative for high/critical risk
+    3. Include dosages, frequencies, and specific instructions where applicable
+    4. For high/critical risk patients, emphasize medical consultation
+    5. Each recommendation should be a complete sentence with clear action steps
+    
+    RESPONSE FORMAT (respond ONLY with this JSON structure, no additional text):
+    {
+      "medicines": [
+        "Omega-3 fatty acids (fish oil) 1000mg twice daily with meals",
+        "Coenzyme Q10 100mg daily for heart energy support",
+        "..."
+      ],
+      "ayurveda": [
+        "Arjuna bark powder 3-6g daily divided into 2-3 doses with warm water",
+        "Fresh garlic 2-3 cloves on empty stomach each morning",
+        "..."
+      ],
+      "yoga": [
+        "Shavasana (Corpse Pose) 10-15 minutes daily for deep relaxation",
+        "Anulom Vilom pranayama 5-10 minutes twice daily",
+        "..."
+      ],
+      "diet": [
+        "Consume 5-7 servings of colorful fruits and vegetables daily",
+        "Include fatty fish (salmon, mackerel) 2-3 times per week",
+        "..."
+      ],
+      "warnings": [
+        "Consult cardiologist before starting any new supplement regimen",
+        "..."
+      ]
+    }
 
-    Respond with valid JSON only.
+    IMPORTANT: Return ONLY the JSON object above with your personalized recommendations. No explanatory text before or after.
     `;
   }
 
-  private async callGemini(prompt: string): Promise<Partial<EnhancedAIResponse> | null> {
+  private async callGemini(prompt: string, retries = 2): Promise<Partial<EnhancedAIResponse> | null> {
     if (!this.gemini) return null;
 
-    try {
-      const model = this.gemini.getGenerativeModel({ model: config.ai.gemini.model });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        if (import.meta.env.DEV && attempt > 0) {
+          console.log(`[AI Service] Gemini retry attempt ${attempt}/${retries}`);
+        }
 
-      // Try to parse JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          suggestions: parsed,
-          warnings: parsed.warnings || []
-        };
+        const model = this.gemini.getGenerativeModel({ 
+          model: config.ai.gemini.model,
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          },
+        });
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        if (import.meta.env.DEV) {
+          console.log('[AI Service] Gemini raw response length:', text.length);
+        }
+
+        // Try to parse JSON response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            
+            // Validate response has expected structure
+            if (parsed.medicines || parsed.ayurveda || parsed.yoga || parsed.diet) {
+              return {
+                suggestions: parsed,
+                warnings: parsed.warnings || []
+              };
+            } else {
+              if (import.meta.env.DEV) {
+                console.warn('[AI Service] Gemini response missing expected categories');
+              }
+            }
+          } catch (parseError) {
+            if (import.meta.env.DEV) {
+              console.error('[AI Service] JSON parse error:', parseError);
+            }
+          }
+        } else {
+          if (import.meta.env.DEV) {
+            console.warn('[AI Service] No JSON found in Gemini response');
+          }
+        }
+
+        // If we got here, parsing failed but no exception - don't retry
+        if (attempt === 0) break;
+        
+      } catch (error: any) {
+        if (import.meta.env.DEV) {
+          console.error(`[AI Service] Gemini API error (attempt ${attempt + 1}):`, error?.message || error);
+        }
+        
+        // Don't retry on certain errors
+        if (error?.message?.includes('API key') || 
+            error?.message?.includes('invalid') ||
+            error?.message?.includes('quota')) {
+          break;
+        }
+        
+        // Wait before retry (exponential backoff)
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-
-      return null;
-    } catch (error) {
-      if (import.meta.env.DEV) console.error('Gemini API error:', error);
-      return null;
     }
+
+    return null;
   }
 
   private async callOpenAI(prompt: string): Promise<Partial<EnhancedAIResponse> | null> {

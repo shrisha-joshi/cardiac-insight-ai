@@ -25,6 +25,8 @@ import { StatsGrid, StatCard } from '@/components/ui/stat-card';
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
+import { PDFParseConfirmationModal } from '@/components/PDFParseConfirmationModal';
+import { parsePDFForFormData, type ParsedField } from '@/services/pdfParserService';
 
 export default function BasicDashboard() {
   const MAX_RISK_SCORE = 14; // Maximum possible score: 2+1+2+2+2+3+2 = 14 points
@@ -36,6 +38,10 @@ export default function BasicDashboard() {
   const [processingLoading, setProcessingLoading] = useState(false);
   const [currentPrediction, setCurrentPrediction] = useState<PredictionResult | null>(null);
   const [activeTab, setActiveTab] = useState('assess');
+  const [pdfParseModalOpen, setPdfParseModalOpen] = useState(false);
+  const [currentParsedFields, setCurrentParsedFields] = useState<ParsedField[]>([]);
+  const [currentUnmappedData, setCurrentUnmappedData] = useState<string[]>([]);
+  const [currentExtractionMethod, setCurrentExtractionMethod] = useState<'text-extraction' | 'ocr'>('text-extraction');
   const [riskIndicators, setRiskIndicators] = useState<{score: number, level: string, factors: string[]}>({
     score: 0,
     level: 'low',
@@ -152,17 +158,59 @@ export default function BasicDashboard() {
     
     toast({
       title: "Files Uploaded",
-      description: `${files.length} document(s) uploaded successfully.`,
+      description: `${files.length} document(s) uploaded successfully. Processing...`,
     });
     
-    // Basic document processing for free tier (limited features)
+    // ✅ FIX: Real PDF parsing integration
     for (const file of files) {
-      if (import.meta.env.DEV) console.log('Basic processing:', file.name);
-      if (file.name.toLowerCase().includes('blood')) {
-        // Basic data extraction - limited compared to premium
-        updateField('cholesterol', 200);
+      if (file.type === 'application/pdf') {
+        try {
+          const parseResult = await parsePDFForFormData(file);
+          
+          if (parseResult.success && parseResult.parsedFields.length > 0) {
+            // Store parsed data and show confirmation modal
+            setCurrentParsedFields(parseResult.parsedFields);
+            setCurrentUnmappedData(parseResult.unmappedData);
+            setCurrentExtractionMethod(parseResult.extractionMethod);
+            setPdfParseModalOpen(true);
+          } else {
+            toast({
+              title: "PDF Processing Complete",
+              description: "No medical data found in PDF. You can enter data manually.",
+              variant: "default",
+            });
+          }
+        } catch (error) {
+          if (import.meta.env.DEV) console.error('PDF parsing error:', error);
+          toast({
+            title: "PDF Processing Error",
+            description: "Unable to extract data from PDF. Please enter manually.",
+            variant: "destructive",
+          });
+        }
       }
     }
+  };
+
+  const handlePDFAccept = () => {
+    // Auto-fill form with parsed data
+    currentParsedFields.forEach(field => {
+      if (field.fieldName in formData) {
+        updateField(field.fieldName as keyof PatientData, field.value);
+      }
+    });
+    
+    setPdfParseModalOpen(false);
+    toast({
+      title: "Form Auto-Filled",
+      description: `${currentParsedFields.length} field(s) populated from PDF.`,
+    });
+  };
+
+  const handlePDFReject = () => {
+    setPdfParseModalOpen(false);
+    setCurrentParsedFields([]);
+    setCurrentUnmappedData([]);
   };
 
   const removeFile = (index: number) => {
@@ -860,6 +908,17 @@ export default function BasicDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* PDF Parse Confirmation Modal */}
+      <PDFParseConfirmationModal
+        open={pdfParseModalOpen}
+        onOpenChange={setPdfParseModalOpen}
+        parsedFields={currentParsedFields}
+        unmappedData={currentUnmappedData}
+        extractionMethod={currentExtractionMethod}
+        onAccept={handlePDFAccept}
+        onReject={handlePDFReject}
+      />
     </div>
   );
 }

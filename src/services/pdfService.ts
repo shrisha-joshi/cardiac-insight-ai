@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import type { PatientData } from '../lib/mockData';
 
@@ -42,6 +43,29 @@ export interface PDFReportData {
 }
 
 export class PDFService {
+  /**
+   * Sanitize text for PDF output to handle Unicode characters
+   * This prevents corruption of special characters like ā, ū, ṣ, etc.
+   */
+  private static sanitizeText(text: string): string {
+    // Replace problematic Unicode characters with ASCII equivalents
+    const replacements: Record<string, string> = {
+      '\u0101': 'a', '\u012B': 'i', '\u016B': 'u', '\u1E5B': 'r', '\u1E5D': 'r',
+      '\u1E37': 'l', '\u1E39': 'l', '\u0113': 'e', '\u014D': 'o',
+      '\u1E43': 'm', '\u1E25': 'h', '\u1E45': 'n', '\u00F1': 'n',
+      '\u1E6D': 't', '\u1E0D': 'd', '\u1E47': 'n', '\u015B': 's', '\u1E63': 's',
+      '\u2018': "'", '\u2019': "'", '\u201C': '"', '\u201D': '"',
+      '\u2013': '-', '\u2014': '-', '\u2026': '...'
+    };
+    
+    let sanitized = text;
+    for (const [unicode, ascii] of Object.entries(replacements)) {
+      sanitized = sanitized.replace(new RegExp(unicode, 'g'), ascii);
+    }
+    
+    return sanitized;
+  }
+
   static async generateReport(data: PDFReportData): Promise<void> {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -59,11 +83,11 @@ export class PDFService {
     pdf.setFont('helvetica', 'normal');
     
     const patientLines = [
-      `Name: ${data.patientInfo.name}`,
+      `Name: ${this.sanitizeText(data.patientInfo.name)}`,
       `Age: ${data.patientInfo.age} years`,
-      `Gender: ${data.patientInfo.gender}`,
-      `Assessment Date: ${data.patientInfo.assessmentDate}`,
-      `Report ID: ${data.reportId}`
+      `Gender: ${this.sanitizeText(data.patientInfo.gender)}`,
+      `Assessment Date: ${this.sanitizeText(data.patientInfo.assessmentDate)}`,
+      `Report ID: ${this.sanitizeText(data.reportId)}`
     ];
     
     patientLines.forEach(line => {
@@ -88,7 +112,7 @@ export class PDFService {
         : [40, 167, 69];
     
     pdf.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
-    pdf.text(`Risk Level: ${data.riskAssessment.riskLevel.toUpperCase()}`, margin + 3, yPosition);
+    pdf.text(this.sanitizeText(`Risk Level: ${data.riskAssessment.riskLevel.toUpperCase()}`), margin + 3, yPosition);
     pdf.setTextColor(0, 0, 0);
     yPosition += 10;
 
@@ -123,7 +147,8 @@ export class PDFService {
           pdf.addPage();
           yPosition = margin;
         }
-        const lines = pdf.splitTextToSize(factor, pageWidth - 2 * margin - 10);
+        const sanitizedFactor = this.sanitizeText(factor);
+        const lines = pdf.splitTextToSize(sanitizedFactor, pageWidth - 2 * margin - 10);
         for (let idx = 0; idx < lines.length; idx++) {
           const line = lines[idx];
           if (yPosition > pageHeight - 30) {
@@ -162,7 +187,7 @@ export class PDFService {
         }
         
         // Feature name
-        pdf.text(`${feature.feature}:`, margin + 3, yPosition);
+        pdf.text(this.sanitizeText(`${feature.feature}:`), margin + 3, yPosition);
         
         // Percentage bar
         const barWidth = (feature.percentage / 100) * (pageWidth - 2 * margin - 50);
@@ -300,7 +325,7 @@ export class PDFService {
       ? 'Professional Clinical Assessment'
       : 'Premium Heart Risk Assessment';
     
-    pdf.text(title, margin, 15);
+    pdf.text(this.sanitizeText(title), margin, 15);
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text('Powered by Cardiac Insight AI - Machine Learning Based Cardiovascular Risk Assessment', margin, 28);
@@ -325,7 +350,7 @@ export class PDFService {
     pdf.setFontSize(13);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(41, 98, 255);
-    pdf.text(title, margin, yPosition);
+    pdf.text(this.sanitizeText(title), margin, yPosition);
     pdf.setTextColor(0, 0, 0);
 
     // Underline
@@ -354,7 +379,7 @@ export class PDFService {
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(100, 100, 100);
-    pdf.text(title, margin + 5, yPosition);
+    pdf.text(this.sanitizeText(title), margin + 5, yPosition);
     pdf.setTextColor(0, 0, 0);
 
     return yPosition + 7;
@@ -380,7 +405,8 @@ export class PDFService {
         yPosition = margin;
       }
 
-      const lines = pdf.splitTextToSize(item, pageWidth - 2 * margin - 15);
+      const sanitizedItem = this.sanitizeText(item);
+      const lines = pdf.splitTextToSize(sanitizedItem, pageWidth - 2 * margin - 15);
       for (let idx = 0; idx < lines.length; idx++) {
         const line = lines[idx];
         if (yPosition > pageHeight - 15) {
