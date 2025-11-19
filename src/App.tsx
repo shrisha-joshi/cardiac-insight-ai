@@ -1,29 +1,45 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import Header from "./components/layout/Header";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
+
+// Phase 8: Code Splitting - Lazy load components for better performance
+// Critical routes (loaded immediately)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import LoginForm from "./components/auth/LoginForm";
-import SignupForm from "./components/auth/SignupForm";
-import ForgotPasswordForm from "./components/auth/ForgotPasswordForm";
-import ResetPasswordForm from "./components/auth/ResetPasswordForm";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import Dashboard from "./components/Dashboard";
-import ProfilePage from "./components/profile/ProfilePage";
-import ChatBot from "./components/chatbot/ChatBot";
-import MedicalHistory from "./components/history/MedicalHistory";
-import Header from "./components/layout/Header";
-import BasicDashboard from "./components/subscription/BasicDashboard";
-import PremiumDashboard from "./components/subscription/PremiumDashboard";
-import ProfessionalDashboard from "./components/subscription/ProfessionalDashboard";
-import DatabaseStatus from "./components/database/DatabaseStatus";
-import HealthSimulationPage from "./pages/HealthSimulationPage";
-import SettingsPage from "./pages/SettingsPage";
-import { DataLoadingDashboard } from "./components/DataLoadingDashboard";
-import { MonitoringDashboard } from "./components/monitoring/MonitoringDashboard";
+
+// Authentication pages (lazy loaded)
+const LoginForm = lazy(() => import("./components/auth/LoginForm"));
+const SignupForm = lazy(() => import("./components/auth/SignupForm"));
+const ForgotPasswordForm = lazy(() => import("./components/auth/ForgotPasswordForm"));
+const ResetPasswordForm = lazy(() => import("./components/auth/ResetPasswordForm"));
+
+// Protected pages (lazy loaded)
+const Dashboard = lazy(() => import("./components/Dashboard"));
+const ProfilePage = lazy(() => import("./components/profile/ProfilePage"));
+const ChatBot = lazy(() => import("./components/chatbot/ChatBot"));
+const MedicalHistory = lazy(() => import("./components/history/MedicalHistory"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+
+// Subscription pages (lazy loaded)
+const BasicDashboard = lazy(() => import("./components/subscription/BasicDashboard"));
+const PremiumDashboard = lazy(() => import("./components/subscription/PremiumDashboard"));
+const ProfessionalDashboard = lazy(() => import("./components/subscription/ProfessionalDashboard"));
+
+// Admin/Technical pages (lazy loaded)
+const DatabaseStatus = lazy(() => import("./components/database/DatabaseStatus"));
+const HealthSimulationPage = lazy(() => import("./pages/HealthSimulationPage"));
+const DataLoadingDashboard = lazy(() => import("./components/DataLoadingDashboard").then(m => ({ default: m.DataLoadingDashboard })));
+const MonitoringDashboard = lazy(() => import("./components/monitoring/MonitoringDashboard").then(m => ({ default: m.MonitoringDashboard })));
+
+// Phase 9: User Feedback Widget (lazy loaded)
+const FeedbackWidget = lazy(() => import("./components/feedback/FeedbackWidget").then(m => ({ default: m.FeedbackWidget })));
 
 const queryClient = new QueryClient();
 
@@ -36,13 +52,14 @@ const App = () => (
         <BrowserRouter>
           <div className="min-h-screen bg-background">
             <Header />
-            <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/signup" element={<SignupForm />} />
-            <Route path="/forgot-password" element={<ForgotPasswordForm />} />
-            <Route path="/reset-password" element={<ResetPasswordForm />} />
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/signup" element={<SignupForm />} />
+                <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+                <Route path="/reset-password" element={<ResetPasswordForm />} />
             
             {/* Protected Routes - Require Authentication */}
             <Route 
@@ -138,12 +155,18 @@ const App = () => (
               } 
             />
             
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+            
+            {/* Phase 9: Feedback Widget - Available on all pages */}
+            <Suspense fallback={null}>
+              <FeedbackWidget />
+            </Suspense>
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
