@@ -27,13 +27,25 @@ import {
   WaveformBackground,
 } from "@/components/ui/animated-medical-icons";
 import { HeroVisual } from "@/components/ui/hero-visual";
+import { CountUpStats } from "@/components/ui/count-up-stats";
 import { NeuralBackgroundMesh } from "@/components/ui/neural-background-mesh";
 import { MedicalFloatingParticles } from "@/components/ui/medical-floating-particles";
+import { InfiniteMarquee } from "@/components/ui/infinite-marquee";
 import { PremiumTestimonialCarousel } from "@/components/ui/premium-testimonial-carousel";
 import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  // Mouse move handler for spotlight effect
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    target.style.setProperty("--mouse-x", `${x}px`);
+    target.style.setProperty("--mouse-y", `${y}px`);
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -147,10 +159,18 @@ export default function LandingPage() {
       <WaveformBackground />
 
       {/* Hero Section */}
-      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 overflow-hidden">
+      <section 
+        className="relative pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 overflow-hidden group"
+        onMouseMove={handleMouseMove}
+      >
         {/* Animated Grid Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-emerald-500/10 dark:from-teal-500/5 dark:to-emerald-500/5" />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
+        
+        {/* Mouse Spotlight Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none">
+           <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_var(--mouse-x,50%)_var(--mouse-y,50%),rgba(20,184,166,0.06),transparent)]" />
+        </div>
 
         <div className="container mx-auto max-w-7xl relative z-10 px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
@@ -180,8 +200,17 @@ export default function LandingPage() {
                 <motion.span
                   className="block bg-gradient-to-r from-teal-600 via-emerald-500 to-cyan-500 dark:from-teal-400 dark:via-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent mb-2"
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
+                  animate={{ 
+                    opacity: 1, 
+                    x: 0,
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
+                  }}
+                  transition={{ 
+                    opacity: { duration: 0.6, delay: 0.5 },
+                    x: { duration: 0.6, delay: 0.5 },
+                    backgroundPosition: { duration: 5, repeat: Infinity, ease: "linear" }
+                  }}
+                  style={{ backgroundSize: "200% auto" }}
                 >
                   heart health
                 </motion.span>
@@ -269,6 +298,8 @@ export default function LandingPage() {
                     scale: 1.05,
                     borderColor: "rgba(20, 184, 166, 0.4)",
                   }}
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0 }}
                 >
                   <Shield className="w-4 h-4 text-teal-500" />
                   <span className="font-medium text-foreground">
@@ -281,6 +312,8 @@ export default function LandingPage() {
                     scale: 1.05,
                     borderColor: "rgba(20, 184, 166, 0.4)",
                   }}
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
                 >
                   <Lock className="w-4 h-4 text-teal-500" />
                   <span className="font-medium text-foreground">
@@ -293,6 +326,8 @@ export default function LandingPage() {
                     scale: 1.05,
                     borderColor: "rgba(20, 184, 166, 0.4)",
                   }}
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 3 }}
                 >
                   <CheckCircle2 className="w-4 h-4 text-teal-500" />
                   <span className="font-medium text-foreground">
@@ -314,6 +349,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Infinite Marquee */}
+      <InfiniteMarquee />
 
       {/* Stats Section */}
       <section className="py-24 px-4 relative">
@@ -358,7 +396,7 @@ export default function LandingPage() {
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
                     >
-                      {stat.value}
+                      <CountUpStats value={stat.value} />
                     </motion.div>
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       {stat.label}

@@ -7,6 +7,7 @@ interface HeroVisualProps {
 
 export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -59,7 +60,9 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
 
       {/* Floating 3D Heart with Neural Network */}
       <motion.div
-        className="relative z-10"
+        className="relative z-10 cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         animate={{
           y: isPulsing ? [0, -25, 0] : [0, -20, 0],
           rotateY: [0, 10, 0, -10, 0],
@@ -138,7 +141,7 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
             />
 
-            {/* Neural Lines */}
+            {/* Neural Lines with Data Packets */}
             <motion.line
               x1="150"
               y1="80"
@@ -150,6 +153,14 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               animate={{ pathLength: [0, 1, 0] }}
               transition={{ duration: 2, repeat: Infinity, delay: 0 }}
             />
+            <motion.circle r="2" fill="#fff">
+              <animateMotion
+                dur="2s"
+                repeatCount="indefinite"
+                path="M150,80 L150,130"
+              />
+            </motion.circle>
+
             <motion.line
               x1="220"
               y1="150"
@@ -161,6 +172,15 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               animate={{ pathLength: [0, 1, 0] }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
             />
+            <motion.circle r="2" fill="#fff">
+              <animateMotion
+                dur="2s"
+                repeatCount="indefinite"
+                path="M220,150 L170,150"
+                begin="0.5s"
+              />
+            </motion.circle>
+
             <motion.line
               x1="80"
               y1="150"
@@ -172,6 +192,15 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               animate={{ pathLength: [0, 1, 0] }}
               transition={{ duration: 2, repeat: Infinity, delay: 1 }}
             />
+            <motion.circle r="2" fill="#fff">
+              <animateMotion
+                dur="2s"
+                repeatCount="indefinite"
+                path="M80,150 L130,150"
+                begin="1s"
+              />
+            </motion.circle>
+
             <motion.line
               x1="150"
               y1="220"
@@ -183,6 +212,14 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               animate={{ pathLength: [0, 1, 0] }}
               transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
             />
+            <motion.circle r="2" fill="#fff">
+              <animateMotion
+                dur="2s"
+                repeatCount="indefinite"
+                path="M150,220 L150,170"
+                begin="1.5s"
+              />
+            </motion.circle>
           </g>
 
           {/* 3D Heart Base */}
@@ -196,7 +233,7 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
             }}
             transition={{
               scale: {
-                duration: 2.4,
+                duration: isHovered ? 0.8 : 2.4,
                 repeat: Infinity,
                 ease: "easeInOut"
               },
@@ -213,7 +250,7 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
               opacity: [0.8, 0.5, 0.8],
             }}
             transition={{
-              duration: 2.4,
+              duration: isHovered ? 0.8 : 2.4,
               repeat: Infinity,
               ease: "easeInOut"
             }}
@@ -287,8 +324,18 @@ export function HeroVisual({ isPulsing = false }: HeroVisualProps) {
           {/* Gradients */}
           <defs>
             <linearGradient id="heart-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#14B8A6" />
-              <stop offset="50%" stopColor="#0D9488" />
+              <motion.stop 
+                offset="0%" 
+                initial={{ stopColor: "#14B8A6" }}
+                animate={{ stopColor: isHovered ? "#F43F5E" : "#14B8A6" }}
+                transition={{ duration: 0.5 }}
+              />
+              <motion.stop 
+                offset="50%" 
+                initial={{ stopColor: "#0D9488" }}
+                animate={{ stopColor: isHovered ? "#BE123C" : "#0D9488" }}
+                transition={{ duration: 0.5 }}
+              />
               <stop offset="100%" stopColor="#0F766E" />
             </linearGradient>
             <linearGradient id="highlight-gradient" x1="0%" y1="0%" x2="100%" y2="100%">

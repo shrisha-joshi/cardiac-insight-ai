@@ -770,26 +770,7 @@ export default function BasicDashboard() {
                     </ActionButton>
                   )}
                 </div>
-                {currentStep === totalSteps && (
-                  <div className="grid md:grid-cols-2 gap-2">
-                    <ActionButton 
-                      variant="secondary"
-                      size="md"
-                      fullWidth
-                      icon={TrendingUp}
-                    >
-                      Upgrade to Premium
-                    </ActionButton>
-                    <ActionButton 
-                      variant="success"
-                      size="md"
-                      fullWidth
-                      icon={BarChart3}
-                    >
-                      Go Professional
-                    </ActionButton>
-                  </div>
-                )}
+                
               </div>
             </form>
           </CardContent>
