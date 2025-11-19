@@ -545,7 +545,7 @@ export function generateAyurvedaPrescription(
   bp: number,
   diabetes: boolean,
   stress: string,
-  prakriti: 'Vata' | 'Pitta' | 'Kapha' = 'Vata-Pitta'
+  prakriti: 'Vata' | 'Pitta' | 'Kapha' | 'Vata-Pitta' | 'Pitta-Kapha' | 'Vata-Kapha' = 'Vata-Pitta'
 ): {
   primaryHerbs: AyurvedaHerbProfile[];
   secondaryHerbs: AyurvedaHerbProfile[];
@@ -591,7 +591,7 @@ export function generateAyurvedaPrescription(
   // Prakriti-based dietary guidelines
   const dietaryGuidelines: string[] = [];
   
-  if (prakriti === 'Vata' || prakriti === 'Vata-Pitta') {
+  if (prakriti === 'Vata' || prakriti === 'Vata-Pitta' || prakriti === 'Vata-Kapha') {
     dietaryGuidelines.push(
       '🥣 VATA-PACIFYING DIET (Warm, Moist, Grounding):',
       '  • Favor: Warm cooked meals, soups, stews, root vegetables',

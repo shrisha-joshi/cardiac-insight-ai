@@ -59,6 +59,7 @@ export interface PatientData {
   stSlope: 'up' | 'flat' | 'down';
   smoking: boolean;
   diabetes: boolean;
+  diabetesType?: 'none' | 'Type 1' | 'Type 2' | 'Gestational' | 'Prediabetes';
   // Basic info fields
   height?: number;
   weight?: number;
@@ -68,6 +69,7 @@ export interface PatientData {
   heartRate?: number;
   ldlCholesterol?: number;
   hdlCholesterol?: number;
+  triglycerideLevel?: number;
   bloodSugar?: number;
   // Enhanced medical fields
   previousHeartAttack: boolean;
@@ -86,9 +88,11 @@ export interface PatientData {
   sleepQuality?: number;
   physicalActivity: 'low' | 'moderate' | 'high';
   exerciseFrequency?: number;
+  smokingStatus?: 'never' | 'former' | 'current';
   dietHabits?: string;
   workStress?: string;
   supplementsDescription?: string;
+  ethnicity?: string;
   // Family and medical history
   familyHistory?: string[];
   supplements?: string[];

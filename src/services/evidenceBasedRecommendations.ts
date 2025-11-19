@@ -292,7 +292,7 @@ class EvidenceBasedRecommendationEngine {
     
     // 4. DIABETES MEDICATIONS (if diabetic)
     const diabetes: MedicationRecommendation = {
-      indicated: data.fastingBS === true || data.diabetesType !== 'none',
+      indicated: data.fastingBS === true || (data.diabetesType && data.diabetesType !== 'none') || data.diabetes === true,
       drugClass: 'GLP-1 RA or SGLT2 Inhibitor (preferred for CVD)',
       specificDrug: 'Semaglutide 1mg weekly OR Empagliflozin 10-25mg daily',
       dose: 'As specified',
@@ -396,7 +396,7 @@ class EvidenceBasedRecommendationEngine {
     
     // 3. SMOKING CESSATION
     const smoking: SmokingCessation = {
-      currentSmoker: data.smokingStatus === 'current',
+      currentSmoker: data.smokingStatus === 'current' || (data.smoking === true),
       program: 'Comprehensive smoking cessation program',
       medications: ['Varenicline OR Bupropion + Nicotine replacement'],
       counseling: 'Individual or group counseling + digital support',
@@ -454,7 +454,7 @@ class EvidenceBasedRecommendationEngine {
         'Every 3 months until target, then every 6 months' :
         'Annually',
       
-      glucose: data.fastingBS || data.diabetesType !== 'none' ?
+      glucose: data.fastingBS || (data.diabetesType && data.diabetesType !== 'none') || data.diabetes ?
         'HbA1c every 3 months, SMBG daily if on insulin' :
         'Annual fasting glucose',
       
@@ -482,7 +482,7 @@ class EvidenceBasedRecommendationEngine {
     // 2024 ESC/AHA Guidelines
     if (riskLevel === 'very-high' || riskLevel === 'high') return true;
     if (data.cholesterol >= 190) return true;
-    if (data.age >= 40 && data.age <= 75 && data.diabetesType !== 'none') return true;
+    if (data.age >= 40 && data.age <= 75 && ((data.diabetesType && data.diabetesType !== 'none') || data.diabetes)) return true;
     if (data.age >= 40 && riskLevel === 'moderate') return true;
     return false;
   }
@@ -517,7 +517,7 @@ class EvidenceBasedRecommendationEngine {
     // 2024 USPSTF/ESC Guidelines
     if (riskLevel === 'very-high') return true;
     if (riskLevel === 'high' && data.age >= 40 && data.age <= 70) return true;
-    if (data.diabetesType !== 'none' && data.age >= 50) return true;
+    if ((data.diabetesType && data.diabetesType !== 'none' && data.age >= 50) || (data.diabetes && data.age >= 50)) return true;
     return false;
   }
   
@@ -528,13 +528,13 @@ class EvidenceBasedRecommendationEngine {
   
   private selectAntihypertensiveClass(data: PatientData): string {
     // ESC/ESH 2024 Guidelines
-    if (data.diabetesType !== 'none') return 'ACE Inhibitor or ARB (preferred in diabetes)';
+    if ((data.diabetesType && data.diabetesType !== 'none') || data.diabetes) return 'ACE Inhibitor or ARB (preferred in diabetes)';
     if (data.age >= 55) return 'Calcium Channel Blocker or Thiazide Diuretic';
     return 'ACE Inhibitor or ARB';
   }
   
   private selectSpecificAntihypertensive(data: PatientData): string {
-    if (data.diabetesType !== 'none') return 'Lisinopril 10-40mg OR Losartan 50-100mg';
+    if ((data.diabetesType && data.diabetesType !== 'none') || data.diabetes) return 'Lisinopril 10-40mg OR Losartan 50-100mg';
     if (data.age >= 55) return 'Amlodipine 5-10mg OR Hydrochlorothiazide 12.5-25mg';
     return 'Lisinopril 10-40mg OR Losartan 50-100mg';
   }
@@ -546,7 +546,7 @@ class EvidenceBasedRecommendationEngine {
   }
   
   private getAntihypertensiveSideEffects(data: PatientData): string[] {
-    if (data.diabetesType !== 'none') {
+    if ((data.diabetesType && data.diabetesType !== 'none') || data.diabetes) {
       return ['Dry cough (ACEi 10%)', 'Hyperkalemia', 'Renal function decline'];
     }
     return ['Ankle edema (CCB)', 'Dizziness', 'Electrolyte abnormalities'];
@@ -580,7 +580,7 @@ class EvidenceBasedRecommendationEngine {
   
   private selectDietPattern(data: PatientData): 'Mediterranean' | 'DASH' | 'Plant-Based' | 'Indian-Heart-Healthy' {
     // Indian patients: Indian-Heart-Healthy (modified Mediterranean)
-    if (data.region?.includes('India') || data.ethnicity === 'indian') {
+    if (data.region?.includes('India') || data.ethnicity?.toLowerCase() === 'indian') {
       return 'Indian-Heart-Healthy';
     }
     // Hypertensive: DASH

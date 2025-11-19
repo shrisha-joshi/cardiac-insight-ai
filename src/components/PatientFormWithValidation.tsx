@@ -24,7 +24,8 @@ interface PatientFormProps {
   isLoading?: boolean;
 }
 
-interface FormData extends Partial<PatientData> {
+// FormData is compatible with PatientData but allows looser types during form input
+interface FormData {
   // Additional display fields
   name?: string;
   email?: string;
@@ -34,6 +35,28 @@ interface FormData extends Partial<PatientData> {
   smokingStatus?: string;
   alcoholConsumption?: string;
   physicalActivityLevel?: string;
+  // All PatientData fields as optional with compatible types
+  age?: number;
+  gender?: 'male' | 'female';
+  chestPainType?: number;
+  restingBP?: number;
+  cholesterol?: number;
+  fastingBS?: boolean;
+  restingECG?: number;
+  maxHR?: number;
+  exerciseAngina?: boolean;
+  oldpeak?: number;
+  stSlope?: number;
+  smoking?: boolean;
+  diabetes?: boolean;
+  diabetesType?: string;
+  dietType?: string;
+  stressLevel?: number;
+  sleepHours?: number;
+  physicalActivity?: string;
+  triglycerideLevel?: number;
+  ethnicity?: string;
+  [key: string]: any; // Allow additional properties
 }
 
 export default function PatientFormWithValidation({
@@ -42,7 +65,7 @@ export default function PatientFormWithValidation({
   isLoading = false,
 }: PatientFormProps) {
   const { state: validationState, actions: validationActions } = useFormValidation();
-  const [formData, setFormData] = useState<FormData>(initialData || {});
+  const [formData, setFormData] = useState<FormData>({...(initialData || {})} as unknown as FormData);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
