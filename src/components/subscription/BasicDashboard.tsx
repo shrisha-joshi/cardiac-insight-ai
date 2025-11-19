@@ -25,6 +25,8 @@ import { StatsGrid, StatCard } from '@/components/ui/stat-card';
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { EmptyState } from '@/components/ui/empty-state';
 
 
 export default function BasicDashboard() {
@@ -197,7 +199,7 @@ export default function BasicDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/30 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Dashboard Header */}
@@ -251,7 +253,7 @@ export default function BasicDashboard() {
 
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 mb-6 h-auto">
             <TabsTrigger value="assess" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Risk Assessment
@@ -323,6 +325,7 @@ export default function BasicDashboard() {
                       min="1"
                       max="120"
                       placeholder="Enter your age"
+                      className="focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                     />
                   </div>
                   <div className="space-y-2">
@@ -446,7 +449,10 @@ export default function BasicDashboard() {
                 >
                   <FormFieldGroup columns={2}>
                   <div className="space-y-2">
-                    <Label htmlFor="chestPainType">Chest Pain Experience</Label>
+                    <Label htmlFor="chestPainType" className="flex items-center">
+                      Chest Pain Type
+                      <InfoTooltip content="Different types of chest pain can indicate various heart conditions. Typical angina is the most concerning for heart disease." />
+                    </Label>
                     <Select value={formData.chestPainType} onValueChange={(value) => updateField('chestPainType', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select chest pain type" />
@@ -754,13 +760,23 @@ export default function BasicDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PredictionHistory 
-                  predictions={predictions}
-                  userId={historyUserId}
-                  onAddFeedback={addFeedback}
-                  feedbackStats={getFeedbackStats()}
-                  isLoading={historyLoading}
-                />
+                {predictions.length === 0 && !historyLoading ? (
+                  <EmptyState
+                    icon="history"
+                    title="No Assessments Yet"
+                    description="Complete your first cardiovascular risk assessment to start tracking your heart health over time."
+                    actionLabel="Start Assessment"
+                    onAction={() => setActiveTab('assess')}
+                  />
+                ) : (
+                  <PredictionHistory 
+                    predictions={predictions}
+                    userId={historyUserId}
+                    onAddFeedback={addFeedback}
+                    feedbackStats={getFeedbackStats()}
+                    isLoading={historyLoading}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

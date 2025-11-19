@@ -1192,7 +1192,7 @@ export default function ProfessionalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/20 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/30 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Dashboard Header */}
@@ -1276,7 +1276,7 @@ export default function ProfessionalDashboard() {
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="Enter patient name"
-                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                   />
                 </div>
                 <div className="space-y-2.5">
@@ -1289,13 +1289,13 @@ export default function ProfessionalDashboard() {
                     min="1"
                     max="120"
                     placeholder="Enter age"
-                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+                    className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                   />
                 </div>
                 <div className="space-y-2.5">
                   <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Gender</Label>
                   <Select value={formData.gender} onValueChange={(value) => updateField('gender', value)}>
-                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
@@ -1307,7 +1307,7 @@ export default function ProfessionalDashboard() {
                 <div className="space-y-2.5">
                   <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Chest Pain Type</Label>
                   <Select value={formData.chestPainType} onValueChange={(value) => updateField('chestPainType', value)}>
-                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select chest pain type" />
                     </SelectTrigger>
                     <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
@@ -1998,10 +1998,19 @@ export default function ProfessionalDashboard() {
                   <h4 className="font-semibold mb-4 text-xl">Uploaded Clinical Documents ({uploadedFiles.length}):</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {uploadedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800/50">
-                        <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        <span className="text-sm font-medium flex-1 text-gray-800 dark:text-gray-200">{file.name}</span>
-                        <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-500">Ready for Analysis</Badge>
+                      <div key={index} className="flex items-center gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800/50 group">
+                        <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                        <span className="text-sm font-medium flex-1 text-gray-800 dark:text-gray-200 truncate" title={file.name}>{file.name}</span>
+                        <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-500 flex-shrink-0">Ready for Analysis</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 dark:hover:bg-red-900/30"
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        </Button>
                       </div>
                     ))}
                   </div>

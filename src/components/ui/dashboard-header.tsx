@@ -24,9 +24,9 @@ export function DashboardHeader({ tier, title, description, icon, titleClassName
       bgGradient: 'from-teal-500/10 via-transparent to-emerald-500/10',
     },
     professional: {
-      badge: { text: 'Professional', icon: Brain, gradient: 'from-purple-500 to-pink-500' },
-      titleGradient: 'from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400',
-      bgGradient: 'from-purple-500/10 via-transparent to-pink-500/10',
+      badge: { text: 'Professional', icon: Brain, gradient: 'from-amber-500 to-yellow-500' },
+      titleGradient: 'from-amber-600 to-yellow-600 dark:from-amber-400 dark:to-yellow-400',
+      bgGradient: 'from-amber-500/10 via-transparent to-yellow-500/10',
     },
   };
 
