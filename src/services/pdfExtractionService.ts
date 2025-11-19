@@ -44,10 +44,21 @@ export async function extractTextFromPDF(file: File): Promise<PDFExtractionResul
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       
-      // Combine text items
+      // Combine text items while preserving line breaks
       const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
+        .map((item: any) => {
+          const str = item.str || '';
+          // pdf.js exposes hasEOL on TextItem when the string ends a line
+          if (item.hasEOL === true) {
+            return str + '\n';
+          }
+          return str + ' ';
+        })
+        .join('')
+        // Collapse spaces but keep newlines intact
+        .replace(/[\t ]+/g, ' ')
+        .replace(/[ ]*\n[ ]*/g, '\n')
+        .trim();
       
       pages.push({
         text: pageText,

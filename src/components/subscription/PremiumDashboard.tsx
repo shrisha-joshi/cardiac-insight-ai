@@ -35,7 +35,8 @@ import {
   Apple,
   AlertTriangle,
   BarChart3,
-  Users
+  Users,
+  Info
 } from 'lucide-react';
 import { PatientData, defaultPatientData } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
@@ -85,6 +86,11 @@ export default function PremiumDashboard() {
     confidenceLevel: number;
     keyRiskFactors: string[];
     timeline: string;
+    extractedData?: {
+      fields: ParsedField[];
+      extractionMethod: 'text-extraction' | 'ocr';
+      documentCount: number;
+    };
   } | null>(null);
   
   // AI suggestions state
@@ -180,11 +186,25 @@ export default function PremiumDashboard() {
       try {
         const parseResult = await parsePDFForFormData(firstFile);
         
-        setCurrentParsedFields(parseResult.parsedFields);
-        setCurrentUnmappedData(parseResult.unmappedData);
-        setCurrentExtractionMethod(parseResult.extractionMethod);
-        
-        setPdfParseModalOpen(true);
+        if (parseResult.success && parseResult.parsedFields.length > 0) {
+          // Found recognizable fields - show confirmation modal
+          setCurrentParsedFields(parseResult.parsedFields);
+          setCurrentUnmappedData(parseResult.unmappedData);
+          setCurrentExtractionMethod(parseResult.extractionMethod);
+          setPdfParseModalOpen(true);
+          
+          toast({
+            title: "PDF Parsed Successfully",
+            description: `Found ${parseResult.parsedFields.length} medical field(s). Review and confirm the data.`,
+          });
+        } else {
+          // No recognizable fields found
+          toast({
+            title: "No Medical Data Found",
+            description: "Could not extract recognizable medical data from PDF. Please enter data manually.",
+            variant: "default",
+          });
+        }
       } catch (error) {
         console.error('PDF parsing error:', error);
         toast({
@@ -224,6 +244,9 @@ export default function PremiumDashboard() {
       description: "Please fill the form manually.",
     });
     setPdfParseModalOpen(false);
+    // Clear parsed data so it won't appear in the report
+    setCurrentParsedFields([]);
+    setCurrentUnmappedData([]);
   };
 
   const generateComprehensiveReport = async () => {
@@ -302,7 +325,12 @@ export default function PremiumDashboard() {
       recommendations,
       confidenceLevel: Math.min(95, 75 + (uploadedFiles.length * 5)),
       keyRiskFactors: recommendations.slice(0, 3),
-      timeline: totalRisk > 60 ? '3-6 months' : totalRisk > 30 ? '6-12 months' : '12+ months'
+      timeline: totalRisk > 60 ? '3-6 months' : totalRisk > 30 ? '6-12 months' : '12+ months',
+      extractedData: currentParsedFields.length > 0 ? {
+        fields: currentParsedFields,
+        extractionMethod: currentExtractionMethod,
+        documentCount: uploadedFiles.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).length
+      } : undefined
     };
     
     setGeneratedReport(report);
@@ -491,6 +519,72 @@ export default function PremiumDashboard() {
               </div>
             </CardContent>
           </Card>
+          {/* Extracted Medical Data from PDF/DOCX */}
+          {generatedReport.extractedData && generatedReport.extractedData.fields.length > 0 && (
+            <Card className="shadow-xl border-cyan-200/50 dark:border-cyan-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-b dark:border-gray-700">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-cyan-600" />
+                  Extracted Medical Data
+                  <Badge variant="secondary" className="ml-2">
+                    {generatedReport.extractedData.extractionMethod === 'ocr' ? 'OCR Scanned' : 'Text Extracted'}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Data automatically extracted from {generatedReport.extractedData.documentCount} uploaded document(s)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {generatedReport.extractedData.fields.map((field, index) => (
+                    <div 
+                      key={index} 
+                      className={`p-4 rounded-lg border-2 ${
+                        field.confidence === 'high' 
+                          ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
+                          : field.confidence === 'medium'
+                          ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-800'
+                          : 'bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          {field.label || field.fieldName}
+                        </div>
+                        <Badge 
+                          variant={field.confidence === 'high' ? 'default' : field.confidence === 'medium' ? 'secondary' : 'outline'}
+                          className="text-xs"
+                        >
+                          {field.confidence}
+                        </Badge>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {typeof field.value === 'boolean' 
+                          ? (field.value ? 'Yes' : 'No')
+                          : field.value}
+                      </div>
+                      {field.rawText && field.rawText !== field.value && (
+                        <div className="text-xs text-gray-500 mt-1 truncate" title={field.rawText}>
+                          Source: {field.rawText}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      <strong>Extraction Method:</strong> {generatedReport.extractedData.extractionMethod === 'ocr' 
+                        ? 'OCR (Optical Character Recognition) - Scanned document processed'
+                        : 'Text Extraction - Direct text parsing from digital document'}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
 
           {/* Risk Assessment Summary */}
           <Card className="shadow-xl border-rose-200/50 dark:border-rose-800/50 dark:bg-gray-800/50 backdrop-blur-sm">

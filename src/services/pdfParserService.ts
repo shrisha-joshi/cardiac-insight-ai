@@ -165,27 +165,70 @@ function tryColonSeparatedPair(line: string, lineNumber: number): ParsedField | 
  * Strategy 3: Try key-value patterns with regex
  */
 function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | null {
-  // More aggressive pattern matching for common medical report formats
+  // Comprehensive pattern matching for medical reports with flexible formatting
   const medicalPatterns = [
-    /\b(age|patient age)\b[:\s]+(\d+)/i,
-    /\b(blood pressure|bp|systolic bp|systolic)\b[:\s]+(\d+)/i,
-    /\b(cholesterol|total cholesterol|chol)\b[:\s]+(\d+)/i,
-    /\b(heart rate|hr|pulse)\b[:\s]+(\d+)/i,
-    /\b(hdl|hdl cholesterol)\b[:\s]+(\d+)/i,
-    /\b(ldl|ldl cholesterol)\b[:\s]+(\d+)/i,
-    /\b(triglycerides|tg)\b[:\s]+(\d+)/i,
-    /\b(height)\b[:\s]+(\d+)/i,
-    /\b(weight)\b[:\s]+(\d+)/i,
-    /\b(waist circumference|waist)\b[:\s]+(\d+)/i,
-    /\b(diabetes|diabetic)\b[:\s]+(yes|no|positive|negative)/i,
-    /\b(smoking|smoker)\b[:\s]+(yes|no|true|false)/i,
+    // Age patterns
+    { pattern: /\b(age|patient age|yrs?|years? old)\b[:\s=-]+(\d+)/i, field: 'age' },
+    
+    // Blood pressure patterns
+    { pattern: /\b(blood pressure|bp|systolic bp|systolic|resting bp)\b[:\s=-]+(\d+)/i, field: 'restingBP' },
+    { pattern: /\b(systolic|sys)\b[:\s=-]+(\d+)[\s\/]*(diastolic|dia)?[:\s]*(\d+)?/i, field: 'restingBP' },
+    { pattern: /(\d{2,3})\/(\d{2,3})\s*(mmhg|mm hg)?/i, field: 'restingBP' }, // 120/80 format
+    
+    // Cholesterol patterns
+    { pattern: /\b(cholesterol|total cholesterol|chol|tc)\b[:\s=-]+(\d+)/i, field: 'cholesterol' },
+    { pattern: /\b(hdl|hdl cholesterol|hdl-c)\b[:\s=-]+(\d+)/i, field: 'hdlCholesterol' },
+    { pattern: /\b(ldl|ldl cholesterol|ldl-c)\b[:\s=-]+(\d+)/i, field: 'ldlCholesterol' },
+    { pattern: /\b(triglycerides?|tg|trig)\b[:\s=-]+(\d+)/i, field: 'triglycerides' },
+    
+    // Heart rate patterns
+    { pattern: /\b(heart rate|hr|pulse|max hr|maximum heart rate)\b[:\s=-]+(\d+)/i, field: 'maxHR' },
+    { pattern: /\b(resting heart rate|resting hr)\b[:\s=-]+(\d+)/i, field: 'restingHR' },
+    
+    // Physical measurements
+    { pattern: /\b(height|ht)\b[:\s=-]+(\d+\.?\d*)\s*(cm|centimeters?)?/i, field: 'height' },
+    { pattern: /\b(weight|wt|body weight)\b[:\s=-]+(\d+\.?\d*)\s*(kg|kilograms?|lbs?)?/i, field: 'weight' },
+    { pattern: /\b(waist circumference|waist|wc)\b[:\s=-]+(\d+\.?\d*)/i, field: 'waistCircumference' },
+    { pattern: /\b(bmi|body mass index)\b[:\s=-]+(\d+\.?\d*)/i, field: 'bmi' },
+    
+    // Blood sugar/glucose
+    { pattern: /\b(fasting blood sugar|fbs|blood glucose|glucose|blood sugar)\b[:\s=-]+(\d+)/i, field: 'fastingBS' },
+    { pattern: /\b(hba1c|a1c|glycated hemoglobin)\b[:\s=-]+(\d+\.?\d*)/i, field: 'hba1c' },
+    
+    // ECG patterns
+    { pattern: /\b(ecg|ekg|electrocardiogram)\b[:\s=-]+(normal|abnormal|st elevation|st depression)/i, field: 'restingECG' },
+    { pattern: /\b(st segment)\b[:\s=-]+(normal|elevated|depressed)/i, field: 'restingECG' },
+    
+    // Boolean conditions
+    { pattern: /\b(diabetes|diabetic|dm)\b[:\s=-]+(yes|no|positive|negative|present|absent|true|false)/i, field: 'diabetes' },
+    { pattern: /\b(smoking|smoker|tobacco use)\b[:\s=-]+(yes|no|positive|negative|present|absent|true|false|current|former|never)/i, field: 'smoking' },
+    { pattern: /\b(exercise|exertional) (angina|chest pain)\b[:\s=-]+(yes|no|positive|negative|present|absent)/i, field: 'exerciseAngina' },
+    { pattern: /\b(previous|prior|history of) (heart attack|mi|myocardial infarction)\b[:\s=-]+(yes|no|positive|negative|present|absent)/i, field: 'previousHeartAttack' },
+    { pattern: /\b(family history|fh).*?(heart disease|cardiac|cvd)\b[:\s=-]+(yes|no|positive|negative|present|absent)/i, field: 'familyHistory' },
+    { pattern: /\b(hypertension|high blood pressure|htn)\b[:\s=-]+(yes|no|positive|negative|present|absent)/i, field: 'hypertension' },
+    
+    // Chest pain type
+    { pattern: /\b(chest pain type|cp type|angina type)\b[:\s=-]+(typical|atypical|non-anginal|asymptomatic)/i, field: 'chestPainType' },
+    
+    // Sleep and lifestyle
+    { pattern: /\b(sleep hours?|hours? of sleep)\b[:\s=-]+(\d+)/i, field: 'sleepHours' },
+    { pattern: /\b(exercise|physical activity)\b[:\s=-]+(\d+)\s*(hours?|hrs?|minutes?|mins?)/i, field: 'exerciseHours' },
+    { pattern: /\b(stress level)\b[:\s=-]+(\d+)/i, field: 'stressLevel' },
   ];
   
-  for (const pattern of medicalPatterns) {
+  for (const { pattern, field } of medicalPatterns) {
     const match = line.match(pattern);
     if (match) {
-      const [, labelPart, valuePart] = match;
-      const mapping = findMatchingField(labelPart);
+      const labelPart = match[1];
+      let valuePart = match[2];
+      
+      // Special handling for blood pressure (systolic/diastolic format)
+      if (field === 'restingBP' && match[0].includes('/')) {
+        valuePart = match[1]; // Take systolic value
+      }
+      
+      // Try to find mapping using the field hint
+      const mapping = findMatchingField(field) || findMatchingField(labelPart);
       
       if (mapping) {
         return createParsedField(mapping, valuePart, labelPart, line, lineNumber, 'high');

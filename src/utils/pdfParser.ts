@@ -1,9 +1,10 @@
 /**
- * PDF Parser with strict non-hallucination rules
- * Returns unknown_field: true for unmapped labels
+ * PDF Parser with fuzzy matching for medical terminology
+ * Uses multi-tier matching: exact > synonym > fuzzy
  */
 
 import fieldMappings from '@/constants/fieldMap.json';
+import { findFuzzyMatch, extractNumericWithUnit, parseBloodPressure, parseBoolean } from './fuzzyMatcher';
 
 export interface ParsedField {
   fieldName: string;
@@ -40,25 +41,39 @@ function normalizeText(text: string): string {
 }
 
 /**
- * Find matching field from fieldMap.json
- * Returns null if no match found (strict non-hallucination rule)
- * STRICT: Only exact matches allowed - no fuzzy matching or contains logic
+ * Find matching field using fuzzy matching and synonyms
+ * Returns field mapping and confidence score
+ * Uses multi-tier matching: exact > synonym > fuzzy
  */
-function findMatchingField(label: string): typeof fieldMappings[keyof typeof fieldMappings] | null {
+function findMatchingField(label: string): { 
+  mapping: typeof fieldMappings[keyof typeof fieldMappings]; 
+  confidence: number;
+  matchedField: string;
+} | null {
   const normalizedLabel = normalizeText(label);
   
+  // Tier 1: Exact match in fieldMappings (highest confidence)
   for (const [key, mapping] of Object.entries(fieldMappings)) {
     for (const mappingLabel of mapping.labels) {
       const normalizedMappingLabel = normalizeText(mappingLabel);
       
-      // STRICT: Only exact match
       if (normalizedLabel === normalizedMappingLabel) {
-        return mapping;
+        return { mapping, confidence: 1.0, matchedField: key };
       }
     }
   }
   
-  return null; // STRICT: No match = no hallucination
+  // Tier 2: Fuzzy match using medical synonyms
+  const fuzzyMatch = findFuzzyMatch(normalizedLabel, 0.75);
+  if (fuzzyMatch && fuzzyMatch.field in fieldMappings) {
+    return {
+      mapping: fieldMappings[fuzzyMatch.field as keyof typeof fieldMappings],
+      confidence: fuzzyMatch.confidence,
+      matchedField: fuzzyMatch.field
+    };
+  }
+  
+  return null; // No match found
 }
 
 /**
@@ -148,7 +163,7 @@ export function parse(text: string): ParseResult {
 }
 
 /**
- * Strategy 1: Exact Label-Value pairs
+ * Strategy 1: Exact Label-Value pairs with fuzzy matching
  */
 function tryExactLabelValuePair(line: string, lineNumber: number): ParsedField | null {
   const patterns = [
@@ -162,10 +177,12 @@ function tryExactLabelValuePair(line: string, lineNumber: number): ParsedField |
     const match = line.match(pattern);
     if (match) {
       const [, labelPart, valuePart] = match;
-      const mapping = findMatchingField(labelPart);
       
-      if (!mapping) {
-        // STRICT NON-HALLUCINATION: Return unknown field
+      // Try fuzzy matching first
+      const matchResult = findMatchingField(labelPart);
+      
+      if (!matchResult) {
+        // No match found - return unknown field
         return {
           fieldName: 'unknown',
           value: valuePart,
@@ -177,17 +194,28 @@ function tryExactLabelValuePair(line: string, lineNumber: number): ParsedField |
         };
       }
       
-      const validation = validateValue(valuePart, mapping);
+      const { mapping, confidence: matchConfidence } = matchResult;
+      
+      // Try to extract value with unit detection
+      const numericResult = extractNumericWithUnit(valuePart);
+      const finalValue = numericResult ? numericResult.value : valuePart;
+      
+      const validation = validateValue(finalValue, mapping);
       
       if (!validation.valid) {
         continue; // Invalid value, try next pattern
       }
       
+      // Determine confidence based on match quality
+      const finalConfidence: 'high' | 'medium' | 'low' = 
+        matchConfidence >= 0.95 ? 'high' :
+        matchConfidence >= 0.80 ? 'medium' : 'low';
+      
       return {
         fieldName: mapping.fieldName,
         value: validation.normalizedValue,
         label: labelPart.trim(),
-        confidence: 'high',
+        confidence: finalConfidence,
         rawText: line,
         lineNumber
       };
@@ -198,7 +226,7 @@ function tryExactLabelValuePair(line: string, lineNumber: number): ParsedField |
 }
 
 /**
- * Strategy 2: Colon-separated pairs
+ * Strategy 2: Colon-separated pairs with fuzzy matching
  */
 function tryColonSeparatedPair(line: string, lineNumber: number): ParsedField | null {
   if (!line.includes(':')) return null;
@@ -208,10 +236,26 @@ function tryColonSeparatedPair(line: string, lineNumber: number): ParsedField | 
   
   if (!valuePart) return null;
   
-  const mapping = findMatchingField(labelPart);
+  // Check for blood pressure format first
+  const bpResult = parseBloodPressure(valuePart);
+  if (bpResult) {
+    const matchResult = findMatchingField('blood pressure');
+    if (matchResult) {
+      return {
+        fieldName: matchResult.mapping.fieldName,
+        value: bpResult.systolic,
+        label: labelPart.trim(),
+        confidence: 'high',
+        rawText: line,
+        lineNumber
+      };
+    }
+  }
   
-  if (!mapping) {
-    // STRICT NON-HALLUCINATION: Return unknown field
+  const matchResult = findMatchingField(labelPart);
+  
+  if (!matchResult) {
+    // No match found - return unknown field
     return {
       fieldName: 'unknown',
       value: valuePart,
@@ -223,29 +267,40 @@ function tryColonSeparatedPair(line: string, lineNumber: number): ParsedField | 
     };
   }
   
-  const validation = validateValue(valuePart, mapping);
+  const { mapping, confidence: matchConfidence } = matchResult;
+  
+  // Try to extract value with unit detection
+  const numericResult = extractNumericWithUnit(valuePart);
+  const finalValue = numericResult ? numericResult.value : valuePart;
+  
+  const validation = validateValue(finalValue, mapping);
   
   if (!validation.valid) {
     return null;
   }
   
+  // Determine confidence based on match quality
+  const finalConfidence: 'high' | 'medium' | 'low' = 
+    matchConfidence >= 0.95 ? 'high' :
+    matchConfidence >= 0.80 ? 'medium' : 'low';
+  
   return {
     fieldName: mapping.fieldName,
     value: validation.normalizedValue,
     label: labelPart.trim(),
-    confidence: 'high',
+    confidence: finalConfidence,
     rawText: line,
     lineNumber
   };
 }
 
 /**
- * Strategy 3: Key-value patterns with regex
+ * Strategy 3: Key-value patterns with regex and fuzzy matching
  */
 function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | null {
   const medicalPatterns = [
     { pattern: /\b(age|patient age)\b[:\s]+(\d+)/i, field: 'age' },
-    { pattern: /\b(sleep hours|hours of sleep)\b[:\s]+(\d+)/i, field: 'sleep_hours' },
+    { pattern: /\b(sleep hours|hours of sleep)\b[:\s]+(\d+)/i, field: 'sleepHours' },
     { pattern: /\b(hdl|hdl cholesterol)\b[:\s]+(\d+)/i, field: 'hdlCholesterol' },
     { pattern: /\b(chest pain type|chest pain)\b[:\s]+(\w+)/i, field: 'chestPainType' },
     { pattern: /\b(blood pressure|bp|systolic bp)\b[:\s]+(\d+)/i, field: 'restingBP' },
@@ -257,9 +312,9 @@ function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | nul
     const match = line.match(pattern);
     if (match) {
       const [, labelPart, valuePart] = match;
-      const mapping = findMatchingField(field);
+      const matchResult = findMatchingField(field) || findMatchingField(labelPart);
       
-      if (!mapping) {
+      if (!matchResult) {
         return {
           fieldName: 'unknown',
           value: valuePart,
@@ -271,17 +326,28 @@ function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | nul
         };
       }
       
-      const validation = validateValue(valuePart, mapping);
+      const { mapping, confidence: matchConfidence } = matchResult;
+      
+      // Try to extract value with unit detection
+      const numericResult = extractNumericWithUnit(valuePart);
+      const finalValue = numericResult ? numericResult.value : valuePart;
+      
+      const validation = validateValue(finalValue, mapping);
       
       if (!validation.valid) {
         continue;
       }
       
+      // Determine confidence based on match quality
+      const finalConfidence: 'high' | 'medium' | 'low' = 
+        matchConfidence >= 0.95 ? 'high' :
+        matchConfidence >= 0.80 ? 'medium' : 'low';
+      
       return {
         fieldName: mapping.fieldName,
         value: validation.normalizedValue,
         label: labelPart,
-        confidence: 'high',
+        confidence: finalConfidence,
         rawText: line,
         lineNumber
       };

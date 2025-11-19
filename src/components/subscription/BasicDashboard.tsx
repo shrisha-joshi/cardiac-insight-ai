@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import { PatientData, defaultPatientData, PredictionResult } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -25,8 +25,7 @@ import { StatsGrid, StatCard } from '@/components/ui/stat-card';
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
-import { PDFParseConfirmationModal } from '@/components/PDFParseConfirmationModal';
-import { parsePDFForFormData, type ParsedField } from '@/services/pdfParserService';
+
 
 export default function BasicDashboard() {
   const MAX_RISK_SCORE = 14; // Maximum possible score: 2+1+2+2+2+3+2 = 14 points
@@ -34,14 +33,9 @@ export default function BasicDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [formData, setFormData] = useState<PatientData>(defaultPatientData);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [processingLoading, setProcessingLoading] = useState(false);
   const [currentPrediction, setCurrentPrediction] = useState<PredictionResult | null>(null);
   const [activeTab, setActiveTab] = useState('assess');
-  const [pdfParseModalOpen, setPdfParseModalOpen] = useState(false);
-  const [currentParsedFields, setCurrentParsedFields] = useState<ParsedField[]>([]);
-  const [currentUnmappedData, setCurrentUnmappedData] = useState<string[]>([]);
-  const [currentExtractionMethod, setCurrentExtractionMethod] = useState<'text-extraction' | 'ocr'>('text-extraction');
   const [riskIndicators, setRiskIndicators] = useState<{score: number, level: string, factors: string[]}>({
     score: 0,
     level: 'low',
@@ -144,78 +138,7 @@ export default function BasicDashboard() {
     setRiskIndicators({ score, level, factors });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length + uploadedFiles.length > 2) {
-      toast({
-        title: "Upload Limit Reached",
-        description: "Free tier allows maximum 2 documents. Upgrade to Premium for unlimited uploads!",
-        variant: "destructive",
-      });
-      return;
-    }
-    setUploadedFiles(prev => [...prev, ...files]);
-    
-    toast({
-      title: "Files Uploaded",
-      description: `${files.length} document(s) uploaded successfully. Processing...`,
-    });
-    
-    // ✅ FIX: Real PDF parsing integration
-    for (const file of files) {
-      if (file.type === 'application/pdf') {
-        try {
-          const parseResult = await parsePDFForFormData(file);
-          
-          if (parseResult.success && parseResult.parsedFields.length > 0) {
-            // Store parsed data and show confirmation modal
-            setCurrentParsedFields(parseResult.parsedFields);
-            setCurrentUnmappedData(parseResult.unmappedData);
-            setCurrentExtractionMethod(parseResult.extractionMethod);
-            setPdfParseModalOpen(true);
-          } else {
-            toast({
-              title: "PDF Processing Complete",
-              description: "No medical data found in PDF. You can enter data manually.",
-              variant: "default",
-            });
-          }
-        } catch (error) {
-          if (import.meta.env.DEV) console.error('PDF parsing error:', error);
-          toast({
-            title: "PDF Processing Error",
-            description: "Unable to extract data from PDF. Please enter manually.",
-            variant: "destructive",
-          });
-        }
-      }
-    }
-  };
 
-  const handlePDFAccept = () => {
-    // Auto-fill form with parsed data
-    currentParsedFields.forEach(field => {
-      if (field.fieldName in formData) {
-        updateField(field.fieldName as keyof PatientData, field.value);
-      }
-    });
-    
-    setPdfParseModalOpen(false);
-    toast({
-      title: "Form Auto-Filled",
-      description: `${currentParsedFields.length} field(s) populated from PDF.`,
-    });
-  };
-
-  const handlePDFReject = () => {
-    setPdfParseModalOpen(false);
-    setCurrentParsedFields([]);
-    setCurrentUnmappedData([]);
-  };
-
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,8 +212,8 @@ export default function BasicDashboard() {
         <StatsGrid>
           <StatCard
             title="Total Assessments"
-            value={uploadedFiles.length.toString()}
-            subtitle="Documents uploaded"
+            value={predictions.length.toString()}
+            subtitle="Completed assessments"
             icon={FileText}
             trend="neutral"
             color="blue"
@@ -380,71 +303,6 @@ export default function BasicDashboard() {
         <Card className="shadow-xl border-blue-200/50 dark:border-blue-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
           <CardContent className="pt-8 pb-8 px-6 md:px-8">
             <form onSubmit={handleSubmit} className="space-y-8">
-              
-              {/* Medical Documents Upload */}
-              <FormSection
-                title="Medical Documents"
-                description="Upload basic medical reports (Max 2 files)"
-                icon={Upload}
-                accent="blue"
-                delay={0.1}
-              >
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-muted rounded-lg p-6 text-center bg-blue-50/30 dark:bg-blue-900/10">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileText className="h-8 w-8 text-blue-500" />
-                      <div className="text-sm text-muted-foreground">
-                        Upload basic medical reports (PDF, images) - Max 2 files
-                      </div>
-                      <div className="text-xs text-blue-600 font-medium">
-                        ⚡ Basic AI extraction • 📊 Limited analysis
-                      </div>
-                      <Input
-                        className="hidden"
-                        id="file-upload"
-                        onChange={handleFileUpload}
-                      />
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <Button type="button" variant="outline" className="mt-2">
-                          Choose Files
-                        </Button>
-                      </Label>
-                    </div>
-                  </div>
-                  {uploadedFiles.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Uploaded Files ({uploadedFiles.length}/2):</div>
-                      {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
-                          <div>
-                            <span className="text-sm font-medium">{file.name}</span>
-                            <div className="flex gap-2 mt-1">
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">✓ Basic Processing</span>
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Free Tier</span>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(index)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))}
-                      {uploadedFiles.length >= 2 && (
-                        <Alert>
-                          <Info className="h-4 w-4" />
-                          <AlertDescription>
-                            Free tier limit reached. Upgrade to Premium for unlimited uploads and advanced AI analysis!
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </FormSection>
 
               {/* Basic Information */}
               <FormSection
@@ -909,16 +767,7 @@ export default function BasicDashboard() {
         </Tabs>
       </div>
 
-      {/* PDF Parse Confirmation Modal */}
-      <PDFParseConfirmationModal
-        open={pdfParseModalOpen}
-        onOpenChange={setPdfParseModalOpen}
-        parsedFields={currentParsedFields}
-        unmappedData={currentUnmappedData}
-        extractionMethod={currentExtractionMethod}
-        onAccept={handlePDFAccept}
-        onReject={handlePDFReject}
-      />
+
     </div>
   );
 }
