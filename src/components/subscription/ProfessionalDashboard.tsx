@@ -53,8 +53,8 @@ import { PDFParseConfirmationModal } from '@/components/PDFParseConfirmationModa
 import { parsePDFForFormData, type ParsedField } from '@/services/pdfParserService';
 
 // Import dashboard enhancement components
-import { DashboardHeader } from '@/components/ui/dashboard-header';
-import { StatCard, StatsGrid } from '@/components/ui/stat-card';
+// Header and stats removed to keep minimal sticky hero
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
@@ -157,6 +157,24 @@ export default function ProfessionalDashboard() {
   } | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<EnhancedAIResponse | null>(null);
   const [loadingAISuggestions, setLoadingAISuggestions] = useState(false);
+  
+  // Stepper (pagination) state to align with Premium flow
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
+  const handleNextStep = () => {
+    if (currentStep < totalSteps) setCurrentStep((s) => s + 1);
+  };
+  const handlePreviousStep = () => {
+    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  };
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return patientName.trim().length >= 2 && (formData.age || 0) > 0;
+      default:
+        return true;
+    }
+  };
   
   // PDF parsing modal state
   const [pdfParseModalOpen, setPdfParseModalOpen] = useState(false);
@@ -634,71 +652,35 @@ export default function ProfessionalDashboard() {
         temperature: 98.6
       }
     });
+    setCurrentStep(1);
   };
 
   if (showReport && generatedReport) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/20 p-4">
-        <div className="max-w-5xl mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-slate-900 dark:to-indigo-950 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
           {/* Professional Report Header */}
-          <div className="bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 dark:from-yellow-900 dark:via-amber-900 dark:to-orange-900 text-white p-8 rounded-2xl shadow-2xl backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <motion.div 
-                  className="bg-white/20 dark:bg-white/10 backdrop-blur-sm p-3 rounded-full border border-white/30"
-                  whileHover={{ scale: 1.05, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Award className="h-10 w-10" />
-                </motion.div>
-                <div>
-                  <h1 className="text-3xl font-bold drop-shadow-lg">Professional Clinical Assessment Report</h1>
-                  <p className="opacity-90 mt-1 text-lg">Comprehensive Cardiovascular Risk Analysis</p>
+          <div className="relative overflow-hidden bg-gradient-to-r from-amber-600 via-yellow-600 to-orange-600 dark:from-amber-800 dark:via-yellow-800 dark:to-orange-800 text-white rounded-2xl shadow-2xl">
+            <div className="absolute inset-0 bg-grid-white/10"></div>
+            <div className="relative px-8 py-10">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                    <Award className="h-10 w-10" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold mb-2">Professional Clinical Assessment</h1>
+                    <p className="text-amber-100 dark:text-amber-200 text-lg flex items-center gap-2">
+                      <Brain className="h-5 w-5" />
+                      Comprehensive Cardiovascular Risk Analysis</p>
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/20">
+                  <div className="text-sm text-amber-200 dark:text-amber-300 mb-1">Report ID</div>
+                  <div className="font-mono text-2xl font-bold">PCR-{Date.now().toString().slice(-6)}</div>
+                  <div className="text-xs text-amber-200 dark:text-amber-300 mt-1">{new Date().toLocaleString()}</div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm opacity-75">Clinical Report ID</div>
-                <div className="font-mono text-xl font-bold bg-white/10 px-3 py-1 rounded-lg">{generatedReport.reportId}</div>
-                <div className="text-sm opacity-75 mt-1">Generated: {generatedReport.testDate}</div>
-              </div>
-            </div>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <motion.div 
-                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  <span className="text-sm font-medium">Clinical Grade Analysis</span>
-                </div>
-              </motion.div>
-              <motion.div 
-                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="flex items-center gap-2">
-                  <Microscope className="h-5 w-5" />
-                  <span className="text-sm font-medium">Biomarker Assessment</span>
-                </div>
-              </motion.div>
-              <motion.div 
-                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="flex items-center gap-2">
-                  <FileDown className="h-5 w-5" />
-                  <span className="text-sm font-medium">Professional PDF Export</span>
-                </div>
-              </motion.div>
-              <motion.div 
-                className="bg-white/10 dark:bg-white/5 backdrop-blur-sm p-3 rounded-lg border border-white/20 hover:bg-white/20 transition-colors"
-                whileHover={{ scale: 1.02, y: -2 }}
-              >
-                <div className="flex items-center gap-2">
-                  <Brain className="h-5 w-5" />
-                  <span className="text-sm font-medium">AI Clinical Insights</span>
-                </div>
-              </motion.div>
             </div>
           </div>
 
@@ -1028,15 +1010,15 @@ export default function ProfessionalDashboard() {
                   <div className="space-y-6">
                     {/* Medicines Section */}
                     {aiSuggestions.suggestions.medicines && aiSuggestions.suggestions.medicines.length > 0 && (
-                      <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-                        <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2">
+                      <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                        <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 mb-4 flex items-center gap-2">
                           <Pill className="h-5 w-5" />
                           Recommended Medicines
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {aiSuggestions.suggestions.medicines.map((medicine, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg border border-blue-200">
-                              <div className="font-semibold text-blue-700 mb-2">{medicine}</div>
+                            <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                              <div className="font-semibold text-blue-700 dark:text-blue-300 mb-2">{medicine}</div>
                             </div>
                           ))}
                         </div>
@@ -1045,15 +1027,15 @@ export default function ProfessionalDashboard() {
 
                     {/* Ayurveda Section */}
                     {aiSuggestions.suggestions.ayurveda && aiSuggestions.suggestions.ayurveda.length > 0 && (
-                      <div className="bg-amber-50 rounded-xl p-6 border border-amber-100">
-                        <h3 className="text-xl font-bold text-amber-800 mb-4 flex items-center gap-2">
+                      <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
+                        <h3 className="text-xl font-bold text-amber-800 dark:text-amber-300 mb-4 flex items-center gap-2">
                           <Leaf className="h-5 w-5" />
                           Ayurvedic Recommendations
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {aiSuggestions.suggestions.ayurveda.map((remedy, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg border border-amber-200">
-                              <div className="font-semibold text-amber-700 mb-2">{remedy}</div>
+                            <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-amber-200 dark:border-amber-700">
+                              <div className="font-semibold text-amber-700 dark:text-amber-300 mb-2">{remedy}</div>
                             </div>
                           ))}
                         </div>
@@ -1062,15 +1044,15 @@ export default function ProfessionalDashboard() {
 
                     {/* Yoga Section */}
                     {aiSuggestions.suggestions.yoga && aiSuggestions.suggestions.yoga.length > 0 && (
-                      <div className="bg-purple-50 rounded-xl p-6 border border-purple-100">
-                        <h3 className="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
+                      <div className="bg-purple-50 dark:bg-purple-950/30 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                        <h3 className="text-xl font-bold text-purple-800 dark:text-purple-300 mb-4 flex items-center gap-2">
                           <HeartPulse className="h-5 w-5" />
                           Yoga & Exercise Recommendations
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {aiSuggestions.suggestions.yoga.map((yoga, index) => (
-                            <div key={index} className="bg-white p-4 rounded-lg border border-purple-200">
-                              <div className="font-semibold text-purple-700 mb-2">{yoga}</div>
+                            <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                              <div className="font-semibold text-purple-700 dark:text-purple-300 mb-2">{yoga}</div>
                             </div>
                           ))}
                         </div>
@@ -1079,7 +1061,7 @@ export default function ProfessionalDashboard() {
 
                     {/* Diet Section */}
                     {aiSuggestions.suggestions.diet && aiSuggestions.suggestions.diet.length > 0 && (
-                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800/50">
+                      <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-6 border border-green-200 dark:border-green-800">
                         <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mb-4 flex items-center gap-2">
                           <Apple className="h-5 w-5" />
                           Dietary Recommendations
@@ -1096,17 +1078,17 @@ export default function ProfessionalDashboard() {
 
                     {/* Lifestyle & General Recommendations */}
                     {aiSuggestions.suggestions.lifestyle && aiSuggestions.suggestions.lifestyle.length > 0 && (
-                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-300 mb-4 flex items-center gap-2">
                           <Clock className="h-5 w-5" />
                           Lifestyle Recommendations
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {aiSuggestions.suggestions.lifestyle.map((lifestyle, index) => (
-                            <div key={index} className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200">
-                              <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                            <div key={index} className="flex items-start gap-3 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                              <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                               <div>
-                                <div className="font-semibold text-gray-800 mb-1">{lifestyle}</div>
+                                <div className="font-semibold text-slate-800 dark:text-slate-300 mb-1">{lifestyle}</div>
                               </div>
                             </div>
                           ))}
@@ -1116,16 +1098,16 @@ export default function ProfessionalDashboard() {
 
                     {/* Warnings */}
                     {aiSuggestions.warnings && aiSuggestions.warnings.length > 0 && (
-                      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl p-4">
-                        <h3 className="text-lg font-bold text-orange-800 dark:text-orange-200 mb-3 flex items-center gap-2">
+                      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                        <h3 className="text-lg font-bold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
                           <AlertTriangle className="h-5 w-5" />
                           Important Warnings
                         </h3>
                         <ul className="space-y-2">
                           {aiSuggestions.warnings.map((warning, index) => (
                             <li key={index} className="flex items-start gap-2">
-                              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm text-orange-700 dark:text-orange-300">{warning}</span>
+                              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-red-700 dark:text-red-300">{warning}</span>
                             </li>
                           ))}
                         </ul>
@@ -1133,14 +1115,14 @@ export default function ProfessionalDashboard() {
                     )}
 
                     {/* Disclaimer */}
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                    <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-yellow-800 mb-2">
+                          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-2">
                             AI Source: {aiSuggestions.source === 'gemini' ? 'Google Gemini' : aiSuggestions.source === 'openai' ? 'OpenAI' : 'Rule-based AI'}
                           </p>
-                          <p className="text-xs text-yellow-700 whitespace-pre-line">
+                          <p className="text-xs text-yellow-700 dark:text-yellow-400 whitespace-pre-line">
                             {aiSuggestions.disclaimer}
                           </p>
                         </div>
@@ -1157,33 +1139,37 @@ export default function ProfessionalDashboard() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-4 justify-center pb-8">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
             <Button
               onClick={downloadReportAsPDF}
-              className="bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 dark:from-yellow-700 dark:to-amber-700 dark:hover:from-yellow-800 dark:hover:to-amber-800 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all"
+              className="bg-gradient-to-r from-amber-600 via-yellow-600 to-orange-600 hover:from-amber-700 hover:via-yellow-700 hover:to-orange-700 text-white px-8 py-6 text-lg shadow-2xl hover:shadow-3xl transition-all rounded-xl font-semibold w-full sm:w-auto"
               size="lg"
             >
-              <Download className="mr-3 h-6 w-6" />
-              Download Professional PDF Report
+              <Download className="mr-2 h-6 w-6" />
+              Download PDF Report
             </Button>
             <Button
               onClick={resetForm}
               variant="outline"
               size="lg"
-              className="px-8 py-4 text-lg border-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="px-8 py-6 text-lg border-2 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-all rounded-xl font-semibold w-full sm:w-auto"
             >
-              New Clinical Assessment
+              <Activity className="mr-2 h-6 w-6" />
+              New Assessment
             </Button>
           </div>
 
-          {/* Professional Footer */}
-          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4 border-t dark:border-gray-700">
-            <p className="font-bold text-gray-700 dark:text-gray-300">PROFESSIONAL CLINICAL ASSESSMENT REPORT</p>
-            <p className="mt-2">This report is generated using advanced AI algorithms and should be interpreted by qualified healthcare professionals.</p>
-            <p className="mt-2 flex items-center justify-center gap-2 flex-wrap">
-              <Badge variant="outline" className="text-xs">Report ID: {generatedReport.reportId}</Badge>
-              <Badge variant="outline" className="text-xs">Generated: {generatedReport.testDate}</Badge>
-              <Badge variant="secondary" className="text-xs">Professional Grade Assessment</Badge>
+          {/* Modern Footer */}
+          <div className="mt-8 p-6 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-semibold">Medical Disclaimer</span>
+            </div>
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+              This report is generated by AI and should be reviewed by a qualified healthcare professional.
+            </p>
+            <p className="text-center text-xs text-slate-500 dark:text-slate-500 mt-2">
+              Report generated on {generatedReport.patientInfo.assessmentDate} • Professional AI Assessment • Confidential
             </p>
           </div>
         </div>
@@ -1192,76 +1178,86 @@ export default function ProfessionalDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/30 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-yellow-900/30">
+      {/* Compact Fixed Header (Hero) */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-800 dark:to-orange-800 shadow-lg border-b-2 border-amber-400/30 dark:border-amber-600/30">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 dark:bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                <Award className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                  Professional Dashboard
+                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs">
+                    Step {currentStep}/{totalSteps}
+                  </Badge>
+                </h1>
+                <p className="text-xs text-amber-100 dark:text-amber-200">Clinical-grade cardiovascular assessment</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
+                <FileText className="h-4 w-4 text-white" />
+                <span className="text-sm font-medium text-white">{uploadedFiles.length} docs</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
+                <CheckCircle className="h-4 w-4 text-amber-300" />
+                <span className="text-sm font-medium text-white">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-6xl mx-auto p-4 pt-6">
         
-        {/* Dashboard Header */}
-        <DashboardHeader
-          tier="professional"
-          title="Professional Clinical Dashboard"
-          description="Advanced clinical-grade cardiovascular assessment with biomarker analysis"
-          icon={<Brain className="w-10 h-10 text-yellow-400" />}
-          titleClassName="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500"
-        />
+        {/* Clean layout: sticky hero only, header/stats removed */}
 
-        {/* Statistics Grid */}
-        <StatsGrid>
-          <StatCard
-            title="Patient Records"
-            value={uploadedFiles.length.toString()}
-            subtitle="Clinical documents"
-            icon={Users}
-            trend="up"
-            trendValue="+5"
-            color="amber"
-            delay={0}
-          />
-          <StatCard
-            title="Biomarker Analysis"
-            value="Advanced"
-            subtitle="9 markers tracked"
-            icon={Microscope}
-            trend="up"
-            trendValue="Active"
-            color="amber"
-            delay={0.1}
-          />
-          <StatCard
-            title="Clinical Reports"
-            value="Unlimited"
-            subtitle="Professional grade"
-            icon={FileText}
-            trend="neutral"
-            color="amber"
-            delay={0.2}
-          />
-          <StatCard
-            title="Professional Tier"
-            value="∞"
-            subtitle="All features unlocked"
-            icon={Crown}
-            trend="up"
-            trendValue="Premium"
-            color="amber"
-            delay={0.3}
-          />
-        </StatsGrid>
+        {/* Stepper */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg rounded-xl border border-amber-200/60 dark:border-amber-800/60 p-5 shadow-lg mb-6"
+        >
+          <div className="flex items-center justify-between">
+            {['Patient', 'Health', 'Lifestyle', 'Clinical', 'Upload'].map((label, idx) => (
+              <div key={label} className="flex items-center flex-1">
+                <div className={`flex items-center gap-2 ${idx > 0 ? 'pl-2' : ''}`}>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold shadow-lg border-2 transition-all duration-300
+                      ${idx + 1 <= currentStep
+                        ? 'bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white border-amber-300 dark:border-amber-400 shadow-amber-500/50'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}`}
+                  >
+                    {idx + 1}
+                  </motion.div>
+                  <span className={`text-sm font-medium hidden sm:block transition-colors duration-300 ${idx + 1 <= currentStep ? 'text-amber-700 dark:text-amber-300' : 'text-slate-600 dark:text-slate-300'}`}>{label}</span>
+                </div>
+                {idx < totalSteps - 1 && (
+                  <div className="mx-2 flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: idx + 1 < currentStep ? '100%' : '0%' }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                      className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 shadow-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-        {/* Comprehensive Assessment Form */}
-        <Card className="shadow-2xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-900/20 dark:via-amber-900/20 dark:to-orange-900/20 rounded-t-lg border-b dark:border-gray-700">
-            <CardTitle className="flex items-center gap-3 text-2xl md:text-3xl text-gray-800 dark:text-gray-100">
-              <Heart className="h-7 w-7 md:h-8 md:w-8 text-amber-500 dark:text-amber-400" />
-              Comprehensive Clinical Assessment
-            </CardTitle>
-            <CardDescription className="text-base md:text-lg text-gray-600 dark:text-gray-400">
-              Complete all sections below for comprehensive cardiovascular risk analysis and professional clinical report generation
-            </CardDescription>
-          </CardHeader>
+        {/* Main Assessment Form */}
+        <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
           <CardContent className="pt-8 pb-8 px-6 md:px-8">
             <form className="space-y-8">
-            
             {/* Patient Assessment Section */}
+            {currentStep === 1 && (
             <FormSection
               icon={Stethoscope}
               title="Patient Assessment & Demographics"
@@ -1407,21 +1403,24 @@ export default function ProfessionalDashboard() {
                 </div>
               </div>
             </FormSection>
+            )}
 
-            <Separator className="my-10" />
+            {currentStep === 1 && <Separator className="my-10" />}
 
             {/* Health Metrics Section */}
-            <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-teal-700 dark:text-teal-400 mb-6">
-                <Activity className="h-7 w-7" />
-                Health Metrics
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Blood Pressure Category</Label>
+            {currentStep === 2 && (
+            <FormSection
+              icon={Activity}
+              title="Health Metrics"
+              description="Cardiovascular health indicators and vital signs"
+              accent="amber"
+            >
+              <FormFieldGroup columns={2}>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Blood Pressure Category</Label>
                   <Select value={formData.restingBP > 140 ? 'high' : formData.restingBP > 120 ? 'elevated' : 'normal'} 
                           onValueChange={(value) => updateField('restingBP', value === 'high' ? 160 : value === 'elevated' ? 130 : 110)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select blood pressure range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1430,13 +1429,13 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="high">High (130/80 or higher)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Choose the range that best describes your usual blood pressure</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Choose the range that best describes your usual blood pressure</div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Cholesterol Level</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Cholesterol Level</Label>
                   <Select value={formData.cholesterol > 240 ? 'high' : formData.cholesterol > 200 ? 'borderline' : 'normal'} 
                           onValueChange={(value) => updateField('cholesterol', value === 'high' ? 280 : value === 'borderline' ? 220 : 180)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select cholesterol range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1445,15 +1444,15 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="high">High (240 mg/dL or higher)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">From your recent blood test results</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">From your recent blood test results</div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Resting Heart Rate</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Resting Heart Rate</Label>
                   <Select 
                     value={formData.maxHR < 70 ? 'low' : formData.maxHR > 100 ? 'high' : 'normal'} 
                     onValueChange={(value) => updateField('maxHR', value === 'low' ? 60 : value === 'high' ? 110 : 80)}
                   >
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select heart rate range" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1462,13 +1461,13 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="high">High (100+ bpm) - May Need Attention</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Your typical resting heart rate</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Your typical resting heart rate</div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Exercise Capacity</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Exercise Capacity</Label>
                   <Select value={formData.oldpeak > 2 ? 'low' : formData.oldpeak > 1 ? 'moderate' : 'good'} 
                           onValueChange={(value) => updateField('oldpeak', value === 'low' ? 3 : value === 'moderate' ? 1.5 : 0.5)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="How well can you exercise?" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1477,12 +1476,12 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="low">Limited - Difficulty with most physical activities</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Your general ability to perform physical activities</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Your general ability to perform physical activities</div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Recent ECG Results</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Recent ECG Results</Label>
                   <Select value={formData.restingECG} onValueChange={(value) => updateField('restingECG', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select ECG result" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1491,12 +1490,12 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="lvh">Abnormal - Heart enlargement detected</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">From your most recent heart test (if available)</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">From your most recent heart test (if available)</div>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Exercise Test Results</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Exercise Test Results</Label>
                   <Select value={formData.stSlope} onValueChange={(value) => updateField('stSlope', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select exercise test result" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1505,13 +1504,14 @@ export default function ProfessionalDashboard() {
                       <SelectItem value="down">Concerning - Poor response to exercise</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="text-sm text-muted-foreground">Results from stress test or exercise ECG (if done)</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Results from stress test or exercise ECG (if done)</div>
                 </div>
-              </div>
-            </div>
+              </FormFieldGroup>
+            </FormSection>
+            )}
 
-            {/* Conditional Questions */}
-            {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
+            {/* Conditional Questions (with metrics) */}
+            {currentStep === 2 && (formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
               <>
                 <Separator className="my-10" />
                 <div className="space-y-8">
@@ -1524,7 +1524,7 @@ export default function ProfessionalDashboard() {
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold">Are you taking cholesterol medication?</Label>
                         <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
-                          <SelectTrigger className="h-14 text-lg">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                             <SelectValue placeholder="Select option" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1538,7 +1538,7 @@ export default function ProfessionalDashboard() {
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold">What diabetes treatment are you taking?</Label>
                         <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
-                          <SelectTrigger className="h-14 text-lg">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                             <SelectValue placeholder="Select treatment type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1555,7 +1555,7 @@ export default function ProfessionalDashboard() {
                         <div className="space-y-3">
                           <Label className="text-lg font-semibold">Are you taking blood pressure medication?</Label>
                           <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
-                            <SelectTrigger className="h-14 text-lg">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1567,7 +1567,7 @@ export default function ProfessionalDashboard() {
                         <div className="space-y-3">
                           <Label className="text-lg font-semibold">Have you made lifestyle/diet changes recently?</Label>
                           <Select value={formData.lifestyleChanges ? 'yes' : 'no'} onValueChange={(value) => updateField('lifestyleChanges', value === 'yes')}>
-                            <SelectTrigger className="h-14 text-lg">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1583,19 +1583,21 @@ export default function ProfessionalDashboard() {
               </>
             )}
 
-            <Separator className="my-10" />
+            {(currentStep === 2) && <Separator className="my-10" />}
 
             {/* Lifestyle Assessment Section */}
-            <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-6">
-                <TrendingUp className="h-7 w-7" />
-                Lifestyle Assessment
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Dietary Preference</Label>
+            {currentStep === 3 && (
+            <FormSection
+              icon={TrendingUp}
+              title="Lifestyle Assessment"
+              description="Daily habits and wellness factors"
+              accent="amber"
+            >
+              <FormFieldGroup columns={2}>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Dietary Preference</Label>
                   <Select value={formData.dietType} onValueChange={(value) => updateField('dietType', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select diet type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1605,10 +1607,10 @@ export default function ProfessionalDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-lg font-semibold">Physical Activity Level</Label>
+                <div className="space-y-2.5">
+                  <Label className="text-base font-semibold text-gray-700 dark:text-gray-200">Physical Activity Level</Label>
                   <Select value={formData.physicalActivity} onValueChange={(value) => updateField('physicalActivity', value)}>
-                    <SelectTrigger className="h-14 text-lg">
+                    <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                       <SelectValue placeholder="Select activity level" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1618,8 +1620,8 @@ export default function ProfessionalDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="sleepHours" className="text-lg font-semibold">Average Sleep Hours</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="sleepHours" className="text-base font-semibold text-gray-700 dark:text-gray-200">Average Sleep Hours</Label>
                   <Input
                     id="sleepHours"
                     type="number"
@@ -1630,10 +1632,10 @@ export default function ProfessionalDashboard() {
                     placeholder="7"
                     className="h-14 text-lg"
                   />
-                  <div className="text-sm text-muted-foreground">Hours of sleep per night on average</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Hours of sleep per night on average</div>
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="stressLevel" className="text-lg font-semibold">Stress Level (1-10)</Label>
+                <div className="space-y-2.5">
+                  <Label htmlFor="stressLevel" className="text-base font-semibold text-gray-700 dark:text-gray-200">Stress Level (1-10)</Label>
                   <Input
                     id="stressLevel"
                     type="number"
@@ -1644,13 +1646,14 @@ export default function ProfessionalDashboard() {
                     placeholder="5"
                     className="h-14 text-lg"
                   />
-                  <div className="text-sm text-muted-foreground">1 = Very relaxed, 10 = Extremely stressed</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">1 = Very relaxed, 10 = Extremely stressed</div>
                 </div>
-              </div>
-            </div>
+              </FormFieldGroup>
+            </FormSection>
+            )}
 
-            {/* Conditional Questions */}
-            {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
+            {/* Repeated Conditional Questions block - show with lifestyle step if applicable */}
+            {currentStep === 3 && (formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
               <>
                 <Separator className="my-10" />
                 <div className="space-y-8">
@@ -1663,7 +1666,7 @@ export default function ProfessionalDashboard() {
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold">Are you taking cholesterol medication?</Label>
                         <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
-                          <SelectTrigger className="h-14 text-lg">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                             <SelectValue placeholder="Select option" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1677,7 +1680,7 @@ export default function ProfessionalDashboard() {
                       <div className="space-y-3">
                         <Label className="text-lg font-semibold">What diabetes treatment are you taking?</Label>
                         <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
-                          <SelectTrigger className="h-14 text-lg">
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                             <SelectValue placeholder="Select treatment type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1694,7 +1697,7 @@ export default function ProfessionalDashboard() {
                         <div className="space-y-3">
                           <Label className="text-lg font-semibold">Are you taking blood pressure medication?</Label>
                           <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
-                            <SelectTrigger className="h-14 text-lg">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1706,7 +1709,7 @@ export default function ProfessionalDashboard() {
                         <div className="space-y-3">
                           <Label className="text-lg font-semibold">Have you made lifestyle/diet changes recently?</Label>
                           <Select value={formData.lifestyleChanges ? 'yes' : 'no'} onValueChange={(value) => updateField('lifestyleChanges', value === 'yes')}>
-                            <SelectTrigger className="h-14 text-lg">
+                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
                               <SelectValue placeholder="Select option" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1722,15 +1725,16 @@ export default function ProfessionalDashboard() {
               </>
             )}
 
-            <Separator className="my-10" />
+            {(currentStep === 3) && <Separator className="my-10" />}
 
             {/* Clinical Data & Biomarkers Section */}
-            <div className="space-y-8">
-              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 dark:text-amber-400 mb-6">
-                <Microscope className="h-7 w-7" />
-                Clinical Data & Laboratory Biomarkers
-              </div>
-              
+            {currentStep === 4 && (
+            <FormSection
+              icon={Microscope}
+              title="Clinical Data & Laboratory Biomarkers"
+              description="Advanced clinical measurements and biomarker analysis"
+              accent="amber"
+            >
               {/* Vital Signs */}
               <div>
                 <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Vital Signs</h3>
@@ -1741,7 +1745,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.vitals.systolicBP}
                       onChange={(e) => updateClinicalData('vitals', 'systolicBP', parseInt(e.target.value) || 120)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                   </div>
                   <div className="space-y-3">
@@ -1750,7 +1754,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.vitals.diastolicBP}
                       onChange={(e) => updateClinicalData('vitals', 'diastolicBP', parseInt(e.target.value) || 80)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                   </div>
                   <div className="space-y-3">
@@ -1759,7 +1763,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.vitals.heartRate}
                       onChange={(e) => updateClinicalData('vitals', 'heartRate', parseInt(e.target.value) || 72)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                   </div>
                 </div>
@@ -1776,7 +1780,7 @@ export default function ProfessionalDashboard() {
                       step="0.001"
                       value={clinicalData.biomarkers.troponin}
                       onChange={(e) => updateClinicalData('biomarkers', 'troponin', parseFloat(e.target.value) || 0.01)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">Normal: &lt;0.04 ng/mL</div>
                   </div>
@@ -1786,7 +1790,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.biomarkers.bnp}
                       onChange={(e) => updateClinicalData('biomarkers', 'bnp', parseInt(e.target.value) || 100)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">Normal: &lt;100 pg/mL</div>
                   </div>
@@ -1797,7 +1801,7 @@ export default function ProfessionalDashboard() {
                       step="0.1"
                       value={clinicalData.biomarkers.hba1c}
                       onChange={(e) => updateClinicalData('biomarkers', 'hba1c', parseFloat(e.target.value) || 5.5)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">Target: &lt;7.0%</div>
                   </div>
@@ -1814,7 +1818,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.biomarkers.cholesterol}
                       onChange={(e) => updateClinicalData('biomarkers', 'cholesterol', parseInt(e.target.value) || 180)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">&lt;200 mg/dL</div>
                   </div>
@@ -1824,7 +1828,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.biomarkers.ldl}
                       onChange={(e) => updateClinicalData('biomarkers', 'ldl', parseInt(e.target.value) || 100)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">&lt;100 mg/dL</div>
                   </div>
@@ -1834,7 +1838,7 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.biomarkers.hdl}
                       onChange={(e) => updateClinicalData('biomarkers', 'hdl', parseInt(e.target.value) || 50)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">&gt;40 mg/dL (M), &gt;50 mg/dL (F)</div>
                   </div>
@@ -1844,22 +1848,25 @@ export default function ProfessionalDashboard() {
                       type="number"
                       value={clinicalData.biomarkers.triglycerides}
                       onChange={(e) => updateClinicalData('biomarkers', 'triglycerides', parseInt(e.target.value) || 120)}
-                      className="h-12 text-lg"
+                      className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-400 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                     />
                     <div className="text-sm text-gray-500">&lt;150 mg/dL</div>
                   </div>
                 </div>
               </div>
-            </div>
+            </FormSection>
+            )}
 
-            <Separator className="my-10" />
+            {(currentStep === 4) && <Separator className="my-10" />}
 
             {/* Family History Section */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-blue-700 dark:text-blue-400 mb-6">
-                <Users className="h-7 w-7" />
-                Family History Assessment
-              </div>
+            {currentStep === 4 && (
+            <FormSection
+              icon={Users}
+              title="Family History Assessment"
+              description="Hereditary cardiovascular risk factors"
+              accent="amber"
+            >
               <div className="space-y-4">
                 {familyMembers.map((member, index) => (
                   <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
@@ -1897,17 +1904,19 @@ export default function ProfessionalDashboard() {
                   Add Family Member
                 </Button>
               </div>
-            </div>
+            </FormSection>
+            )}
 
-            <Separator className="my-10" />
+            {(currentStep === 4) && <Separator className="my-10" />}
 
-            {/* Lifestyle Assessment */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-6">
-                <TrendingUp className="h-7 w-7" />
-                Lifestyle Risk Factors
-                <Badge variant="secondary" className="ml-3">Professional</Badge>
-              </div>
+            {/* Lifestyle Risk Factors (keep with Step 3) */}
+            {currentStep === 3 && (
+            <FormSection
+              icon={TrendingUp}
+              title="Lifestyle Risk Factors"
+              description="Advanced lifestyle and behavioral assessment"
+              accent="amber"
+            >
               <div className="space-y-8">
                 <div>
                   <Label className="text-lg font-semibold mb-4 block">Stress Level Assessment (1-10)</Label>
@@ -1960,17 +1969,19 @@ export default function ProfessionalDashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </FormSection>
+            )}
 
-            <Separator className="my-10" />
+            {(currentStep === 3) && <Separator className="my-10" />}
 
             {/* Document Upload Section */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-2xl font-bold text-amber-700 dark:text-amber-400 mb-6">
-                <Upload className="h-7 w-7" />
-                Clinical Document Upload
-                <Badge variant="secondary" className="ml-3">Unlimited</Badge>
-              </div>
+            {currentStep === 5 && (
+            <FormSection
+              icon={Upload}
+              title="Clinical Document Upload"
+              description="Upload ECG reports, lab results, and previous assessments"
+              accent="amber"
+            >
               <div className="relative border-2 border-dashed border-amber-300 dark:border-amber-700 rounded-2xl p-12 text-center bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-900/20 dark:hover:to-yellow-900/20 transition-all duration-300">
                 <Upload className="mx-auto h-20 w-20 text-amber-400 dark:text-amber-500 mb-6" />
                 <div className="space-y-3">
@@ -2016,32 +2027,66 @@ export default function ProfessionalDashboard() {
                   </div>
                 </div>
               )}
-            </div>
+            </FormSection>
+            )}
 
-            {/* Generate Report Button */}
-            <div className="pt-12">
-              <Button
-                onClick={generateProfessionalReport}
-                disabled={processingLoading || !patientName.trim()}
-                className="w-full h-20 text-2xl bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 dark:from-yellow-700 dark:via-amber-700 dark:to-orange-700 dark:hover:from-yellow-800 dark:hover:via-amber-800 dark:hover:to-orange-800 text-white shadow-2xl hover:shadow-3xl rounded-xl transition-all duration-300"
-                size="lg"
-              >
-                {processingLoading ? (
-                  <>
-                    <Zap className="mr-4 h-8 w-8 animate-spin" />
-                    Generating Professional Clinical Report...
-                  </>
+            {/* Step Navigation and Generate */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="pt-1"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={handlePreviousStep} 
+                    disabled={currentStep === 1} 
+                    className="h-12 w-12 rounded-full p-0 flex items-center justify-center border-2 border-amber-300 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-amber-700 dark:text-amber-300" />
+                  </Button>
+                </motion.div>
+                {currentStep < totalSteps ? (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button 
+                      type="button"
+                      onClick={handleNextStep} 
+                      disabled={!canProceedToNext()} 
+                      className="h-12 w-12 rounded-full p-0 flex items-center justify-center bg-gradient-to-br from-amber-600 via-yellow-600 to-orange-600 hover:from-amber-700 hover:via-yellow-700 hover:to-orange-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border-2 border-amber-400 dark:border-amber-500"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </motion.div>
                 ) : (
-                  <>
-                    <Brain className="mr-4 h-8 w-8" />
-                    Generate Professional Clinical Report with AI Analysis
-                  </>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      type="button"
+                      onClick={generateProfessionalReport}
+                      disabled={processingLoading || !patientName.trim()}
+                      className="h-12 px-8 bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold border-2 border-yellow-500/50"
+                    >
+                      {processingLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Generating Report…
+                        </>
+                      ) : (
+                        <>
+                          <FileDown className="mr-2 h-5 w-5" />
+                          Generate Professional Report
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
                 )}
-              </Button>
-              {!patientName.trim() && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-3 text-center">Please enter patient name to generate professional report</p>
-              )}
-            </div>
+              </div>
+            </motion.div>
+            {currentStep === totalSteps && !patientName.trim() && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 mt-3 text-center">Please enter patient name to generate professional report</p>
+            )}
             </form>
 
             {/* Professional Features Highlight */}

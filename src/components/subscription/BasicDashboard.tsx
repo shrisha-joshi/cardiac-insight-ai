@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { FileText, Heart, Activity, Stethoscope, AlertTriangle, CheckCircle, Info, Star, TrendingUp, Users, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PatientData, defaultPatientData, PredictionResult } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,7 @@ import PredictionHistory from '@/components/PredictionHistory';
 import { usePredictionHistory } from '@/hooks/use-prediction-history';
 
 // Import new dashboard components
-import { DashboardHeader } from '@/components/ui/dashboard-header';
-import { StatsGrid, StatCard } from '@/components/ui/stat-card';
+
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
 import { LoadingState } from '@/components/ui/loading-state';
 import { ActionButton } from '@/components/ui/action-button';
@@ -43,6 +42,19 @@ export default function BasicDashboard() {
     level: 'low',
     factors: []
   });
+  // Stepper (pagination) for Basic assessment
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+  const handleNextStep = () => { if (currentStep < totalSteps) setCurrentStep((s) => s + 1); };
+  const handlePreviousStep = () => { if (currentStep > 1) setCurrentStep((s) => s - 1); };
+  const canProceedToNext = () => {
+    switch (currentStep) {
+      case 1:
+        return (formData.age || 0) > 0 && !!formData.gender;
+      default:
+        return true;
+    }
+  };
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -199,57 +211,30 @@ export default function BasicDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/30 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/30">
+      {/* Compact Fixed Header (Hero) for Basic */}
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-800 dark:to-cyan-800 shadow-lg border-b-2 border-blue-400/30 dark:border-blue-600/30">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-white">
+              <Heart className="h-6 w-6" />
+              <div>
+                <div className="text-sm uppercase tracking-wide opacity-90">Basic Tier</div>
+                <div className="font-semibold">Basic Heart Health Check</div>
+              </div>
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-blue-100">
+              <FileText className="h-4 w-4" />
+              <span className="text-sm">Assessments: {predictions.length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="max-w-6xl mx-auto space-y-6 p-4">
         
-        {/* Dashboard Header */}
-        <DashboardHeader
-          tier="basic"
-          title="Basic Heart Health Check"
-          description="Get started with foundational cardiovascular risk assessment"
-          icon={<Heart className="w-10 h-10 text-white" />}
-        />
 
-        {/* Statistics Grid */}
-        <StatsGrid>
-          <StatCard
-            title="Total Assessments"
-            value={predictions.length.toString()}
-            subtitle="Completed assessments"
-            icon={FileText}
-            trend="neutral"
-            color="blue"
-            delay={0}
-          />
-          <StatCard
-            title="Risk Score"
-            value={riskIndicators.score > 0 ? `${Math.round((riskIndicators.score / MAX_RISK_SCORE) * 100)}%` : "—"}
-            subtitle="Current risk level"
-            icon={Activity}
-            trend={riskIndicators.level === 'high' ? 'down' : riskIndicators.level === 'medium' ? 'neutral' : 'up'}
-            trendValue={riskIndicators.level.toUpperCase()}
-            color={riskIndicators.level === 'high' ? 'rose' : riskIndicators.level === 'medium' ? 'amber' : 'emerald'}
-            delay={0.1}
-          />
-          <StatCard
-            title="Risk Factors"
-            value={riskIndicators.factors.length.toString()}
-            subtitle="Key factors identified"
-            icon={AlertTriangle}
-            trend="neutral"
-            color="blue"
-            delay={0.2}
-          />
-          <StatCard
-            title="Free Tier"
-            value="2/2"
-            subtitle="File upload limit"
-            icon={Star}
-            trend="neutral"
-            color="purple"
-            delay={0.3}
-          />
-        </StatsGrid>
+
+
 
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -265,9 +250,35 @@ export default function BasicDashboard() {
           </TabsList>
 
           <TabsContent value="assess" className="space-y-6">
+            {/* Stepper */}
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg rounded-xl border border-blue-200/60 dark:border-blue-800/60 p-5 shadow-lg">
+              <div className="flex items-center justify-between">
+                {['Basic Info', 'Health', 'History', 'Lifestyle'].map((label, idx) => (
+                  <div key={label} className="flex items-center flex-1">
+                    <div className={`flex items-center gap-2 ${idx > 0 ? 'pl-2' : ''}`}>
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold shadow-lg border-2 transition-all duration-300
+                        ${idx + 1 <= currentStep
+                          ? 'bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 text-white border-blue-300 dark:border-blue-400 shadow-blue-500/50'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <span className={`text-sm font-medium hidden sm:block transition-colors duration-300 ${idx + 1 <= currentStep ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300'}`}>{label}</span>
+                    </div>
+                    {idx < totalSteps - 1 && (
+                      <div className="mx-2 flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                        <div 
+                          className={`h-full bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 shadow-sm transition-all duration-500 ease-in-out ${idx + 1 < currentStep ? 'w-full' : 'w-0'}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
             {/* Real-time Risk Indicator */}
             {riskIndicators.score > 0 && (
-              <Card className="border-l-4 border-l-blue-500 shadow-xl dark:bg-gray-800/50 backdrop-blur-sm">
+              <Card className="border-l-4 border-l-blue-500 shadow-xl dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-2xl transition-all duration-300 hover:border-l-blue-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold flex items-center gap-2 text-gray-800 dark:text-gray-100">
@@ -302,11 +313,12 @@ export default function BasicDashboard() {
         )}
 
         {/* Main Assessment Form */}
-        <Card className="shadow-xl border-blue-200/50 dark:border-blue-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
+        <Card className="shadow-xl border-blue-200/50 dark:border-blue-800/50 dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-2xl transition-shadow duration-300">
           <CardContent className="pt-8 pb-8 px-6 md:px-8">
             <form onSubmit={handleSubmit} className="space-y-8">
 
               {/* Basic Information */}
+              {currentStep === 1 && (
               <FormSection
                 title="Basic Information"
                 description="Personal details and demographics"
@@ -364,8 +376,10 @@ export default function BasicDashboard() {
                     </div>
                   </FormFieldGroup>
                 </FormSection>
+              )}
 
                 {/* Health Metrics */}
+                {currentStep === 2 && (
                 <FormSection
                   title="Health Metrics"
                   description="Vital signs and measurements"
@@ -438,8 +452,10 @@ export default function BasicDashboard() {
                     </div>
                   </FormFieldGroup>
                 </FormSection>
+                )}
 
                 {/* Symptoms & Medical History */}
+                {currentStep === 2 && (
                 <FormSection
                   title="Symptoms & Medical History"
                   description="Clinical observations and past conditions"
@@ -496,8 +512,10 @@ export default function BasicDashboard() {
                     </div>
                   </FormFieldGroup>
                 </FormSection>
+                )}
 
                 {/* Lifestyle & Health Conditions */}
+                {currentStep === 3 && (
                 <FormSection
                   title="Lifestyle & Health Conditions"
                   description="Daily habits and existing conditions"
@@ -552,9 +570,10 @@ export default function BasicDashboard() {
                   </div>
                 </div>
               </FormSection>
+              )}
 
               {/* Conditional Questions */}
-              {(formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
+              {currentStep === 3 && (formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
                 <FormSection
                   title="Additional Medical Information"
                   description="Follow-up questions based on your conditions"
@@ -626,6 +645,7 @@ export default function BasicDashboard() {
               )}
 
               {/* Lifestyle Assessment */}
+              {currentStep === 4 && (
               <FormSection
                 title="Lifestyle Assessment"
                 description="Daily habits and activities"
@@ -688,8 +708,10 @@ export default function BasicDashboard() {
                   </div>
                 </FormFieldGroup>
               </FormSection>
+              )}
 
               {/* Upgrade Promotion */}
+              {currentStep === 4 && (
               <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800/50 backdrop-blur-sm">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-3 text-lg">🚀 Unlock Advanced Features</h3>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
@@ -713,35 +735,60 @@ export default function BasicDashboard() {
                   </div>
                 </div>
               </div>
+              )}
 
+              {/* Step Navigation / Submit */}
               <div className="space-y-3">
-                <ActionButton 
-                  loading={processingLoading}
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  icon={Heart}
-                >
-                  Get Basic Risk Assessment (Free)
-                </ActionButton>
-                <div className="grid md:grid-cols-2 gap-2">
-                  <ActionButton 
-                    variant="secondary"
-                    size="md"
-                    fullWidth
-                    icon={TrendingUp}
+                <div className="flex items-center justify-between gap-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handlePreviousStep} 
+                    disabled={currentStep === 1} 
+                    className="h-11 w-11 rounded-full p-0 flex items-center justify-center border-2 border-blue-300 dark:border-blue-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
                   >
-                    Upgrade to Premium
-                  </ActionButton>
-                  <ActionButton 
-                    variant="success"
-                    size="md"
-                    fullWidth
-                    icon={BarChart3}
-                  >
-                    Go Professional
-                  </ActionButton>
+                    <ChevronLeft className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+                  </Button>
+                  {currentStep < totalSteps ? (
+                    <Button 
+                      type="button" 
+                      onClick={handleNextStep} 
+                      disabled={!canProceedToNext()} 
+                      className="h-11 w-11 rounded-full p-0 flex items-center justify-center bg-gradient-to-br from-blue-600 via-cyan-600 to-blue-700 hover:from-blue-700 hover:via-cyan-700 hover:to-blue-800 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border-2 border-blue-400 dark:border-blue-500 hover:scale-105 active:scale-95"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  ) : (
+                    <ActionButton 
+                      loading={processingLoading}
+                      variant="primary"
+                      size="lg"
+                      icon={Heart}
+                    >
+                      Get Basic Risk Assessment (Free)
+                    </ActionButton>
+                  )}
                 </div>
+                {currentStep === totalSteps && (
+                  <div className="grid md:grid-cols-2 gap-2">
+                    <ActionButton 
+                      variant="secondary"
+                      size="md"
+                      fullWidth
+                      icon={TrendingUp}
+                    >
+                      Upgrade to Premium
+                    </ActionButton>
+                    <ActionButton 
+                      variant="success"
+                      size="md"
+                      fullWidth
+                      icon={BarChart3}
+                    >
+                      Go Professional
+                    </ActionButton>
+                  </div>
+                )}
               </div>
             </form>
           </CardContent>
