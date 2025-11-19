@@ -763,6 +763,7 @@ export default function BasicDashboard() {
                       loading={processingLoading}
                       variant="primary"
                       size="lg"
+                      fullWidth
                       icon={Heart}
                     >
                       Get Basic Risk Assessment (Free)

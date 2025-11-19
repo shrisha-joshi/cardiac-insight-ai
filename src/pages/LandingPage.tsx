@@ -549,7 +549,7 @@ export default function LandingPage() {
       </section>
 
       {/* Subscription Plans Section */}
-      <section className="py-16 sm:py-24 px-4 relative">
+      <section id="subscription-plans" className="py-16 sm:py-24 px-4 relative">
         {/* Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-teal-500/5 to-background" />
 

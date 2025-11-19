@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,15 @@ export default function LoginForm() {
           title: "Welcome back!",
           description: "You've successfully logged in.",
         });
-        window.location.href = '/';
+        // Navigate to home page and scroll to subscription plans
+        navigate('/');
+        // Use setTimeout to ensure the page has loaded before scrolling
+        setTimeout(() => {
+          const element = document.getElementById('subscription-plans');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
       }
     } catch (err) {
       setError('An unexpected error occurred');

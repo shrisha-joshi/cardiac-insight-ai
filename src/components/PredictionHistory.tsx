@@ -154,9 +154,9 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
     <div className="space-y-6">
       {/* User Info */}
       {userId && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="dark:bg-slate-900/50">
           <CardContent className="pt-6">
-            <p className="text-sm text-blue-900">
+            <p className="text-sm dark:text-blue-200">
               <strong>Your Personal History</strong> • User: {userId.substring(0, 20)}...
             </p>
           </CardContent>
@@ -208,8 +208,8 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
       </div>
 
       {/* Feedback Stats */}
-      {feedbackStats && feedbackStats.total > 0 && (
-        <Card className="bg-green-50 border-green-200">
+      {/* {feedbackStats && feedbackStats.total > 0 && (
+        <Card className="bg-green-200 border-green-200">
           <CardContent className="pt-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
@@ -229,7 +229,7 @@ export default function PredictionHistory({ predictions, userId, onAddFeedback, 
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* History List */}
       <Card>

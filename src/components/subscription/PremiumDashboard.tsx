@@ -47,6 +47,8 @@ import { enhancedAiService, type EnhancedAIRequest, type EnhancedAIResponse } fr
 import type { User } from '@supabase/supabase-js';
 import { PDFParseConfirmationModal } from '@/components/PDFParseConfirmationModal';
 import { parsePDFForFormData, type ParsedField } from '@/services/pdfParserService';
+import PredictionHistory from '@/components/PredictionHistory';
+import { usePredictionHistory } from '@/hooks/use-prediction-history';
 
 // Import new dashboard components
 import { FormSection, FormFieldGroup } from '@/components/ui/form-section';
@@ -96,6 +98,9 @@ export default function PremiumDashboard() {
       documentCount: number;
     };
   } | null>(null);
+  
+  // Use custom hook for prediction history management
+  const { predictions, addPrediction, addFeedback, getFeedbackStats, userId: historyUserId, isLoading: historyLoading } = usePredictionHistory();
   
   // AI suggestions state
   const [aiSuggestions, setAiSuggestions] = useState<EnhancedAIResponse | null>(null);
@@ -363,6 +368,20 @@ export default function PremiumDashboard() {
     setGeneratedReport(report);
     setShowReport(true);
     setProcessingLoading(false);
+    
+    // Save to prediction history
+    const prediction = {
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      riskLevel: (riskLevel.toLowerCase().includes('low') ? 'low' : riskLevel.toLowerCase().includes('moderate') ? 'medium' : 'high') as 'low' | 'medium' | 'high',
+      riskScore: totalRisk,
+      confidence: report.confidenceLevel,
+      prediction: (totalRisk > 50 ? 'Risk' : 'No Risk') as 'Risk' | 'No Risk',
+      explanation: `Comprehensive premium assessment with ${report.confidenceLevel}% confidence`,
+      recommendations: recommendations,
+      patientData: formData
+    };
+    addPrediction(prediction);
     
     // Generate AI-powered suggestions
     await getAISuggestions(riskLevel as 'low' | 'moderate' | 'high' | 'critical', formData);

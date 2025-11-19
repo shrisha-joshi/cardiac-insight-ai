@@ -51,6 +51,8 @@ import { enhancedAiService, type EnhancedAIRequest, type EnhancedAIResponse } fr
 import type { User } from '@supabase/supabase-js';
 import { PDFParseConfirmationModal } from '@/components/PDFParseConfirmationModal';
 import { parsePDFForFormData, type ParsedField } from '@/services/pdfParserService';
+import PredictionHistory from '@/components/PredictionHistory';
+import { usePredictionHistory } from '@/hooks/use-prediction-history';
 
 // Import dashboard enhancement components
 // Header and stats removed to keep minimal sticky hero
@@ -98,6 +100,9 @@ export default function ProfessionalDashboard() {
   });
   const [patientName, setPatientName] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+  // Use custom hook for prediction history management
+  const { predictions, addPrediction, addFeedback, getFeedbackStats, userId: historyUserId, isLoading: historyLoading } = usePredictionHistory();
   const [processingLoading, setProcessingLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
@@ -502,6 +507,20 @@ export default function ProfessionalDashboard() {
     setShowReport(true);
     setProcessingLoading(false);
     
+    // Save to prediction history
+    const prediction = {
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      riskLevel: (urgencyLevel === 'low' ? 'low' : urgencyLevel === 'moderate' ? 'medium' : 'high') as 'low' | 'medium' | 'high',
+      riskScore: overallRisk,
+      confidence: Math.min(98, 88 + (uploadedFiles.length * 2)),
+      prediction: (overallRisk > 50 ? 'Risk' : 'No Risk') as 'Risk' | 'No Risk',
+      explanation: `Professional clinical assessment with ${urgencyLevel} urgency level`,
+      recommendations: professionalRecommendations,
+      patientData: formData
+    };
+    addPrediction(prediction);
+    
     // Generate AI-powered suggestions
     await getAISuggestions(report.urgencyLevel, formData);
   };
@@ -795,55 +814,195 @@ export default function ProfessionalDashboard() {
           )}
 
 
-          {/* Clinical Risk Assessment */}
-          <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
-              <CardTitle className="flex items-center gap-2 text-gray-800 dark:text-gray-100">
-                <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                Professional Risk Stratification
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="text-center mb-8">
-                <div className={`text-7xl font-bold mb-3 ${
-                  generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-emerald-600 dark:text-emerald-400' :
-                  generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-blue-600 dark:text-blue-400' :
-                  generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-amber-600 dark:text-amber-400' : 'text-orange-600 dark:text-orange-400'
-                }`}>
-                  {generatedReport.clinicalAssessment.overallRisk}%
-                </div>
-                <div className={`text-2xl font-bold px-6 py-3 rounded-full inline-block ${
-                  generatedReport.urgencyLevel === 'low' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' :
-                  generatedReport.urgencyLevel === 'moderate' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' :
-                  generatedReport.urgencyLevel === 'high' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200'
-                }`}>
-                  {generatedReport.urgencyLevel.toUpperCase()} RISK
-                </div>
-                <div className="mt-3 text-lg text-gray-600 dark:text-gray-400">
-                  Next Follow-up: <span className="font-semibold text-gray-800 dark:text-gray-200">{generatedReport.nextFollowUp}</span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Cardiovascular Risk</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Clinical Risk</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Biomarker Risk</div>
-                </div>
-                <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 backdrop-blur-sm">
-                  <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.demographicRisk}%</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Demographic Risk</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Patient Info & Risk Score */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Overall Risk Score - Circular Progress */}
+              <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 bg-white dark:bg-slate-900">
+                <CardContent className="p-8">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-6">Overall Cardiovascular Risk</h3>
+                    
+                    {/* Circular Progress Ring */}
+                    <div className="relative inline-flex items-center justify-center">
+                      <svg className="transform -rotate-90 w-48 h-48">
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="88"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="transparent"
+                          className="text-gray-200 dark:text-gray-700"
+                        />
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="88"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="transparent"
+                          strokeDasharray={`${2 * Math.PI * 88}`}
+                          strokeDashoffset={`${2 * Math.PI * 88 * (1 - generatedReport.clinicalAssessment.overallRisk / 100)}`}
+                          className={`transition-all duration-1000 ease-out ${
+                            generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-emerald-500' :
+                            generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-blue-500' :
+                            generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-amber-500' : 'text-orange-500'
+                          }`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`text-5xl font-bold ${
+                          generatedReport.clinicalAssessment.overallRisk < 30 ? 'text-emerald-600 dark:text-emerald-400' :
+                          generatedReport.clinicalAssessment.overallRisk < 50 ? 'text-blue-600 dark:text-blue-400' :
+                          generatedReport.clinicalAssessment.overallRisk < 70 ? 'text-amber-600 dark:text-amber-400' : 'text-orange-600 dark:text-orange-400'
+                        }`}>
+                          {generatedReport.clinicalAssessment.overallRisk}%
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 mt-1">Risk Score</span>
+                      </div>
+                    </div>
+
+                    {/* Risk Level Badge */}
+                    <div className="mt-6">
+                      <div className={`inline-block px-6 py-2 rounded-full font-bold text-lg ${
+                        generatedReport.urgencyLevel === 'low' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' :
+                        generatedReport.urgencyLevel === 'moderate' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' :
+                        generatedReport.urgencyLevel === 'high' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200'
+                      }`}>
+                        {generatedReport.urgencyLevel.toUpperCase()} RISK
+                      </div>
+                    </div>
+
+                    {/* Follow-up Info */}
+                    <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 rounded-lg">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Next Follow-up</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-1">{generatedReport.nextFollowUp}</div>
+                    </div>
+
+                    {/* Clinical Note */}
+                    <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          Professional clinical assessment requires physician review
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Detailed Analysis */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Detailed Risk Breakdown */}
+              <Card className="shadow-xl border-amber-200/50 dark:border-amber-800/50 bg-white dark:bg-slate-900">
+                <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-gray-200 dark:border-gray-700">
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                    <BarChart3 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    Professional Risk Stratification
+                  </CardTitle>
+                  <CardDescription>Multi-factorial cardiovascular risk analysis</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Cardiovascular Risk */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cardiovascular Risk</span>
+                        <span className="text-sm font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-1000"
+                          style={{ width: `${generatedReport.clinicalAssessment.cardiovascularRisk}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Blood pressure, heart rate, exercise tolerance</p>
+                    </div>
+
+                    {/* Clinical Risk */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Clinical Risk Factors</span>
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.clinicalRisk}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 h-3 rounded-full transition-all duration-1000"
+                          style={{ width: `${generatedReport.clinicalAssessment.clinicalRisk}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Diabetes, smoking, family history, stress levels</p>
+                    </div>
+
+                    {/* Biomarker Risk */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Biomarker Analysis</span>
+                        <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-3 rounded-full transition-all duration-1000"
+                          style={{ width: `${generatedReport.clinicalAssessment.biomarkerRisk}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Troponin, BNP, cholesterol, HbA1c levels</p>
+                    </div>
+
+                    {/* Demographic Risk */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Demographic Factors</span>
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.demographicRisk}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 h-3 rounded-full transition-all duration-1000"
+                          style={{ width: `${generatedReport.clinicalAssessment.demographicRisk}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Age, gender, and population risk factors</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Risk Factor Summary */}
+              <Card className="shadow-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/50 dark:to-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                    <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    Risk Category Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800/50">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Cardiovascular</div>
+                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{generatedReport.clinicalAssessment.cardiovascularRisk}%</div>
+                    </div>
+                    <div className="p-4 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Clinical</div>
+                      <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.clinicalRisk}%</div>
+                    </div>
+                    <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800/50">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Biomarker</div>
+                      <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{generatedReport.clinicalAssessment.biomarkerRisk}%</div>
+                    </div>
+                    <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Demographic</div>
+                      <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{generatedReport.clinicalAssessment.demographicRisk}%</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
           {/* Biomarker Analysis */}
           <Card className="shadow-xl border-yellow-200/50 dark:border-yellow-800/50 dark:bg-gray-800/50 backdrop-blur-sm">
@@ -1869,7 +2028,7 @@ export default function ProfessionalDashboard() {
             >
               <div className="space-y-4">
                 {familyMembers.map((member, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 dark:bg-slate-700 rounded-lg">
                     <Input
                       placeholder="Family member name"
                       value={member.name}
@@ -2061,12 +2220,12 @@ export default function ProfessionalDashboard() {
                     </Button>
                   </motion.div>
                 ) : (
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 flex justify-end">
                     <Button
                       type="button"
                       onClick={generateProfessionalReport}
                       disabled={processingLoading || !patientName.trim()}
-                      className="h-12 px-8 bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold border-2 border-yellow-500/50"
+                      className="h-12 px-6 w-full bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-500 hover:from-yellow-700 hover:via-amber-700 hover:to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold border-2 border-yellow-500/50"
                     >
                       {processingLoading ? (
                         <>

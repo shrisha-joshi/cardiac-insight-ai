@@ -28,9 +28,13 @@ export default function MedicalHistory() {
       }
     }
 
-    // Apply risk level filter
-    if (riskFilter !== 'all' && prediction.riskLevel?.toLowerCase() !== riskFilter) {
-      return false;
+    // Apply risk level filter (normalize medium/moderate)
+    if (riskFilter !== 'all') {
+      const normalizedPredictionLevel = prediction.riskLevel?.toLowerCase() === 'medium' ? 'medium' : prediction.riskLevel?.toLowerCase();
+      const normalizedFilterLevel = riskFilter === 'moderate' ? 'medium' : riskFilter;
+      if (normalizedPredictionLevel !== normalizedFilterLevel) {
+        return false;
+      }
     }
 
     return true;
@@ -69,8 +73,8 @@ export default function MedicalHistory() {
       <div className="container mx-auto px-4 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
-            <History className="h-8 w-8 text-medical-primary" />
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+            <History className="h-8 w-8 text-primary" />
             Medical History
           </h1>
           <p className="text-muted-foreground">
@@ -80,35 +84,35 @@ export default function MedicalHistory() {
 
         {/* Statistics Overview */}
         <div className="grid md:grid-cols-4 gap-4 mb-6">
-          <Card>
+          <Card className="border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Assessments</p>
-                  <p className="text-2xl font-bold">{predictions.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{predictions.length}</p>
                 </div>
-                <Calendar className="h-8 w-8 text-medical-primary" />
+                <Calendar className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Average Risk Score</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-2xl font-bold text-foreground">
                     {predictions.length > 0 
                       ? Math.round(predictions.reduce((sum, p) => sum + p.riskScore, 0) / predictions.length)
                       : 0}%
                   </p>
                 </div>
-                <History className="h-8 w-8 text-medical-primary" />
+                <History className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -117,23 +121,23 @@ export default function MedicalHistory() {
                     {predictions.filter(p => p.riskLevel === 'high').length}
                   </p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-destructive/20 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-destructive/20 dark:bg-destructive/30 flex items-center justify-center">
                   <span className="text-destructive font-bold">!</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border">
             <CardContent className="p-4">
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Verified Predictions</p>
                   <p className="text-2xl font-bold text-success">
                     {getFeedbackStats().correct}
                   </p>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-success/20 dark:bg-success/30 flex items-center justify-center">
                   <span className="text-success font-bold">✓</span>
                 </div>
               </div>
@@ -142,7 +146,7 @@ export default function MedicalHistory() {
         </div>
 
         {/* Search and Filter Controls */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-border">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
@@ -186,9 +190,9 @@ export default function MedicalHistory() {
         </Card>
 
         {/* Prediction History Component */}
-        <Card>
+        <Card className="border-border">
           <CardHeader>
-            <CardTitle>Assessment History</CardTitle>
+            <CardTitle className="text-foreground">Assessment History</CardTitle>
             <CardDescription>
               Detailed view of all your cardiovascular risk assessments
             </CardDescription>
