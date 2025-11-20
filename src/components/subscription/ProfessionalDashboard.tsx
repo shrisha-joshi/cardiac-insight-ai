@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +108,44 @@ export default function ProfessionalDashboard() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
     { name: '', relation: '', conditions: '' }
   ]);
+  
+  // Professional-grade detailed history state
+  const [detailedHistory, setDetailedHistory] = useState({
+    diabetesDuration: '',
+    diabetesType: 'Type 2',
+    diabetesComplications: [] as string[],
+    hypertensionDuration: '',
+    hypertensionMedications: [] as string[],
+    cardiacInterventions: [] as string[],
+    dyslipidemiaTherapy: 'None',
+    // Detailed complication tracking
+    retinopathyStage: '',
+    neuropathyType: '',
+    nephropathyStage: '',
+    padSeverity: '',
+    // Medication details
+    aceInhibitorName: '',
+    betaBlockerName: '',
+    ccbName: '',
+    diureticName: '',
+    // Cardiac intervention details
+    pciDate: '',
+    cabgDate: '',
+    pacemakerType: '',
+    valveType: ''
+  });
+
+  const toggleDetailedHistoryItem = (category: 'diabetesComplications' | 'hypertensionMedications' | 'cardiacInterventions', item: string) => {
+    setDetailedHistory(prev => {
+      const list = prev[category];
+      if (list.includes(item)) {
+        return { ...prev, [category]: list.filter(i => i !== item) };
+      } else {
+        return { ...prev, [category]: [...list, item] };
+      }
+    });
+  };
+
   const [clinicalData, setClinicalData] = useState<ClinicalData>({
     ecgReading: 'normal',
     biomarkers: {
@@ -468,6 +506,23 @@ export default function ProfessionalDashboard() {
     clinicalInsights.push('Multi-modal risk assessment incorporating clinical, biochemical, and lifestyle factors');
     if (uploadedFiles.length > 0) clinicalInsights.push('Uploaded diagnostic reports analyzed for additional risk stratification');
     
+    // Detailed History Analysis (Professional Tier)
+    if (formData.diabetes) {
+      if (detailedHistory.diabetesType !== 'Type 2') {
+        clinicalInsights.push(`Diabetes management complexity increased due to ${detailedHistory.diabetesType} classification`);
+      }
+      if (detailedHistory.diabetesComplications.length > 0) {
+        clinicalInsights.push(`Presence of microvascular complications: ${detailedHistory.diabetesComplications.join(', ')}`);
+        professionalRecommendations.push('Referral to ophthalmologist/podiatrist/nephrologist indicated for complication management');
+      }
+    }
+    if (detailedHistory.cardiacInterventions.length > 0) {
+      clinicalInsights.push(`History of cardiac interventions: ${detailedHistory.cardiacInterventions.join(', ')}`);
+    }
+    if (detailedHistory.hypertensionDuration && parseInt(detailedHistory.hypertensionDuration) > 10) {
+      clinicalInsights.push('Long-standing hypertension (>10 years) significantly increases risk of end-organ damage');
+    }
+
     // Determine follow-up schedule
     let nextFollowUp = '';
     if (urgencyLevel === 'critical') nextFollowUp = '24-48 hours';
@@ -539,9 +594,11 @@ export default function ProfessionalDashboard() {
           age: patientData.age || 0,
           gender: patientData.gender || 'Not specified',
           medicalHistory: [
-            ...(patientData.diabetes ? ['Diabetes'] : []),
+            ...(patientData.diabetes ? [`Diabetes (${detailedHistory.diabetesType})`] : []),
+            ...(detailedHistory.diabetesComplications.length > 0 ? [`Diabetes Complications: ${detailedHistory.diabetesComplications.join(', ')}`] : []),
             ...(patientData.smoking ? ['Smoking'] : []),
             ...(patientData.previousHeartAttack ? ['Previous Heart Attack'] : []),
+            ...(detailedHistory.cardiacInterventions.length > 0 ? [`Cardiac Interventions: ${detailedHistory.cardiacInterventions.join(', ')}`] : []),
             ...(patientData.cholesterolMedication ? ['High Cholesterol'] : []),
             ...(patientData.bpMedication ? ['High Blood Pressure'] : [])
           ],
@@ -1503,6 +1560,7 @@ export default function ProfessionalDashboard() {
               <div className="space-y-4 mt-6">
                 <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Medical History</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Diabetes Mellitus Toggle */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
                     className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
@@ -1517,6 +1575,8 @@ export default function ProfessionalDashboard() {
                       className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
+
+                  {/* Smoking History Toggle */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
                     className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
@@ -1531,6 +1591,8 @@ export default function ProfessionalDashboard() {
                       className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
+
+                  {/* Exercise-Induced Angina Toggle */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
                     className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
@@ -1545,6 +1607,8 @@ export default function ProfessionalDashboard() {
                       className="scale-125 data-[state=checked]:bg-amber-600"
                     />
                   </motion.div>
+
+                  {/* Previous MI Toggle */}
                   <motion.div 
                     whileHover={{ scale: 1.02 }}
                     className="flex items-center justify-between p-5 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm"
@@ -1560,6 +1624,638 @@ export default function ProfessionalDashboard() {
                     />
                   </motion.div>
                 </div>
+
+                {/* Diabetes Follow-up Questions */}
+                <AnimatePresence>
+                  {formData.diabetes && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800/50 space-y-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <h5 className="font-semibold text-blue-800 dark:text-blue-200">Diabetes Management Details</h5>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Diabetes Type</Label>
+                          <Select>
+                            <SelectTrigger className="border-blue-300 dark:border-blue-700">
+                              <SelectValue placeholder="Select diabetes type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="type1">Type 1 Diabetes</SelectItem>
+                              <SelectItem value="type2">Type 2 Diabetes</SelectItem>
+                              <SelectItem value="gestational">Gestational Diabetes</SelectItem>
+                              <SelectItem value="prediabetes">Prediabetes</SelectItem>
+                              <SelectItem value="lada">LADA (Latent Autoimmune Diabetes)</SelectItem>
+                              <SelectItem value="mody">MODY (Maturity Onset Diabetes)</SelectItem>
+                              <SelectItem value="unknown">Unknown/Not specified</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Age at Diagnosis</Label>
+                          <Input
+                            type="number"
+                            placeholder="Age when diagnosed"
+                            className="border-blue-300 dark:border-blue-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Years with Diabetes</Label>
+                          <Input
+                            type="number"
+                            placeholder="Duration in years"
+                            className="border-blue-300 dark:border-blue-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Current HbA1c Level</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            placeholder="e.g., 7.5%"
+                            className="border-blue-300 dark:border-blue-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Fasting Blood Sugar</Label>
+                          <Input
+                            type="number"
+                            placeholder="mg/dL"
+                            className="border-blue-300 dark:border-blue-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Current Medication</Label>
+                          <Select>
+                            <SelectTrigger className="border-blue-300 dark:border-blue-700">
+                              <SelectValue placeholder="Select medication type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="metformin">Metformin</SelectItem>
+                              <SelectItem value="insulin">Insulin</SelectItem>
+                              <SelectItem value="sulfonylurea">Sulfonylurea</SelectItem>
+                              <SelectItem value="glp1">GLP-1 Agonist</SelectItem>
+                              <SelectItem value="sglt2">SGLT2 Inhibitor</SelectItem>
+                              <SelectItem value="combination">Combination Therapy</SelectItem>
+                              <SelectItem value="none">No Medication</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Medication Adherence</Label>
+                          <Select>
+                            <SelectTrigger className="border-blue-300 dark:border-blue-700">
+                              <SelectValue placeholder="How often do you take meds?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="excellent">Excellent (Never miss)</SelectItem>
+                              <SelectItem value="good">Good (Rarely miss)</SelectItem>
+                              <SelectItem value="fair">Fair (Sometimes miss)</SelectItem>
+                              <SelectItem value="poor">Poor (Often miss)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Blood Sugar Monitoring</Label>
+                          <Select>
+                            <SelectTrigger className="border-blue-300 dark:border-blue-700">
+                              <SelectValue placeholder="How often?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="multiple-daily">Multiple times daily</SelectItem>
+                              <SelectItem value="daily">Once daily</SelectItem>
+                              <SelectItem value="weekly">Few times per week</SelectItem>
+                              <SelectItem value="rarely">Rarely</SelectItem>
+                              <SelectItem value="never">Never</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Hypoglycemic Episodes</Label>
+                          <Select>
+                            <SelectTrigger className="border-blue-300 dark:border-blue-700">
+                              <SelectValue placeholder="Frequency in past month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="rare">1-2 episodes</SelectItem>
+                              <SelectItem value="occasional">3-5 episodes</SelectItem>
+                              <SelectItem value="frequent">More than 5 episodes</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Diabetes-Related Complications (Select all that apply)</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {['Neuropathy', 'Retinopathy', 'Nephropathy', 'Foot problems', 'None'].map((comp) => (
+                            <label key={comp} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                              <input type="checkbox" className="rounded text-blue-600" />
+                              <span className="text-sm">{comp}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Smoking History Follow-up Questions */}
+                <AnimatePresence>
+                  {formData.smoking && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 p-5 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl border-2 border-red-200 dark:border-red-800/50 space-y-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        <h5 className="font-semibold text-red-800 dark:text-red-200">Smoking History Details</h5>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Smoking Status</Label>
+                          <Select>
+                            <SelectTrigger className="border-red-300 dark:border-red-700">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="current">Current Smoker</SelectItem>
+                              <SelectItem value="former">Former Smoker</SelectItem>
+                              <SelectItem value="occasional">Occasional Smoker</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Age Started Smoking</Label>
+                          <Input
+                            type="number"
+                            placeholder="Age"
+                            className="border-red-300 dark:border-red-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Cigarettes Per Day</Label>
+                          <Input
+                            type="number"
+                            placeholder="Average number"
+                            className="border-red-300 dark:border-red-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Pack-Years</Label>
+                          <Input
+                            type="number"
+                            placeholder="Calculate: (packs/day) × years"
+                            className="border-red-300 dark:border-red-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Years Smoked</Label>
+                          <Input
+                            type="number"
+                            placeholder="Total years"
+                            className="border-red-300 dark:border-red-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">If Former Smoker: Quit Date</Label>
+                          <Input
+                            type="date"
+                            className="border-red-300 dark:border-red-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Tobacco Type</Label>
+                          <Select>
+                            <SelectTrigger className="border-red-300 dark:border-red-700">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cigarettes">Cigarettes</SelectItem>
+                              <SelectItem value="cigars">Cigars</SelectItem>
+                              <SelectItem value="pipe">Pipe</SelectItem>
+                              <SelectItem value="chewing">Chewing Tobacco</SelectItem>
+                              <SelectItem value="vaping">E-cigarettes/Vaping</SelectItem>
+                              <SelectItem value="multiple">Multiple Types</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Attempted to Quit?</Label>
+                          <Select>
+                            <SelectTrigger className="border-red-300 dark:border-red-700">
+                              <SelectValue placeholder="Number of attempts" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="never">Never tried</SelectItem>
+                              <SelectItem value="once">Once</SelectItem>
+                              <SelectItem value="2-3">2-3 times</SelectItem>
+                              <SelectItem value="4-5">4-5 times</SelectItem>
+                              <SelectItem value="many">More than 5 times</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Exposure to Secondhand Smoke</Label>
+                          <Select>
+                            <SelectTrigger className="border-red-300 dark:border-red-700">
+                              <SelectValue placeholder="Select exposure level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No exposure</SelectItem>
+                              <SelectItem value="minimal">Minimal (Rare)</SelectItem>
+                              <SelectItem value="moderate">Moderate (Weekly)</SelectItem>
+                              <SelectItem value="frequent">Frequent (Daily)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Interest in Quitting</Label>
+                          <Select>
+                            <SelectTrigger className="border-red-300 dark:border-red-700">
+                              <SelectValue placeholder="Current interest level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="very-interested">Very interested</SelectItem>
+                              <SelectItem value="somewhat">Somewhat interested</SelectItem>
+                              <SelectItem value="not-ready">Not ready yet</SelectItem>
+                              <SelectItem value="not-interested">Not interested</SelectItem>
+                              <SelectItem value="already-quit">Already quit</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Exercise-Induced Angina Follow-up Questions */}
+                <AnimatePresence>
+                  {formData.exerciseAngina && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 p-5 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800/50 space-y-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <Heart className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <h5 className="font-semibold text-purple-800 dark:text-purple-200">Angina Characteristics</h5>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">When Did Symptoms Start?</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="Select timeframe" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="recent">Within last month</SelectItem>
+                              <SelectItem value="few-months">1-6 months ago</SelectItem>
+                              <SelectItem value="year">6-12 months ago</SelectItem>
+                              <SelectItem value="over-year">Over a year ago</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Frequency of Episodes</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="How often?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Several times per week</SelectItem>
+                              <SelectItem value="monthly">Few times per month</SelectItem>
+                              <SelectItem value="occasional">Occasional</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Pain Severity (1-10)</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            placeholder="Rate pain intensity"
+                            className="border-purple-300 dark:border-purple-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Duration of Each Episode</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="How long?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="seconds">&lt;1 minute</SelectItem>
+                              <SelectItem value="1-5">1-5 minutes</SelectItem>
+                              <SelectItem value="5-10">5-10 minutes</SelectItem>
+                              <SelectItem value="10-20">10-20 minutes</SelectItem>
+                              <SelectItem value="longer">&gt;20 minutes</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Exercise Intensity That Triggers Pain</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="Select intensity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="minimal">Minimal activity (walking slowly)</SelectItem>
+                              <SelectItem value="light">Light activity (normal walking)</SelectItem>
+                              <SelectItem value="moderate">Moderate activity (brisk walking, stairs)</SelectItem>
+                              <SelectItem value="vigorous">Only vigorous activity (running, heavy lifting)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Pain Location</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="Where is the pain?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="center-chest">Center of chest</SelectItem>
+                              <SelectItem value="left-chest">Left side of chest</SelectItem>
+                              <SelectItem value="radiating-arm">Radiating to left arm</SelectItem>
+                              <SelectItem value="radiating-jaw">Radiating to jaw/neck</SelectItem>
+                              <SelectItem value="radiating-back">Radiating to back</SelectItem>
+                              <SelectItem value="multiple">Multiple locations</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Pain Character</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="Describe the pain" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pressure">Pressure/Squeezing</SelectItem>
+                              <SelectItem value="tight">Tightness</SelectItem>
+                              <SelectItem value="burning">Burning sensation</SelectItem>
+                              <SelectItem value="sharp">Sharp pain</SelectItem>
+                              <SelectItem value="dull">Dull ache</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Relief Methods</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="What helps?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="rest">Rest alone</SelectItem>
+                              <SelectItem value="nitro">Nitroglycerin</SelectItem>
+                              <SelectItem value="rest-nitro">Rest + Nitroglycerin</SelectItem>
+                              <SelectItem value="slow">Takes long time to resolve</SelectItem>
+                              <SelectItem value="none">Nothing helps quickly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Associated Symptoms</Label>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {['Shortness of breath', 'Sweating', 'Nausea', 'Dizziness', 'Palpitations', 'None'].map((symptom) => (
+                              <label key={symptom} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-purple-200 dark:border-purple-700 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20">
+                                <input type="checkbox" className="rounded text-purple-600" />
+                                <span className="text-sm">{symptom}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Using Nitroglycerin?</Label>
+                          <Select>
+                            <SelectTrigger className="border-purple-300 dark:border-purple-700">
+                              <SelectValue placeholder="Select usage" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="yes-prescribed">Yes, prescribed</SelectItem>
+                              <SelectItem value="yes-effective">Yes, and it helps</SelectItem>
+                              <SelectItem value="yes-ineffective">Yes, but doesn't help much</SelectItem>
+                              <SelectItem value="no">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Previous MI (Heart Attack) Follow-up Questions */}
+                <AnimatePresence>
+                  {formData.previousHeartAttack && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 p-5 bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-900/20 dark:to-red-900/20 rounded-xl border-2 border-rose-200 dark:border-rose-800/50 space-y-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <Heart className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                        <h5 className="font-semibold text-rose-800 dark:text-rose-200">Myocardial Infarction History</h5>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Date of Heart Attack</Label>
+                          <Input
+                            type="date"
+                            className="border-rose-300 dark:border-rose-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Age at Time of Event</Label>
+                          <Input
+                            type="number"
+                            placeholder="Age"
+                            className="border-rose-300 dark:border-rose-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Type of Heart Attack</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="stemi">STEMI (ST-Elevation MI)</SelectItem>
+                              <SelectItem value="nstemi">NSTEMI (Non-ST-Elevation MI)</SelectItem>
+                              <SelectItem value="unknown">Unknown/Not sure</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Number of Heart Attacks</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="How many?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">One</SelectItem>
+                              <SelectItem value="2">Two</SelectItem>
+                              <SelectItem value="3">Three</SelectItem>
+                              <SelectItem value="4+">Four or more</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Affected Artery/Arteries</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="Select vessel" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="lad">LAD (Left Anterior Descending)</SelectItem>
+                              <SelectItem value="lcx">LCx (Left Circumflex)</SelectItem>
+                              <SelectItem value="rca">RCA (Right Coronary Artery)</SelectItem>
+                              <SelectItem value="lmca">LMCA (Left Main Coronary)</SelectItem>
+                              <SelectItem value="multiple">Multiple vessels</SelectItem>
+                              <SelectItem value="unknown">Unknown</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Treatment Received</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="Select treatment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="stent">Stent (PCI)</SelectItem>
+                              <SelectItem value="cabg">CABG Surgery</SelectItem>
+                              <SelectItem value="thrombolysis">Thrombolytic therapy</SelectItem>
+                              <SelectItem value="medical">Medical management only</SelectItem>
+                              <SelectItem value="unknown">Unknown</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Number of Stents (if applicable)</Label>
+                          <Input
+                            type="number"
+                            placeholder="Number of stents"
+                            className="border-rose-300 dark:border-rose-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Ejection Fraction (EF%)</Label>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 55%"
+                            className="border-rose-300 dark:border-rose-700"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Cardiac Rehabilitation</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="Did you complete?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="completed">Completed full program</SelectItem>
+                              <SelectItem value="partial">Partially completed</SelectItem>
+                              <SelectItem value="enrolled">Currently enrolled</SelectItem>
+                              <SelectItem value="not-attended">Did not attend</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Current Cardiac Medications</Label>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {['Aspirin', 'Beta-blocker', 'ACE inhibitor', 'Statin', 'Blood thinner', 'None'].map((med) => (
+                              <label key={med} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-rose-200 dark:border-rose-700 cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-900/20">
+                                <input type="checkbox" className="rounded text-rose-600" />
+                                <span className="text-sm">{med}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Complications After MI</Label>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {['Heart failure', 'Arrhythmia', 'Cardiogenic shock', 'Stroke', 'None'].map((comp) => (
+                              <label key={comp} className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-rose-200 dark:border-rose-700 cursor-pointer hover:bg-rose-50 dark:hover:bg-rose-900/20">
+                                <input type="checkbox" className="rounded text-rose-600" />
+                                <span className="text-sm">{comp}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Follow-up Care Adherence</Label>
+                          <Select>
+                            <SelectTrigger className="border-rose-300 dark:border-rose-700">
+                              <SelectValue placeholder="How well do you follow up?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="excellent">Excellent (All appointments)</SelectItem>
+                              <SelectItem value="good">Good (Most appointments)</SelectItem>
+                              <SelectItem value="fair">Fair (Some appointments)</SelectItem>
+                              <SelectItem value="poor">Poor (Rarely attend)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </FormSection>
             )}
@@ -1673,72 +2369,478 @@ export default function ProfessionalDashboard() {
             {currentStep === 2 && (formData.previousHeartAttack || formData.diabetes || formData.restingBP > 130) && (
               <>
                 <Separator className="my-10" />
-                <div className="space-y-8">
-                  <div className="flex items-center gap-3 text-2xl font-bold text-orange-700 mb-6">
-                    <Heart className="h-7 w-7" />
-                    Additional Medical Information
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-8"
+                >
+                  <div className="flex items-center gap-3 text-2xl font-bold text-orange-700 dark:text-orange-400 mb-6">
+                    <Activity className="h-7 w-7" />
+                    Advanced Clinical History
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {formData.previousHeartAttack && (
-                      <div className="space-y-3">
-                        <Label className="text-lg font-semibold">Are you taking cholesterol medication?</Label>
-                        <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
-                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
-                            <SelectValue placeholder="Select option" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="yes">Yes, taking cholesterol medication</SelectItem>
-                            <SelectItem value="no">No, not taking medication</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                  
+                  <div className="grid grid-cols-1 gap-8">
+                    {/* Diabetes Detailed Assessment */}
                     {formData.diabetes && (
-                      <div className="space-y-3">
-                        <Label className="text-lg font-semibold">What diabetes treatment are you taking?</Label>
-                        <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
-                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
-                            <SelectValue placeholder="Select treatment type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="insulin">Insulin injections</SelectItem>
-                            <SelectItem value="tablets">Oral tablets/pills</SelectItem>
-                            <SelectItem value="both">Both insulin and tablets</SelectItem>
-                            <SelectItem value="none">No medication currently</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Card className="border-l-4 border-l-blue-500 bg-blue-50/30 dark:bg-blue-900/10">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <FlaskConical className="h-5 w-5 text-blue-600" />
+                            Diabetes Management Profile
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Diabetes Type</Label>
+                            <Select value={detailedHistory.diabetesType} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, diabetesType: val }))}>
+                              <SelectTrigger className="bg-white dark:bg-gray-800">
+                                <SelectValue placeholder="Select Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Type 1">Type 1 (Insulin Dependent)</SelectItem>
+                                <SelectItem value="Type 2">Type 2 (Non-Insulin Dependent)</SelectItem>
+                                <SelectItem value="Gestational">Gestational Diabetes</SelectItem>
+                                <SelectItem value="LADA">LADA (Latent Autoimmune)</SelectItem>
+                                <SelectItem value="MODY">MODY (Maturity Onset)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Duration of Diagnosis</Label>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                placeholder="Years" 
+                                value={detailedHistory.diabetesDuration}
+                                onChange={(e) => setDetailedHistory(prev => ({ ...prev, diabetesDuration: e.target.value }))}
+                                className="bg-white dark:bg-gray-800"
+                              />
+                              <span className="text-sm text-gray-500">years</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <Label className="text-base font-medium">Current Pharmacotherapy</Label>
+                            <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
+                              <SelectTrigger className="bg-white dark:bg-gray-800">
+                                <SelectValue placeholder="Select primary treatment" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="insulin">Insulin Monotherapy/Combination</SelectItem>
+                                <SelectItem value="tablets">Oral Hypoglycemics (Metformin, SGLT2i, etc.)</SelectItem>
+                                <SelectItem value="both">Combination (Insulin + Oral)</SelectItem>
+                                <SelectItem value="glp1">GLP-1 Agonists (Injectable)</SelectItem>
+                                <SelectItem value="none">Lifestyle Management Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <Label className="text-base font-medium">Associated Complications</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              {['Retinopathy', 'Neuropathy', 'Nephropathy', 'PAD'].map((comp) => (
+                                <div key={comp} className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                  <Switch 
+                                    checked={detailedHistory.diabetesComplications.includes(comp)}
+                                    onCheckedChange={() => toggleDetailedHistoryItem('diabetesComplications', comp)}
+                                  />
+                                  <Label className="text-sm font-normal cursor-pointer">{comp}</Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Deep dive follow-ups for complications */}
+                          <AnimatePresence>
+                            {detailedHistory.diabetesComplications.includes('Retinopathy') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-blue-700 dark:text-blue-400">Retinopathy Details</Label>
+                                <Select value={detailedHistory.retinopathyStage} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, retinopathyStage: val }))}>
+                                  <SelectTrigger className="bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700">
+                                    <SelectValue placeholder="Select stage" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="mild-npdr">Mild Non-Proliferative</SelectItem>
+                                    <SelectItem value="moderate-npdr">Moderate Non-Proliferative</SelectItem>
+                                    <SelectItem value="severe-npdr">Severe Non-Proliferative</SelectItem>
+                                    <SelectItem value="pdr">Proliferative Diabetic Retinopathy</SelectItem>
+                                    <SelectItem value="macular-edema">Diabetic Macular Edema</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.diabetesComplications.includes('Neuropathy') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-purple-700 dark:text-purple-400">Neuropathy Classification</Label>
+                                <Select value={detailedHistory.neuropathyType} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, neuropathyType: val }))}>
+                                  <SelectTrigger className="bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="peripheral">Peripheral (Sensory Loss)</SelectItem>
+                                    <SelectItem value="autonomic">Autonomic (Cardiac/GI)</SelectItem>
+                                    <SelectItem value="focal">Focal/Mononeuropathy</SelectItem>
+                                    <SelectItem value="proximal">Proximal (Amyotrophy)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.diabetesComplications.includes('Nephropathy') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-green-700 dark:text-green-400">Chronic Kidney Disease Stage</Label>
+                                <Select value={detailedHistory.nephropathyStage} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, nephropathyStage: val }))}>
+                                  <SelectTrigger className="bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700">
+                                    <SelectValue placeholder="Select CKD stage" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="stage1">Stage 1 (GFR &gt;90, Albuminuria)</SelectItem>
+                                    <SelectItem value="stage2">Stage 2 (GFR 60-89)</SelectItem>
+                                    <SelectItem value="stage3a">Stage 3a (GFR 45-59)</SelectItem>
+                                    <SelectItem value="stage3b">Stage 3b (GFR 30-44)</SelectItem>
+                                    <SelectItem value="stage4">Stage 4 (GFR 15-29)</SelectItem>
+                                    <SelectItem value="stage5">Stage 5 (GFR &lt;15 or Dialysis)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.diabetesComplications.includes('PAD') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-orange-700 dark:text-orange-400">Peripheral Artery Disease Severity</Label>
+                                <Select value={detailedHistory.padSeverity} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, padSeverity: val }))}>
+                                  <SelectTrigger className="bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700">
+                                    <SelectValue placeholder="Select severity" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="asymptomatic">Asymptomatic (ABI &lt;0.9)</SelectItem>
+                                    <SelectItem value="claudication">Intermittent Claudication</SelectItem>
+                                    <SelectItem value="rest-pain">Rest Pain</SelectItem>
+                                    <SelectItem value="tissue-loss">Tissue Loss/Ulceration</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </CardContent>
+                      </Card>
                     )}
+
+                    {/* Hypertension Detailed Assessment */}
                     {formData.restingBP > 130 && (
-                      <>
-                        <div className="space-y-3">
-                          <Label className="text-lg font-semibold">Are you taking blood pressure medication?</Label>
-                          <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
-                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
-                              <SelectValue placeholder="Select option" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes, taking BP medication</SelectItem>
-                              <SelectItem value="no">No, not taking medication</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-lg font-semibold">Have you made lifestyle/diet changes recently?</Label>
-                          <Select value={formData.lifestyleChanges ? 'yes' : 'no'} onValueChange={(value) => updateField('lifestyleChanges', value === 'yes')}>
-                            <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400">
-                              <SelectValue placeholder="Select option" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes, made significant changes</SelectItem>
-                              <SelectItem value="no">No, no major changes</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
+                      <Card className="border-l-4 border-l-red-500 bg-red-50/30 dark:bg-red-900/10">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-red-600" />
+                            Hypertension Management
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Duration of Hypertension</Label>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                placeholder="Years" 
+                                value={detailedHistory.hypertensionDuration}
+                                onChange={(e) => setDetailedHistory(prev => ({ ...prev, hypertensionDuration: e.target.value }))}
+                                className="bg-white dark:bg-gray-800"
+                              />
+                              <span className="text-sm text-gray-500">years</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Adherence to Therapy</Label>
+                            <Select value={formData.bpMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('bpMedication', value === 'yes')}>
+                              <SelectTrigger className="bg-white dark:bg-gray-800">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="yes">Compliant with Medication</SelectItem>
+                                <SelectItem value="no">Not on Medication / Non-compliant</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <Label className="text-base font-medium">Antihypertensive Classes</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {['ACE Inhibitors/ARBs', 'Beta Blockers', 'Calcium Channel Blockers', 'Diuretics', 'Other'].map((med) => (
+                                <div key={med} className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                  <Switch 
+                                    checked={detailedHistory.hypertensionMedications.includes(med)}
+                                    onCheckedChange={() => toggleDetailedHistoryItem('hypertensionMedications', med)}
+                                  />
+                                  <Label className="text-sm font-normal cursor-pointer">{med}</Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Deep dive follow-ups for medications */}
+                          <AnimatePresence>
+                            {detailedHistory.hypertensionMedications.includes('ACE Inhibitors/ARBs') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-red-700 dark:text-red-400">ACEi/ARB Specification</Label>
+                                <Input
+                                  placeholder="e.g., Lisinopril 10mg, Losartan 50mg"
+                                  value={detailedHistory.aceInhibitorName}
+                                  onChange={(e) => setDetailedHistory(prev => ({ ...prev, aceInhibitorName: e.target.value }))}
+                                  className="bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700"
+                                />
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.hypertensionMedications.includes('Beta Blockers') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-400">Beta Blocker Specification</Label>
+                                <Input
+                                  placeholder="e.g., Metoprolol 50mg, Carvedilol 25mg"
+                                  value={detailedHistory.betaBlockerName}
+                                  onChange={(e) => setDetailedHistory(prev => ({ ...prev, betaBlockerName: e.target.value }))}
+                                  className="bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700"
+                                />
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.hypertensionMedications.includes('Calcium Channel Blockers') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-pink-700 dark:text-pink-400">CCB Specification</Label>
+                                <Input
+                                  placeholder="e.g., Amlodipine 5mg, Diltiazem 180mg"
+                                  value={detailedHistory.ccbName}
+                                  onChange={(e) => setDetailedHistory(prev => ({ ...prev, ccbName: e.target.value }))}
+                                  className="bg-pink-50 dark:bg-pink-900/20 border-pink-300 dark:border-pink-700"
+                                />
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.hypertensionMedications.includes('Diuretics') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-cyan-700 dark:text-cyan-400">Diuretic Specification</Label>
+                                <Input
+                                  placeholder="e.g., Hydrochlorothiazide 25mg, Furosemide 40mg"
+                                  value={detailedHistory.diureticName}
+                                  onChange={(e) => setDetailedHistory(prev => ({ ...prev, diureticName: e.target.value }))}
+                                  className="bg-cyan-50 dark:bg-cyan-900/20 border-cyan-300 dark:border-cyan-700"
+                                />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Cardiac History Detailed Assessment */}
+                    {formData.previousHeartAttack && (
+                      <Card className="border-l-4 border-l-amber-500 bg-amber-50/30 dark:bg-amber-900/10">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <HeartPulse className="h-5 w-5 text-amber-600" />
+                            Cardiac Event History
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                          <div className="space-y-3">
+                            <Label className="text-base font-medium">Lipid Management</Label>
+                            <Select value={formData.cholesterolMedication ? 'yes' : 'no'} onValueChange={(value) => updateField('cholesterolMedication', value === 'yes')}>
+                              <SelectTrigger className="bg-white dark:bg-gray-800">
+                                <SelectValue placeholder="Statin therapy status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="yes">High-Intensity Statin</SelectItem>
+                                <SelectItem value="moderate">Moderate-Intensity Statin</SelectItem>
+                                <SelectItem value="no">No Lipid Lowering Therapy</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-3 md:col-span-2">
+                            <Label className="text-base font-medium">Previous Interventions</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {['PCI (Stent)', 'CABG (Bypass)', 'Pacemaker/ICD', 'Valve Repair/Replacement', 'Thrombolysis'].map((proc) => (
+                                <div key={proc} className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                  <Switch 
+                                    checked={detailedHistory.cardiacInterventions.includes(proc)}
+                                    onCheckedChange={() => toggleDetailedHistoryItem('cardiacInterventions', proc)}
+                                  />
+                                  <Label className="text-sm font-normal cursor-pointer">{proc}</Label>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Deep dive follow-ups for cardiac interventions */}
+                          <AnimatePresence>
+                            {detailedHistory.cardiacInterventions.includes('PCI (Stent)') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-amber-700 dark:text-amber-400">PCI Details</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <Input
+                                    type="month"
+                                    placeholder="Date of procedure"
+                                    value={detailedHistory.pciDate}
+                                    onChange={(e) => setDetailedHistory(prev => ({ ...prev, pciDate: e.target.value }))}
+                                    className="bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700"
+                                  />
+                                  <Select onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, pciVessel: val }))}>
+                                    <SelectTrigger className="bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700">
+                                      <SelectValue placeholder="Vessel stented" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="lad">LAD (Left Anterior Descending)</SelectItem>
+                                      <SelectItem value="lcx">LCx (Left Circumflex)</SelectItem>
+                                      <SelectItem value="rca">RCA (Right Coronary)</SelectItem>
+                                      <SelectItem value="lmca">LMCA (Left Main)</SelectItem>
+                                      <SelectItem value="multiple">Multiple Vessels</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.cardiacInterventions.includes('CABG (Bypass)') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-red-700 dark:text-red-400">CABG Surgery Details</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <Input
+                                    type="month"
+                                    placeholder="Surgery date"
+                                    value={detailedHistory.cabgDate}
+                                    onChange={(e) => setDetailedHistory(prev => ({ ...prev, cabgDate: e.target.value }))}
+                                    className="bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700"
+                                  />
+                                  <Select onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, cabgGrafts: val }))}>
+                                    <SelectTrigger className="bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700">
+                                      <SelectValue placeholder="Number of grafts" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="single">Single Graft</SelectItem>
+                                      <SelectItem value="double">Double Graft</SelectItem>
+                                      <SelectItem value="triple">Triple Graft (CABG×3)</SelectItem>
+                                      <SelectItem value="quad">Quadruple Graft (CABG×4)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.cardiacInterventions.includes('Pacemaker/ICD') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-purple-700 dark:text-purple-400">Device Type & Indication</Label>
+                                <Select value={detailedHistory.pacemakerType} onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, pacemakerType: val }))}>
+                                  <SelectTrigger className="bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700">
+                                    <SelectValue placeholder="Select device type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="single-pacemaker">Single Chamber Pacemaker</SelectItem>
+                                    <SelectItem value="dual-pacemaker">Dual Chamber Pacemaker</SelectItem>
+                                    <SelectItem value="crt-p">CRT-P (Cardiac Resynchronization Therapy)</SelectItem>
+                                    <SelectItem value="icd">ICD (Implantable Cardioverter-Defibrillator)</SelectItem>
+                                    <SelectItem value="crt-d">CRT-D (Combined CRT + ICD)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </motion.div>
+                            )}
+
+                            {detailedHistory.cardiacInterventions.includes('Valve Repair/Replacement') && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="md:col-span-2 space-y-3"
+                              >
+                                <Label className="text-sm font-medium text-teal-700 dark:text-teal-400">Valve Surgery Specification</Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <Select onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, valveType: val }))}>
+                                    <SelectTrigger className="bg-teal-50 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700">
+                                      <SelectValue placeholder="Valve location" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="aortic">Aortic Valve</SelectItem>
+                                      <SelectItem value="mitral">Mitral Valve</SelectItem>
+                                      <SelectItem value="tricuspid">Tricuspid Valve</SelectItem>
+                                      <SelectItem value="pulmonary">Pulmonary Valve</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Select onValueChange={(val) => setDetailedHistory(prev => ({ ...prev, valveProcedure: val }))}>
+                                    <SelectTrigger className="bg-teal-50 dark:bg-teal-900/20 border-teal-300 dark:border-teal-700">
+                                      <SelectValue placeholder="Procedure type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="mechanical">Mechanical Replacement</SelectItem>
+                                      <SelectItem value="bioprosthetic">Bioprosthetic Replacement</SelectItem>
+                                      <SelectItem value="repair">Valve Repair</SelectItem>
+                                      <SelectItem value="tavr">TAVR (Transcatheter)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </CardContent>
+                      </Card>
                     )}
                   </div>
-                </div>
+                </motion.div>
               </>
             )}
 

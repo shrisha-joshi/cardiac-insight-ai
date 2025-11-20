@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1369,7 +1369,112 @@ export default function PremiumDashboard() {
                     className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
                   />
                 </div>
+                <div className="flex items-center justify-between p-5 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
+                  <div className="flex-1 pr-4">
+                    <Label className="text-base font-medium text-gray-800 dark:text-gray-100 cursor-pointer">Family History</Label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Heart disease in immediate family</p>
+                  </div>
+                  <Switch
+                    checked={formData.hasPositiveFamilyHistory || false}
+                    onCheckedChange={(checked) => updateField('hasPositiveFamilyHistory', checked)}
+                    className="data-[state=checked]:bg-teal-600 dark:data-[state=checked]:bg-teal-500"
+                  />
+                </div>
               </div>
+
+              {/* Conditional Questions for Health Conditions */}
+              <AnimatePresence>
+                {formData.diabetes && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2.5">
+                        <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Diabetes Type</Label>
+                        <Select value={formData.diabetesType || 'Type 2'} onValueChange={(value) => updateField('diabetesType', value)}>
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            <SelectItem value="Type 1" className="dark:text-gray-100 dark:focus:bg-gray-700">Type 1</SelectItem>
+                            <SelectItem value="Type 2" className="dark:text-gray-100 dark:focus:bg-gray-700">Type 2</SelectItem>
+                            <SelectItem value="Gestational" className="dark:text-gray-100 dark:focus:bg-gray-700">Gestational</SelectItem>
+                            <SelectItem value="Prediabetes" className="dark:text-gray-100 dark:focus:bg-gray-700">Prediabetes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2.5">
+                        <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Current Treatment</Label>
+                        <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
+                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
+                            <SelectValue placeholder="Select treatment" />
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                            <SelectItem value="insulin" className="dark:text-gray-100 dark:focus:bg-gray-700">Insulin injections</SelectItem>
+                            <SelectItem value="tablets" className="dark:text-gray-100 dark:focus:bg-gray-700">Oral tablets/pills</SelectItem>
+                            <SelectItem value="both" className="dark:text-gray-100 dark:focus:bg-gray-700">Both insulin and tablets</SelectItem>
+                            <SelectItem value="none" className="dark:text-gray-100 dark:focus:bg-gray-700">No medication currently</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {formData.previousHeartAttack && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="space-y-2.5">
+                      <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Are you currently taking cholesterol medication?</Label>
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="cholesterol-med"
+                            checked={formData.cholesterolMedication || false}
+                            onCheckedChange={(checked) => updateField('cholesterolMedication', checked)}
+                            className="data-[state=checked]:bg-rose-600 dark:data-[state=checked]:bg-rose-500"
+                          />
+                          <Label htmlFor="cholesterol-med" className="font-normal text-gray-600 dark:text-gray-300">
+                            Yes, I take statins or other lipid-lowering drugs
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {formData.hasPositiveFamilyHistory && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="space-y-2.5">
+                      <Label className="text-base font-medium text-gray-700 dark:text-gray-200">Which family members?</Label>
+                      <Select onValueChange={(value) => updateField('familyHistory', [value])}>
+                        <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                          <SelectItem value="Father" className="dark:text-gray-100 dark:focus:bg-gray-700">Father</SelectItem>
+                          <SelectItem value="Mother" className="dark:text-gray-100 dark:focus:bg-gray-700">Mother</SelectItem>
+                          <SelectItem value="Sibling" className="dark:text-gray-100 dark:focus:bg-gray-700">Brother/Sister</SelectItem>
+                          <SelectItem value="Grandparent" className="dark:text-gray-100 dark:focus:bg-gray-700">Grandparent</SelectItem>
+                          <SelectItem value="Multiple" className="dark:text-gray-100 dark:focus:bg-gray-700">Multiple Members</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </FormSection>
             
             <FormPagination
@@ -1413,22 +1518,6 @@ export default function PremiumDashboard() {
                           <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                             <SelectItem value="yes" className="dark:text-gray-100 dark:focus:bg-gray-700">Yes, taking cholesterol medication</SelectItem>
                             <SelectItem value="no" className="dark:text-gray-100 dark:focus:bg-gray-700">No, not taking medication</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {formData.diabetes && (
-                      <div className="space-y-2.5">
-                        <Label className="text-base font-medium text-gray-700 dark:text-gray-200">What diabetes treatment are you taking?</Label>
-                        <Select value={formData.diabetesMedication} onValueChange={(value) => updateField('diabetesMedication', value)}>
-                          <SelectTrigger className="h-12 text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-rose-500 dark:focus:ring-rose-400 transition-all">
-                            <SelectValue placeholder="Select treatment type" />
-                          </SelectTrigger>
-                          <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                            <SelectItem value="insulin" className="dark:text-gray-100 dark:focus:bg-gray-700">Insulin injections</SelectItem>
-                            <SelectItem value="tablets" className="dark:text-gray-100 dark:focus:bg-gray-700">Oral tablets/pills</SelectItem>
-                            <SelectItem value="both" className="dark:text-gray-100 dark:focus:bg-gray-700">Both insulin and tablets</SelectItem>
-                            <SelectItem value="none" className="dark:text-gray-100 dark:focus:bg-gray-700">No medication currently</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1541,7 +1630,7 @@ export default function PremiumDashboard() {
                       max={10}
                       min={1}
                       step={1}
-                      className="flex-1 [&_[role=slider]]:bg-emerald-600 dark:[&_[role=slider]]:bg-emerald-500 [&_[role=slider]]:border-emerald-700 dark:[&_[role=slider]]:border-emerald-400"
+                      className="flex-1 [&_[role=slider]]:bg-emerald-600 dark:[&_[role=slider]]:bg-emerald-500 [&_[role=slider]]:border-emerald-700 dark:[&_[role=slider]]:border-emerald-400 [&_.bg-primary]:bg-emerald-600 dark:[&_.bg-primary]:bg-emerald-500 [&_.bg-secondary]:bg-emerald-200 dark:[&_.bg-secondary]:bg-emerald-900/30"
                     />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[60px] flex items-center gap-1">😰 High</span>
                     <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 font-semibold min-w-[50px] justify-center">{formData.stressLevel}/10</Badge>
@@ -1558,7 +1647,7 @@ export default function PremiumDashboard() {
                       max={10}
                       min={1}
                       step={1}
-                      className="flex-1 [&_[role=slider]]:bg-blue-600 dark:[&_[role=slider]]:bg-blue-500 [&_[role=slider]]:border-blue-700 dark:[&_[role=slider]]:border-blue-400"
+                      className="flex-1 [&_[role=slider]]:bg-blue-600 dark:[&_[role=slider]]:bg-blue-500 [&_[role=slider]]:border-blue-700 dark:[&_[role=slider]]:border-blue-400 [&_.bg-primary]:bg-blue-600 dark:[&_.bg-primary]:bg-blue-500 [&_.bg-secondary]:bg-blue-200 dark:[&_.bg-secondary]:bg-blue-900/30"
                     />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[90px] flex items-center gap-1">😊 Excellent</span>
                     <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 font-semibold min-w-[50px] justify-center">{formData.sleepQuality}/10</Badge>
@@ -1570,12 +1659,12 @@ export default function PremiumDashboard() {
                   <div className="flex items-center space-x-4">
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[50px] flex items-center gap-1">🛋️ 0</span>
                     <Slider
-                      value={[formData.exerciseFrequency || 3]}
+                      value={[formData.exerciseFrequency ?? 3]}
                       onValueChange={(value) => updateField('exerciseFrequency', value[0])}
                       max={7}
                       min={0}
                       step={1}
-                      className="flex-1 [&_[role=slider]]:bg-purple-600 dark:[&_[role=slider]]:bg-purple-500 [&_[role=slider]]:border-purple-700 dark:[&_[role=slider]]:border-purple-400"
+                      className="flex-1 [&_[role=slider]]:bg-purple-600 dark:[&_[role=slider]]:bg-purple-500 [&_[role=slider]]:border-purple-700 dark:[&_[role=slider]]:border-purple-400 [&_.bg-primary]:bg-purple-600 dark:[&_.bg-primary]:bg-purple-500 [&_.bg-secondary]:bg-purple-200 dark:[&_.bg-secondary]:bg-purple-900/30"
                     />
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[50px] flex items-center gap-1">💪 7</span>
                     <Badge variant="outline" className="ml-2 bg-white dark:bg-gray-700 border-purple-500 dark:border-purple-400 text-purple-700 dark:text-purple-300 font-semibold min-w-[70px] justify-center">{formData.exerciseFrequency} days</Badge>
