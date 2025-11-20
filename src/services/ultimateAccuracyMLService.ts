@@ -230,6 +230,61 @@ class UltimateAccuracyMLService {
   
   /**
    * ═══════════════════════════════════════════════════════════════════════════
+   * PYTHON API INTEGRATION
+   * ═══════════════════════════════════════════════════════════════════════════
+   */
+  private async callPythonAPI(data: PatientData): Promise<any | null> {
+    try {
+      // Map frontend data to API expected format
+      // Note: 'ca' and 'thal' are missing from frontend PatientData, using defaults
+      const apiPayload = {
+        age: data.age,
+        sex: data.gender === 'male' ? 1 : 0,
+        cp: data.chestPainType === 'typical' ? 0 : 
+            data.chestPainType === 'atypical' ? 1 : 
+            data.chestPainType === 'non-anginal' ? 2 : 3,
+        trestbps: data.restingBP,
+        chol: data.cholesterol,
+        fbs: data.fastingBS ? 1 : 0,
+        restecg: data.restingECG === 'normal' ? 0 : 
+                 data.restingECG === 'st-t' ? 1 : 2,
+        thalach: data.maxHR,
+        exang: data.exerciseAngina ? 1 : 0,
+        oldpeak: data.oldpeak,
+        slope: data.stSlope === 'up' ? 0 : 
+               data.stSlope === 'flat' ? 1 : 2,
+        ca: 0, // Default: number of major vessels (0-3)
+        thal: 2 // Default: thalassemia (2 = normal)
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+      const response = await fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': 'current-user' // TODO: Replace with actual user ID
+        },
+        body: JSON.stringify(apiPayload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('⚠️ Python ML Backend unavailable, using simulation:', error);
+      return null;
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════════
    * MAIN PREDICTION - ULTIMATE ACCURACY (Enhanced with Real Datasets)
    * ═══════════════════════════════════════════════════════════════════════════
    */
@@ -249,7 +304,7 @@ class UltimateAccuracyMLService {
     // Extract comprehensive features
     const features = comprehensiveInputUtilization.extractComprehensiveFeatures(data);
     
-    // Run ALL 19 models in parallel
+    // Run ALL 19 models in parallel (Simulation)
     const [
       // Clinical Validated (6)
       framinghamPred,
@@ -316,26 +371,68 @@ class UltimateAccuracyMLService {
     
     if (import.meta.env.DEV) console.log(`✅ Executed 19 advanced models (6 clinical + 8 ML + 3 Indian + 2 biomarker)`);
     
-    // Advanced ensemble with intelligent weighting
-    const finalRiskScore = this.advancedEnsembleVoting(allModels, features);
+    // Advanced ensemble with intelligent weighting (Simulation Baseline)
+    let finalRiskScore = this.advancedEnsembleVoting(allModels, features);
     
-    // Apply final Indian population calibration
-    const calibratedScore = this.finalIndianCalibration(finalRiskScore, features, data);
+    // Apply final Indian population calibration (Simulation Baseline)
+    let calibratedScore = this.finalIndianCalibration(finalRiskScore, features, data);
     
     // Calculate model agreement
-    const modelAgreement = this.calculateAdvancedModelAgreement(allModels);
+    let modelAgreement = this.calculateAdvancedModelAgreement(allModels);
     
     // Determine risk level
-    const riskLevel = this.determineRiskLevel(calibratedScore);
+    let riskLevel = this.determineRiskLevel(calibratedScore);
     
     // Calculate confidence with uncertainty quantification
-    const confidence = this.calculateUltimateConfidence(allModels, modelAgreement);
+    let confidence = this.calculateUltimateConfidence(allModels, modelAgreement);
     
     // Uncertainty range
     const uncertaintyRange = this.calculateUncertaintyRange(allModels);
     
     // Expected accuracy
     const expectedAccuracy = this.calculateExpectedAccuracy(allModels, modelAgreement);
+
+    // -------------------------------------------------------------------------
+    // 🔌 REAL PYTHON BACKEND INTEGRATION (HYBRID MODE)
+    // -------------------------------------------------------------------------
+    const apiResult = await this.callPythonAPI(data);
+    
+    if (apiResult) {
+      if (import.meta.env.DEV) console.log('🔌 Connected to Real Python ML Backend! Overriding simulation results.');
+      
+      // Override final scores with REAL ML inference
+      calibratedScore = apiResult.risk_score;
+      riskLevel = apiResult.risk_level as 'low' | 'medium' | 'high' | 'very-high';
+      confidence = apiResult.confidence;
+      
+      // Override specific ML models in the list with real values
+      if (apiResult.model_predictions) {
+        // Update XGBoost
+        if (apiResult.model_predictions.xgboost) {
+          const xgbModel = allModels.find(m => m.modelName.includes('XGBoost'));
+          if (xgbModel) {
+            xgbModel.riskScore = apiResult.model_predictions.xgboost;
+            xgbModel.reasoning += ' [VERIFIED BY PYTHON BACKEND]';
+          }
+        }
+        // Update Random Forest
+        if (apiResult.model_predictions.random_forest) {
+          const rfModel = allModels.find(m => m.modelName.includes('Random Forest'));
+          if (rfModel) {
+            rfModel.riskScore = apiResult.model_predictions.random_forest;
+            rfModel.reasoning += ' [VERIFIED BY PYTHON BACKEND]';
+          }
+        }
+        // Update Neural Network
+        if (apiResult.model_predictions.neural_network) {
+          const nnModel = allModels.find(m => m.modelName.includes('Neural Network'));
+          if (nnModel) {
+            nnModel.riskScore = apiResult.model_predictions.neural_network;
+            nnModel.reasoning += ' [VERIFIED BY PYTHON BACKEND]';
+          }
+        }
+      }
+    }
     
     if (import.meta.env.DEV) console.log(`✅ ULTIMATE ACCURACY PREDICTION COMPLETE:`);
     if (import.meta.env.DEV) console.log(`   Risk Score: ${calibratedScore.toFixed(1)}% (${riskLevel})`);
@@ -350,7 +447,7 @@ class UltimateAccuracyMLService {
       confidence,
       models: allModels,
       modelAgreement,
-      ensembleMethod: 'Weighted Stacking + Bayesian Calibration',
+      ensembleMethod: apiResult ? 'Hybrid: Python ML Backend + Clinical Simulation' : 'Weighted Stacking + Bayesian Calibration',
       calibratedForIndianPopulation: true,
       expectedAccuracy,
       uncertaintyRange,

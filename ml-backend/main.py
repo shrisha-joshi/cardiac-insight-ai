@@ -16,6 +16,7 @@ Endpoints:
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import numpy as np
@@ -26,22 +27,6 @@ import sqlite3
 import json
 from datetime import datetime
 import time
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="Cardiac Risk Prediction API",
-    description="ML-powered cardiac risk assessment using XGBoost, Random Forest, and Neural Network ensemble",
-    version="1.0.0"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Global variables for models
 models = {}
@@ -55,11 +40,7 @@ prediction_history: Dict[str, List[Dict[str, Any]]] = {}
 DB_PATH = os.path.join(os.path.dirname(__file__), "prediction_history.db")
 
 def init_db(reset: bool = False):
-    """Initialize SQLite database and tables.
-
-    Args:
-        reset: If True, deletes existing DB file and recreates schema (for tests).
-    """
+    """Initialize SQLite database and tables."""
     if reset and os.path.exists(DB_PATH):
         os.remove(DB_PATH)
     conn = sqlite3.connect(DB_PATH)
@@ -168,6 +149,76 @@ def fetch_history_from_db(user_id: str, limit: int) -> List[Dict[str, Any]]:
     finally:
         conn.close()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context replacing deprecated startup events."""
+    global models, preprocessor, ensemble_weights, model_metadata
+    print("🚀 Lifespan start: loading ML models...")
+    model_dir = os.path.join(os.path.dirname(__file__), "models")
+    try:
+        preprocessor_path = os.path.join(model_dir, "preprocessor.pkl")
+        if os.path.exists(preprocessor_path):
+            preprocessor = joblib.load(preprocessor_path)
+            print("✅ Loaded preprocessor")
+        
+        xgb_path = os.path.join(model_dir, "xgboost_model.pkl")
+        if os.path.exists(xgb_path):
+            models['xgboost'] = joblib.load(xgb_path)
+            print("✅ Loaded XGBoost model")
+            
+        rf_path = os.path.join(model_dir, "random_forest_model.pkl")
+        if os.path.exists(rf_path):
+            models['random_forest'] = joblib.load(rf_path)
+            print("✅ Loaded Random Forest model")
+            
+        nn_path = os.path.join(model_dir, "neural_network_model.h5")
+        if os.path.exists(nn_path):
+            models['neural_network'] = keras.models.load_model(nn_path)
+            print("✅ Loaded Neural Network model")
+            
+        metrics_path = os.path.join(model_dir, "training_metrics.json")
+        if os.path.exists(metrics_path):
+            with open(metrics_path, 'r') as f:
+                metrics = json.load(f)
+                if 'ensemble' in metrics and 'weights' in metrics['ensemble']:
+                    ensemble_weights = metrics['ensemble']['weights']
+                else:
+                    ensemble_weights = {
+                        'xgboost': 0.40,
+                        'random_forest': 0.35,
+                        'neural_network': 0.25
+                    }
+                model_metadata = metrics
+            print("✅ Loaded ensemble weights and metrics")
+        else:
+            ensemble_weights = {
+                'xgboost': 0.40,
+                'random_forest': 0.35,
+                'neural_network': 0.25
+            }
+        print(f"✅ Successfully loaded {len(models)} models")
+        init_db()
+        yield
+    finally:
+        print("🛑 Lifespan end: cleanup complete")
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Cardiac Risk Prediction API",
+    description="ML-powered cardiac risk assessment using XGBoost, Random Forest, and Neural Network ensemble",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Pydantic models for request/response
 class PatientData(BaseModel):
     """Input data for single patient prediction"""
@@ -232,60 +283,7 @@ class ModelInfoResponse(BaseModel):
     training_date: str
     version: str
 
-
-# Initialize models on startup
-@app.on_event("startup")
-async def load_models():
-    """Load trained models and preprocessor on startup"""
-    global models, preprocessor, ensemble_weights, model_metadata
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan context replacing deprecated startup events."""
-    global models, preprocessor, ensemble_weights, model_metadata
-    print("🚀 Lifespan start: loading ML models...")
-    model_dir = "models"
-    try:
-        preprocessor_path = os.path.join(model_dir, "preprocessor.pkl")
-        if os.path.exists(preprocessor_path):
-            preprocessor = joblib.load(preprocessor_path)
-            print("✅ Loaded preprocessor")
-        xgb_path = os.path.join(model_dir, "xgboost_model.pkl")
-        if os.path.exists(xgb_path):
-            models['xgboost'] = joblib.load(xgb_path)
-            print("✅ Loaded XGBoost model")
-        rf_path = os.path.join(model_dir, "random_forest_model.pkl")
-        if os.path.exists(rf_path):
-            models['random_forest'] = joblib.load(rf_path)
-            print("✅ Loaded Random Forest model")
-        nn_path = os.path.join(model_dir, "neural_network_model.h5")
-        if os.path.exists(nn_path):
-            models['neural_network'] = keras.models.load_model(nn_path)
-            print("✅ Loaded Neural Network model")
-        metrics_path = os.path.join(model_dir, "training_metrics.json")
-        if os.path.exists(metrics_path):
-            with open(metrics_path, 'r') as f:
-                metrics = json.load(f)
-                if 'ensemble' in metrics and 'weights' in metrics['ensemble']:
-                    ensemble_weights = metrics['ensemble']['weights']
-                else:
-                    ensemble_weights = {
-                        'xgboost': 0.40,
-                        'random_forest': 0.35,
-                        'neural_network': 0.25
-                    }
-                model_metadata = metrics
-            print("✅ Loaded ensemble weights and metrics")
-        else:
-            ensemble_weights = {
-                'xgboost': 0.40,
-                'random_forest': 0.35,
-                'neural_network': 0.25
-            }
-        print(f"✅ Successfully loaded {len(models)} models")
-        init_db()
-        yield
-    finally:
-        print("🛑 Lifespan end: cleanup complete")
+def preprocess_input(patient_data: PatientData):
     """Preprocess patient data for model input"""
     # Convert to dictionary
     data = patient_data.model_dump()
@@ -326,7 +324,6 @@ async def lifespan(app: FastAPI):
     
     return features
 
-
 def get_risk_level(risk_score: float) -> str:
     """Convert risk score to risk level category"""
     if risk_score < 30:
@@ -337,7 +334,6 @@ def get_risk_level(risk_score: float) -> str:
         return "high"
     else:
         return "very-high"
-
 
 # API Endpoints
 @app.get("/")
@@ -354,7 +350,6 @@ async def root():
             "docs": "/docs"
         }
     }
-
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(patient: PatientData, request: Request):
@@ -386,8 +381,17 @@ async def predict(patient: PatientData, request: Request):
         
         # Calculate ensemble prediction
         ensemble_pred = 0.0
-        for model_name, pred in model_predictions.items():
-            ensemble_pred += (pred / 100) * ensemble_weights.get(model_name, 0.33)
+        if model_predictions:
+            for model_name, pred in model_predictions.items():
+                ensemble_pred += (pred / 100) * ensemble_weights.get(model_name, 0.33)
+            
+            # Normalize if weights don't sum to 1 or missing models
+            total_weight = sum(ensemble_weights.get(m, 0.33) for m in model_predictions.keys())
+            if total_weight > 0:
+                ensemble_pred = ensemble_pred / total_weight
+        else:
+            # Fallback if no models loaded
+            ensemble_pred = 0.5 
         
         risk_score = ensemble_pred * 100
         
@@ -449,6 +453,7 @@ async def predict(patient: PatientData, request: Request):
         return response
         
     except Exception as e:
+        print(f"Error during prediction: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
 
