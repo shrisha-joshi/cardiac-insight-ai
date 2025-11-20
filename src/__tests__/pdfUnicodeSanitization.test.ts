@@ -114,11 +114,11 @@ describe('PDF Unicode Sanitization', () => {
     });
 
     it('should handle null input', () => {
-      expect(sanitizeText(null as any)).toBe('');
+      expect(sanitizeText(null as unknown as string)).toBe('');
     });
 
     it('should handle undefined input', () => {
-      expect(sanitizeText(undefined as any)).toBe('');
+      expect(sanitizeText(undefined as unknown as string)).toBe('');
     });
 
     it('should handle plain ASCII text unchanged', () => {

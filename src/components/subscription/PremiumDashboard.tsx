@@ -461,30 +461,10 @@ export default function PremiumDashboard() {
 
     try {
       const reportId = `PRM-${Date.now().toString().slice(-6)}`;
+      const filename = `Premium_Report_${reportId}.pdf`;
       
-      const pdfData: PDFReportData = {
-        patientInfo: {
-          name: patientName || generatedReport.patientInfo.name,
-          age: generatedReport.patientInfo.age,
-          gender: generatedReport.patientInfo.gender,
-          assessmentDate: generatedReport.patientInfo.assessmentDate
-        },
-        riskAssessment: {
-          overallRisk: generatedReport.riskScore,
-          riskLevel: generatedReport.riskLevel,
-          factors: generatedReport.keyRiskFactors
-        },
-        recommendations: {
-          medicines: generatedReport.recommendations || [],
-          ayurveda: aiSuggestions?.suggestions?.ayurveda || [],
-          yoga: aiSuggestions?.suggestions?.yoga || [],
-          diet: aiSuggestions?.suggestions?.diet || []
-        },
-        reportType: 'premium',
-        reportId: reportId
-      };
-
-      await PDFService.generateReport(pdfData);
+      // Use HTML-to-PDF generation for perfect visual fidelity matching the browser view
+      await PDFService.generateReportFromHTML('premium-report-content', filename);
       
       toast({
         title: "PDF Downloaded",
@@ -519,7 +499,7 @@ export default function PremiumDashboard() {
   if (showReport && generatedReport) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-950 dark:via-slate-900 dark:to-indigo-950 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div id="premium-report-content" className="max-w-7xl mx-auto space-y-6 bg-transparent">
           {/* Modern Report Header */}
           <div className="relative overflow-hidden bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 dark:from-teal-800 dark:via-emerald-800 dark:to-green-800 text-white rounded-2xl shadow-2xl">
             <div className="absolute inset-0 bg-grid-white/10"></div>
@@ -1011,7 +991,7 @@ export default function PremiumDashboard() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
+          <div data-html2canvas-ignore="true" className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
             <Button
               onClick={downloadReportAsPDF}
               className="bg-gradient-to-r from-teal-600 via-emerald-600 to-green-600 hover:from-teal-700 hover:via-emerald-700 hover:to-green-700 text-white px-8 py-6 text-lg shadow-2xl hover:shadow-3xl transition-all rounded-xl font-semibold w-full sm:w-auto"

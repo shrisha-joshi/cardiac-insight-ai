@@ -33,13 +33,13 @@ export default function PatientForm({ onSubmit, loading }: PatientFormProps) {
   const [unmappedData, setUnmappedData] = useState<string[]>([]);
   const [unknownFields, setUnknownFields] = useState<Array<{
     label: string;
-    value: string;
+    value: string | number | boolean;
     rawText: string;
     unknown_field: true;
   }>>([]);
   const [extractionMethod, setExtractionMethod] = useState<'text-extraction' | 'ocr'>('text-extraction');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingParsedData, setPendingParsedData] = useState<Record<string, any>>({});
+  const [pendingParsedData, setPendingParsedData] = useState<Record<string, string | number | boolean | null>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

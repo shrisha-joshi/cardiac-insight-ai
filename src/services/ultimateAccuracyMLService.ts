@@ -105,6 +105,17 @@ interface ModelPrediction {
   accuracy: number; // Expected accuracy of this model
 }
 
+interface MLAPIResponse {
+  risk_score: number;
+  risk_level: string;
+  confidence: number;
+  model_predictions?: {
+    xgboost?: number;
+    random_forest?: number;
+    neural_network?: number;
+  };
+}
+
 interface UltimateAccuracyPrediction {
   finalRiskScore: number;
   riskLevel: 'low' | 'medium' | 'high' | 'very-high';
@@ -233,7 +244,7 @@ class UltimateAccuracyMLService {
    * PYTHON API INTEGRATION
    * ═══════════════════════════════════════════════════════════════════════════
    */
-  private async callPythonAPI(data: PatientData): Promise<any | null> {
+  private async callPythonAPI(data: PatientData): Promise<MLAPIResponse | null> {
     try {
       // Map frontend data to API expected format
       // Note: 'ca' and 'thal' are missing from frontend PatientData, using defaults
@@ -279,7 +290,7 @@ class UltimateAccuracyMLService {
         throw new Error(`API Error: ${response.statusText}`);
       }
 
-      return await response.json();
+      return await response.json() as MLAPIResponse;
     } catch (error) {
       if (import.meta.env.DEV) console.warn('⚠️ Python ML Backend unavailable, using simulation:', error);
       return null;
@@ -375,13 +386,13 @@ class UltimateAccuracyMLService {
     if (import.meta.env.DEV) console.log(`✅ Executed 19 advanced models (6 clinical + 8 ML + 3 Indian + 2 biomarker)`);
     
     // Advanced ensemble with intelligent weighting (Simulation Baseline)
-    let finalRiskScore = this.advancedEnsembleVoting(allModels, features);
+    const finalRiskScore = this.advancedEnsembleVoting(allModels, features);
     
     // Apply final Indian population calibration (Simulation Baseline)
     let calibratedScore = this.finalIndianCalibration(finalRiskScore, features, data);
     
     // Calculate model agreement
-    let modelAgreement = this.calculateAdvancedModelAgreement(allModels);
+    const modelAgreement = this.calculateAdvancedModelAgreement(allModels);
     
     // Determine risk level
     let riskLevel = this.determineRiskLevel(calibratedScore);

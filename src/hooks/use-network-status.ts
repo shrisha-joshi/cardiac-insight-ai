@@ -6,6 +6,18 @@
 import { useState, useEffect } from 'react';
 import { useToast } from './use-toast';
 
+interface NetworkInformation extends EventTarget {
+  readonly effectiveType: string;
+  addEventListener: (type: string, listener: EventListener) => void;
+  removeEventListener: (type: string, listener: EventListener) => void;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+  mozConnection?: NetworkInformation;
+  webkitConnection?: NetworkInformation;
+}
+
 export interface NetworkStatus {
   isOnline: boolean;
   isSlowConnection: boolean;
@@ -28,9 +40,8 @@ export const useNetworkStatus = () => {
       const isOnline = navigator.onLine;
       
       // Get connection info if available
-      const connection = (navigator as any).connection || 
-                        (navigator as any).mozConnection || 
-                        (navigator as any).webkitConnection;
+      const nav = navigator as NavigatorWithConnection;
+      const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
       
       const effectiveType = connection?.effectiveType || null;
       const isSlowConnection = effectiveType === '2g' || effectiveType === 'slow-2g';
@@ -65,9 +76,8 @@ export const useNetworkStatus = () => {
     window.addEventListener('offline', updateOnlineStatus);
 
     // Listen for connection changes (if supported)
-    const connection = (navigator as any).connection || 
-                      (navigator as any).mozConnection || 
-                      (navigator as any).webkitConnection;
+    const nav = navigator as NavigatorWithConnection;
+    const connection = nav.connection || nav.mozConnection || nav.webkitConnection;
     
     if (connection) {
       connection.addEventListener('change', updateOnlineStatus);

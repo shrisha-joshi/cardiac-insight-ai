@@ -13,6 +13,25 @@ interface PerformanceMetrics {
   totalBlockingTime: number;
 }
 
+interface LargestContentfulPaint extends PerformanceEntry {
+  renderTime: number;
+  loadTime: number;
+  size: number;
+  id: string;
+  url: string;
+  element: Element | null;
+}
+
+interface PerformanceMemory {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+
+interface PerformanceWithMemory extends Performance {
+  memory?: PerformanceMemory;
+}
+
 class PerformanceMonitor {
   private metrics: Partial<PerformanceMetrics> = {};
 
@@ -73,7 +92,7 @@ class PerformanceMonitor {
       try {
         const lcpObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
-          const lastEntry = entries[entries.length - 1] as any;
+          const lastEntry = entries[entries.length - 1] as LargestContentfulPaint;
           this.metrics.largestContentfulPaint = lastEntry.renderTime || lastEntry.loadTime;
         });
         lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
@@ -204,8 +223,9 @@ class PerformanceMonitor {
    * Monitor memory usage (if available)
    */
   getMemoryUsage(): { used: number; total: number } | null {
-    if ("memory" in performance && (performance as any).memory) {
-      const mem = (performance as any).memory;
+    const perf = performance as PerformanceWithMemory;
+    if (perf.memory) {
+      const mem = perf.memory;
       return {
         used: mem.usedJSHeapSize / (1024 * 1024), // MB
         total: mem.totalJSHeapSize / (1024 * 1024), // MB

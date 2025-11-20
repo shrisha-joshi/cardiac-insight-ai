@@ -111,7 +111,7 @@ export function PDFParseConfirmationModal({
       .join(' ');
   };
 
-  const formatValue = (value: any): string => {
+  const formatValue = (value: string | number | boolean): string => {
     if (typeof value === 'boolean') {
       return value ? 'Yes' : 'No';
     }

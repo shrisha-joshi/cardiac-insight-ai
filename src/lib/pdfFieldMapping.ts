@@ -412,7 +412,7 @@ export function findMatchingField(label: string): FieldMapping | null {
 export function validateValue(
   value: string | number | boolean,
   mapping: FieldMapping
-): { valid: boolean; normalizedValue?: any; error?: string } {
+): { valid: boolean; normalizedValue?: string | number | boolean; error?: string } {
   if (mapping.type === 'number') {
     const numValue = typeof value === 'number' ? value : parseFloat(String(value));
     

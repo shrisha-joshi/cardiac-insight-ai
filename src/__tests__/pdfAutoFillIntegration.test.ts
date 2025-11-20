@@ -363,7 +363,7 @@ Sleep Hours: 7
       const result = parse(samplePDF);
       
       // Simulate form population
-      const formData: Record<string, any> = {};
+      const formData: Record<string, string | number | boolean | null> = {};
       result.parsedFields.forEach(field => {
         if (!field.unknown_field) {
           formData[field.fieldName] = field.value;

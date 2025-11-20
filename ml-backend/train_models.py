@@ -22,7 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 import xgboost as xgb
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
+# from tensorflow.keras import layers # Removed to fix import resolution issue
 import joblib
 import json
 import os
@@ -184,14 +184,14 @@ class ModelTrainingService:
         
         # Build model architecture
         model = keras.Sequential([
-            layers.Input(shape=(input_dim,)),
-            layers.Dense(128, activation='relu', name='hidden1'),
-            layers.Dropout(0.3),
-            layers.Dense(64, activation='relu', name='hidden2'),
-            layers.Dropout(0.2),
-            layers.Dense(32, activation='relu', name='hidden3'),
-            layers.Dropout(0.1),
-            layers.Dense(1, activation='sigmoid', name='output')
+            keras.layers.Input(shape=(input_dim,)),
+            keras.layers.Dense(128, activation='relu', name='hidden1'),
+            keras.layers.Dropout(0.3),
+            keras.layers.Dense(64, activation='relu', name='hidden2'),
+            keras.layers.Dropout(0.2),
+            keras.layers.Dense(32, activation='relu', name='hidden3'),
+            keras.layers.Dropout(0.1),
+            keras.layers.Dense(1, activation='sigmoid', name='output')
         ])
         
         model.compile(

@@ -82,6 +82,13 @@ export interface RegionalDietProfile {
   references: string[];
 }
 
+export interface MealPlan {
+  breakfast: string[];
+  lunch: string[];
+  snacks: string[];
+  dinner: string[];
+}
+
 /**
  * NORTH INDIAN HEART-HEALTHY DIET
  * Based on: Punjab, Haryana, UP, Delhi, Rajasthan patterns
@@ -420,7 +427,7 @@ export function generateFoodHabitPrescription(
   macros: { protein: number; carbs: number; fat: number; fiber: number };
   sodiumLimit: number;
   fluidIntake: number;
-  mealPlan: any;
+  mealPlan: MealPlan;
   specificRecommendations: string[];
   foodsToIncrease: string[];
   foodsToReduce: string[];

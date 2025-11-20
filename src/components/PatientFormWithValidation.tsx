@@ -56,7 +56,7 @@ interface FormData {
   physicalActivity?: string;
   triglycerideLevel?: number;
   ethnicity?: string;
-  [key: string]: any; // Allow additional properties
+  [key: string]: unknown; // Allow additional properties
 }
 
 export default function PatientFormWithValidation({
@@ -81,12 +81,12 @@ export default function PatientFormWithValidation({
 
       // Auto-calculate BMI
       if (fieldName === 'weight' || fieldName === 'height') {
-        if (formData.weight && formData.height) {
-          const heightInMeters = (formData.height || 0) / 100;
-          const numValue = typeof value === 'number' ? value : 0;
-          const weight = fieldName === 'weight' ? numValue : (formData.weight || 0);
-          const height = fieldName === 'height' ? numValue / 100 : (formData.height || 0) / 100;
-          const bmi = weight / (height * height);
+        const currentWeight = fieldName === 'weight' ? Number(value) : Number(formData.weight || 0);
+        const currentHeight = fieldName === 'height' ? Number(value) : Number(formData.height || 0);
+        
+        if (currentWeight > 0 && currentHeight > 0) {
+          const heightInMeters = currentHeight / 100;
+          const bmi = currentWeight / (heightInMeters * heightInMeters);
           setFormData(prev => ({ ...prev, BMI: Math.round(bmi * 10) / 10 }));
         }
       }
@@ -116,33 +116,33 @@ export default function PatientFormWithValidation({
       try {
         // Filter form data to only include PatientData fields
         const patientData: PatientData = {
-          age: formData.age || 0,
+          age: Number(formData.age) || 0,
           gender: (formData.gender as 'male' | 'female') || 'male',
           chestPainType: String(formData.chestPainType || 'typical') as 'typical' | 'atypical' | 'non-anginal' | 'asymptomatic',
-          restingBP: formData.restingBP || 0,
-          cholesterol: formData.cholesterol || 0,
-          fastingBS: formData.fastingBS || false,
+          restingBP: Number(formData.restingBP) || 0,
+          cholesterol: Number(formData.cholesterol) || 0,
+          fastingBS: Boolean(formData.fastingBS),
           restingECG: String(formData.restingECG || 'normal') as 'normal' | 'st-t' | 'lvh',
-          maxHR: formData.maxHR || 0,
-          exerciseAngina: formData.exerciseAngina || false,
-          oldpeak: formData.oldpeak || 0,
+          maxHR: Number(formData.maxHR) || 0,
+          exerciseAngina: Boolean(formData.exerciseAngina),
+          oldpeak: Number(formData.oldpeak) || 0,
           stSlope: String(formData.stSlope || 'flat') as 'flat' | 'up' | 'down',
-          smoking: formData.smoking || false,
-          diabetes: formData.diabetes || false,
-          previousHeartAttack: formData.previousHeartAttack || false,
-          cholesterolMedication: formData.cholesterolMedication || false,
-          bpMedication: formData.bpMedication || false,
-          lifestyleChanges: formData.lifestyleChanges || false,
+          smoking: Boolean(formData.smoking),
+          diabetes: Boolean(formData.diabetes),
+          previousHeartAttack: Boolean(formData.previousHeartAttack),
+          cholesterolMedication: Boolean(formData.cholesterolMedication),
+          bpMedication: Boolean(formData.bpMedication),
+          lifestyleChanges: Boolean(formData.lifestyleChanges),
           dietType: String(formData.dietType || 'non-vegetarian') as 'vegetarian' | 'non-vegetarian' | 'vegan',
-          stressLevel: formData.stressLevel || 5,
-          sleepHours: formData.sleepHours || 7,
+          stressLevel: Number(formData.stressLevel) || 5,
+          sleepHours: Number(formData.sleepHours) || 7,
           physicalActivity: String(formData.physicalActivity || 'moderate') as 'low' | 'high' | 'moderate',
-          height: formData.height,
-          weight: formData.weight,
-          heartRate: formData.maxHR,
-          bloodSugar: formData.bloodSugar,
-          sleepQuality: formData.sleepQuality,
-          exerciseFrequency: formData.exerciseFrequency,
+          height: Number(formData.height),
+          weight: Number(formData.weight),
+          heartRate: Number(formData.maxHR),
+          bloodSugar: Number(formData.bloodSugar),
+          sleepQuality: Number(formData.sleepQuality),
+          exerciseFrequency: Number(formData.exerciseFrequency),
         };
 
         await onSubmit(patientData);
@@ -239,7 +239,7 @@ export default function PatientFormWithValidation({
                   <Label htmlFor="name">Full Name *</Label>
                   <Input
                     id="name"
-                    value={formData.name || ''}
+                    value={String(formData.name || '')}
                     onChange={e => handleFieldChange('name', e.target.value)}
                     className={`mt-1 ${getFieldStatus('name')}`}
                     placeholder="John Doe"
@@ -304,7 +304,7 @@ export default function PatientFormWithValidation({
                   <Input
                     id="email"
                     type="email"
-                    value={formData.email || ''}
+                    value={String(formData.email || '')}
                     onChange={e => handleFieldChange('email', e.target.value)}
                     className={`mt-1 ${getFieldStatus('email')}`}
                     placeholder="john@example.com"
@@ -322,7 +322,7 @@ export default function PatientFormWithValidation({
                   <Input
                     id="phone"
                     type="tel"
-                    value={formData.phone || ''}
+                    value={String(formData.phone || '')}
                     onChange={e => handleFieldChange('phone', e.target.value)}
                     className={`mt-1 ${getFieldStatus('phone')}`}
                     placeholder="+1-555-0000"
@@ -479,7 +479,7 @@ export default function PatientFormWithValidation({
                   <Input
                     id="BMI"
                     type="number"
-                    value={formData.BMI || ''}
+                    value={Number(formData.BMI) || ''}
                     readOnly
                     className="mt-1 bg-gray-100"
                     placeholder="--"

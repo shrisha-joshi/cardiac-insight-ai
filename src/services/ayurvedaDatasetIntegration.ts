@@ -723,7 +723,7 @@ export function loadAYUSHMinistryData(): AyurvedaRecommendationRecord[] {
       patientId: `AYUSH-ARJ-${i}`,
       age: 52 + Math.floor(Math.random() * 18),
       gender: Math.random() > 0.6 ? 'male' : 'female',
-      prakriti: ['Vata', 'Pitta', 'Kapha', 'Vata-Pitta'][Math.floor(Math.random() * 4)] as any,
+      prakriti: ['Vata', 'Pitta', 'Kapha', 'Vata-Pitta'][Math.floor(Math.random() * 4)] as 'Vata' | 'Pitta' | 'Kapha' | 'Vata-Pitta',
       vikriti: 'Vata-Pitta Vriddhi',
       riskLevel: isHighRisk ? 'high' : 'moderate',
       baselineBP: isHighRisk ? 165 : 145,

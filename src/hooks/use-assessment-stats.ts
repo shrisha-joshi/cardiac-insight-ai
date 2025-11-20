@@ -54,7 +54,7 @@ export function useAssessmentStats(userId: string | undefined) {
 
         // Count documents (assuming stored in metadata)
         const totalDocs = predictions.reduce((sum, p) => {
-          const metadata = p.metadata as any;
+          const metadata = p.metadata as { document_count?: number } | null;
           return sum + (metadata?.document_count || 0);
         }, 0);
 

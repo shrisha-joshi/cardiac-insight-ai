@@ -273,7 +273,7 @@ export function extractNumericWithUnit(text: string): { value: number; unit: str
 export function parseBloodPressure(text: string): { systolic: number; diastolic: number } | null {
   // Patterns: 120/80, 120 / 80, 120-80, 120 over 80
   const patterns = [
-    /(\d{2,3})\s*[\/\-]\s*(\d{2,3})/,
+    new RegExp("(\\d{2,3})\\s*[/-]\\s*(\\d{2,3})"),
     /(\d{2,3})\s+over\s+(\d{2,3})/i,
   ];
 

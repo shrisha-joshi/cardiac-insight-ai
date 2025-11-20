@@ -1379,19 +1379,20 @@ I'm here to provide comprehensive heart health education with a focus on **India
         // If we got here, parsing failed but no exception - don't retry
         if (attempt === 0) break;
         
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { message?: string; status?: number };
         if (import.meta.env.DEV) {
-          console.error(`[AI Service] Gemini API error (attempt ${attempt + 1}):`, error?.message || error);
+          console.error(`[AI Service] Gemini API error (attempt ${attempt + 1}):`, err?.message || error);
         }
         
         // Categorize error for better user feedback (Phase 7)
-        if (error?.message?.includes('quota') || error?.status === 429) {
+        if (err?.message?.includes('quota') || err?.status === 429) {
           throw new Error('GEMINI_QUOTA_EXCEEDED');
         }
-        if (error?.message?.includes('API key') || error?.message?.includes('invalid')) {
+        if (err?.message?.includes('API key') || err?.message?.includes('invalid')) {
           throw new Error('GEMINI_API_ERROR');
         }
-        if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+        if (err?.message?.includes('network') || err?.message?.includes('fetch')) {
           throw new Error('GEMINI_NETWORK_ERROR');
         }
         

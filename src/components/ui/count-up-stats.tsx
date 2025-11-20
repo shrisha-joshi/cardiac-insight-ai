@@ -51,7 +51,7 @@ export function CountUpStats({ value, duration = 2, className }: CountUpStatsPro
 
       return () => cancelAnimationFrame(animationFrame);
     }
-  }, [isInView, value, duration, numericValue, suffix, prefix]);
+  }, [isInView, value, duration, numericValue, suffix, prefix, isFloat]);
 
   return (
     <span ref={ref} className={className}>

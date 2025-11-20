@@ -8,7 +8,7 @@ import { findFuzzyMatch, extractNumericWithUnit, parseBloodPressure, parseBoolea
 
 export interface ParsedField {
   fieldName: string;
-  value: any;
+  value: string | number | boolean;
   label: string;
   confidence: 'high' | 'medium' | 'low';
   rawText: string;
@@ -21,7 +21,7 @@ export interface ParseResult {
   parsedFields: ParsedField[];
   unknownFields: Array<{
     label: string;
-    value: string;
+    value: string | number | boolean;
     rawText: string;
     unknown_field: true;
   }>;
@@ -82,7 +82,7 @@ function findMatchingField(label: string): {
 function validateValue(
   value: string | number | boolean,
   mapping: typeof fieldMappings[keyof typeof fieldMappings]
-): { valid: boolean; normalizedValue?: any; error?: string } {
+): { valid: boolean; normalizedValue?: string | number | boolean; error?: string } {
   if (mapping.type === 'number') {
     const numValue = typeof value === 'number' ? value : parseFloat(String(value));
     
@@ -146,7 +146,12 @@ export function parse(text: string): ParseResult {
     if (result) {
       if (result.unknown_field) {
         // Unknown field - don't add to parsedFields
-        unknownFields.push(result as any);
+        unknownFields.push({
+          label: result.label,
+          value: result.value,
+          rawText: result.rawText,
+          unknown_field: true
+        });
       } else if (!processedFields.has(result.fieldName)) {
         parsedFields.push(result);
         processedFields.add(result.fieldName);
@@ -360,8 +365,8 @@ function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | nul
 /**
  * Convert parsed fields to form data object (excluding unknown fields)
  */
-export function convertToFormData(fields: ParsedField[]): Record<string, any> {
-  const formData: Record<string, any> = {};
+export function convertToFormData(fields: ParsedField[]): Record<string, string | number | boolean> {
+  const formData: Record<string, string | number | boolean> = {};
   
   for (const field of fields) {
     if (!field.unknown_field) {

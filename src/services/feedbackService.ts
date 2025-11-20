@@ -71,7 +71,7 @@ class FeedbackService {
   /**
    * Fallback: Save feedback to localStorage
    */
-  private saveToLocalStorage(feedback: any): void {
+  private saveToLocalStorage(feedback: Record<string, unknown>): void {
     try {
       const stored = localStorage.getItem("pending_feedback");
       const pendingFeedback = stored ? JSON.parse(stored) : [];
@@ -96,8 +96,8 @@ class FeedbackService {
    * Track feedback event for analytics
    */
   private trackFeedbackEvent(type: FeedbackType): void {
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("event", "feedback_submitted", {
+    if (typeof window !== "undefined" && (window as unknown as { gtag: (command: string, action: string, params: Record<string, unknown>) => void }).gtag) {
+      (window as unknown as { gtag: (command: string, action: string, params: Record<string, unknown>) => void }).gtag("event", "feedback_submitted", {
         event_category: "user_engagement",
         event_label: type,
       });
@@ -132,7 +132,7 @@ class FeedbackService {
     adminNotes?: string
   ): Promise<void> {
     try {
-      const updates: any = { status };
+      const updates: { status: StoredFeedback["status"]; admin_notes?: string } = { status };
       if (adminNotes) {
         updates.admin_notes = adminNotes;
       }

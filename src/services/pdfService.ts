@@ -55,15 +55,26 @@ export class PDFService {
       '\u1E43': 'm', '\u1E25': 'h', '\u1E45': 'n', '\u00F1': 'n',
       '\u1E6D': 't', '\u1E0D': 'd', '\u1E47': 'n', '\u015B': 's', '\u1E63': 's',
       '\u2018': "'", '\u2019': "'", '\u201C': '"', '\u201D': '"',
-      '\u2013': '-', '\u2014': '-', '\u2026': '...'
+      '\u2013': '-', '\u2014': '-', '\u2026': '...',
+      '\u2022': '-', // Bullet point
+      '\u25C6': '*'  // Diamond
     };
     
     let sanitized = text;
+    
+    // Remove emojis and other symbols that might cause encoding issues
+    // This regex covers common emoji ranges and symbols
+    sanitized = sanitized.replace(/[\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+
     for (const [unicode, ascii] of Object.entries(replacements)) {
       sanitized = sanitized.replace(new RegExp(unicode, 'g'), ascii);
     }
     
-    return sanitized;
+    // Final cleanup: remove any remaining non-ASCII characters that might cause issues
+    // Keep basic punctuation and alphanumeric
+    // sanitized = sanitized.replace(/[^\x00-\x7F]/g, ''); 
+    
+    return sanitized.trim();
   }
 
   static async generateReport(data: PDFReportData): Promise<void> {
@@ -309,10 +320,11 @@ export class PDFService {
 
     // Download the PDF
     pdf.save(filename);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Phase 7: Enhanced error handling
       console.error('[PDF Service] Export failed:', error);
-      throw new Error(`PDF_EXPORT_FAILED: ${error?.message || 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`PDF_EXPORT_FAILED: ${errorMessage}`);
     }
   }
 
@@ -420,7 +432,7 @@ export class PDFService {
           yPosition = margin;
         }
 
-        const bullet = idx === 0 ? '◆' : ' ';
+        const bullet = idx === 0 ? '-' : ' ';
         pdf.text(`${bullet} ${line}`, margin + 10, yPosition);
         yPosition += 5;
       }

@@ -15,7 +15,7 @@ import {
 
 export interface ParsedField {
   fieldName: string;
-  value: any;
+  value: string | number | boolean;
   label: string;
   confidence: 'high' | 'medium' | 'low';
   rawText: string;
@@ -29,7 +29,7 @@ export interface PDFParseResult {
   unmappedData: string[];
   unknownFields: Array<{
     label: string;
-    value: string;
+    value: string | number | boolean;
     rawText: string;
     unknown_field: true;
   }>;
@@ -172,7 +172,7 @@ function tryKeyValuePattern(line: string, lineNumber: number): ParsedField | nul
     
     // Blood pressure patterns
     { pattern: /\b(blood pressure|bp|systolic bp|systolic|resting bp)\b[:\s=-]+(\d+)/i, field: 'restingBP' },
-    { pattern: /\b(systolic|sys)\b[:\s=-]+(\d+)[\s\/]*(diastolic|dia)?[:\s]*(\d+)?/i, field: 'restingBP' },
+    { pattern: new RegExp("\\b(systolic|sys)\\b[:\\s=-]+(\\d+)[\\s/]*(diastolic|dia)?[:\\s]*(\\d+)?", "i"), field: 'restingBP' },
     { pattern: /(\d{2,3})\/(\d{2,3})\s*(mmhg|mm hg)?/i, field: 'restingBP' }, // 120/80 format
     
     // Cholesterol patterns
@@ -341,6 +341,6 @@ export function filterByConfidence(
 /**
  * Convert parsed fields to form data object (excluding unknown fields)
  */
-export function convertToFormData(fields: ParsedField[]): Record<string, any> {
+export function convertToFormData(fields: ParsedField[]): Record<string, string | number | boolean> {
   return strictConvertToFormData(fields);
 }

@@ -24,6 +24,11 @@ export interface PDFExtractionResult {
   error?: string;
 }
 
+interface PDFTextItem {
+  str: string;
+  hasEOL: boolean;
+}
+
 /**
  * Extract text from PDF using pdf.js
  */
@@ -46,10 +51,11 @@ export async function extractTextFromPDF(file: File): Promise<PDFExtractionResul
       
       // Combine text items while preserving line breaks
       const pageText = textContent.items
-        .map((item: any) => {
-          const str = item.str || '';
+        .map((item: unknown) => {
+          const textItem = item as PDFTextItem;
+          const str = textItem.str || '';
           // pdf.js exposes hasEOL on TextItem when the string ends a line
-          if (item.hasEOL === true) {
+          if (textItem.hasEOL === true) {
             return str + '\n';
           }
           return str + ' ';
@@ -189,7 +195,7 @@ export async function estimatePDFType(file: File): Promise<'text-based' | 'scann
     // Sample first page
     const page = await pdf.getPage(1);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    const pageText = textContent.items.map((item: unknown) => (item as PDFTextItem).str || '').join(' ');
     
     // If we get substantial text, it's likely text-based
     if (pageText.trim().length > 50) {

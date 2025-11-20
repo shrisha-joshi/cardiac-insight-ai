@@ -336,9 +336,10 @@ export const getErrorConfig = (type: EnhancedErrorType): ErrorConfig => {
 /**
  * Categorize error based on error object
  */
-export const categorizeError = (error: any): EnhancedErrorType => {
-  const errorMessage = error?.message?.toLowerCase() || '';
-  const errorStatus = error?.status || error?.response?.status;
+export const categorizeError = (error: unknown): EnhancedErrorType => {
+  const err = error as { message?: string; status?: number; response?: { status?: number } };
+  const errorMessage = err?.message?.toLowerCase() || '';
+  const errorStatus = err?.status || err?.response?.status;
   
   // Gemini AI errors
   if (errorMessage.includes('quota') || errorStatus === 429) {
