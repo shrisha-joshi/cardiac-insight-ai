@@ -260,7 +260,10 @@ class UltimateAccuracyMLService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
-      const response = await fetch('http://localhost:8000/predict', {
+      // Use environment variable for API URL, fallback to localhost for development
+      const API_URL = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
