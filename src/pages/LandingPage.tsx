@@ -419,87 +419,81 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 sm:py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
+      <section className="py-24 sm:py-32 px-4 relative overflow-hidden">
+        {/* Modern Background with Grid Pattern */}
+        <div className="absolute inset-0 bg-slate-100/35 dark:bg-[#050f26]">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff1a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff1a_1px,transparent_1px)] bg-[size:24px_24px]" />
+            <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-teal-500 opacity-30 blur-[100px]" />
+             <div className="absolute right-0 bottom-0 -z-10 h-[310px] w-[310px] rounded-full bg-emerald-500 opacity-30 blur-[100px]" />
+             <div className="absolute left-10 bottom-10 -z-10 h-[200px] w-[200px] rounded-full bg-cyan-500 opacity-20 blur-[80px]" />
+        </div>
+
+        <div className="container mx-auto max-w-7xl relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-12 sm:mb-16"
+            className="text-center mb-16 sm:mb-24"
           >
-            <Badge className="mb-4 px-4 py-1">
-              <Sparkles className="w-3 h-3 mr-2" />
-              Features
+            <Badge className="mb-6 px-4 py-1.5 text-sm font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20 backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 mr-2 inline-block" />
+              Advanced Capabilities
             </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
               Clinical precision meets{" "}
-              <span className="bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-teal-600 via-emerald-500 to-cyan-500 dark:from-teal-400 dark:via-emerald-400 dark:to-cyan-400 bg-clip-text text-transparent">
                 ethical AI
               </span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Advanced technology designed with your health and privacy in mind
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Experience the future of cardiac care with technology designed for accuracy, privacy, and ease of use.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-10">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 50, rotateX: -10 }}
-                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: index * 0.15 }}
-                whileHover={{
-                  y: -12,
-                  rotateY: 2,
-                  transition: { duration: 0.3 },
-                }}
+                transition={{ duration: 0.7, delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+                className="h-full"
               >
-                <Card className="glass dark:glass-dark border-teal-500/20 h-full shadow-xl hover:shadow-2xl hover:shadow-teal-500/20 overflow-hidden group relative">
-                  {/* Animated Gradient Background */}
-                  <motion.div
-                    className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-700`}
-                    initial={false}
-                  />
+                <div className="group relative h-full">
+                  {/* Card Glow Effect */}
+                  <div className={`absolute -inset-0.5 bg-gradient-to-r ${feature.gradient} rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500`} />
+                  
+                  <Card className="relative h-full bg-white/80 dark:bg-[#111827]/80 backdrop-blur-xl border-white/20 dark:border-teal-500/20 shadow-xl overflow-hidden rounded-3xl">
+                    {/* Inner Grid Pattern */}
+                    <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] dark:bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+                    
+                    <CardContent className="p-8 sm:p-10 flex flex-col h-full relative z-10">
+                      <div className="mb-6 inline-flex">
+                        <div className="relative group-hover:scale-110 transition-transform duration-500">
+                          <div className="absolute inset-0 bg-teal-500/20 rounded-2xl blur-lg transform rotate-6 group-hover:rotate-12 transition-transform duration-500" />
+                          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg text-white">
+                            <feature.icon className="w-8 h-8" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-2xl font-bold mb-3 text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                        {feature.title}
+                      </h3>
+                      
+                      <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed flex-grow">
+                        {feature.description}
+                      </p>
 
-                  {/* Shimmer Effect */}
-                  <motion.div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                    animate={{
-                      background: [
-                        "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
-                        "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
-                      ],
-                      x: ["-100%", "100%"],
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatDelay: 1,
-                    }}
-                  />
-
-                  <CardContent className="p-6 sm:p-8 md:p-10 relative z-10">
-                    <motion.div
-                      className="w-16 h-16 rounded-3xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center mb-6 shadow-2xl shadow-teal-500/50 group-hover:shadow-emerald-500/50 transition-all duration-500"
-                      whileHover={{
-                        scale: 1.15,
-                        rotate: 360,
-                        transition: { duration: 0.6 },
-                      }}
-                    >
-                      <feature.icon className="w-8 h-8 text-white" />
-                    </motion.div>
-                    <h3 className="text-2xl md:text-3xl font-black mb-4 group-hover:text-teal-500 transition-colors duration-300">
-                      {feature.title}
-                    </h3>
-                    <p className="text-muted-foreground leading-relaxed text-base">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
+                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center text-teal-600 dark:text-teal-400 font-medium text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                        Learn more <ArrowRight className="ml-2 w-4 h-4" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </motion.div>
             ))}
           </div>
