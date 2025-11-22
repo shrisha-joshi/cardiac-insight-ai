@@ -214,6 +214,12 @@ npm run lint
 npm test
 ```
 
+## How to Run the Project
+
+1. Clone the repo  
+2. Install dependencies  
+3. Run the model  
+
 ## 📊 Application Status
 
 ✅ **Production Ready**  
